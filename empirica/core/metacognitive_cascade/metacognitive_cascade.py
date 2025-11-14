@@ -22,6 +22,9 @@ from datetime import datetime, UTC
 import asyncio
 import requests
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Import canonical structures
 import sys
@@ -62,7 +65,7 @@ try:
     BAYESIAN_AVAILABLE = True
 except ImportError:
     BAYESIAN_AVAILABLE = False
-    print("⚠️ Bayesian belief tracker not available")
+    logger.warning("Bayesian belief tracker not available")
 
 # Parallel reasoning and drift monitoring
 try:
@@ -70,7 +73,7 @@ try:
     PARALLEL_REASONING_AVAILABLE = True
 except ImportError:
     PARALLEL_REASONING_AVAILABLE = False
-    print("⚠️ Parallel reasoning not available")
+    logger.warning("Parallel reasoning not available")
 
 # Action hooks for tmux dashboard real-time updates
 try:
@@ -270,14 +273,14 @@ class CanonicalEpistemicCascade:
                     enable_perspective_caching=enable_perspective_caching,
                     cache_ttl=cache_ttl
                 )
-                print("🧠 Parallel Reasoning enabled for epistemic assessment")
+                logger.info("Parallel Reasoning enabled for epistemic assessment")
             else:
                 self.parallel_reasoner = None
-                print("⚠️  Parallel reasoning not available (will use direct assessment)")
+                logger.warning("Parallel reasoning not available (will use direct assessment)")
         except Exception as e:
             self.parallel_reasoner = None
-            print(f"⚠️  Parallel reasoning initialization failed: {e}")
-            print("   Continuing with direct assessment mode")
+            logger.warning(f"Parallel reasoning initialization failed: {e}")
+            logger.info("Continuing with direct assessment mode")
 
         # Bayesian Guardian (CHECK phase - evidence-based belief tracking)
         self.enable_bayesian = enable_bayesian and BAYESIAN_AVAILABLE
@@ -285,7 +288,7 @@ class CanonicalEpistemicCascade:
         self.current_context_key = None
         self.current_domain = None
         if self.enable_bayesian:
-            print("🧮 Bayesian Guardian enabled")
+            logger.info("Bayesian Guardian enabled")
 
         # Drift Monitor (behavioral drift detection via parallel reasoning)
         # Requires parallel_reasoner to be initialized
@@ -294,33 +297,33 @@ class CanonicalEpistemicCascade:
             self.drift_monitor = DriftMonitor() if self.enable_drift_monitor else None
             # Note: synthesis_history is tracked in self.parallel_reasoner.synthesis_history
             if self.enable_drift_monitor:
-                print("📊 Drift Monitor enabled")
+                logger.info("Drift Monitor enabled")
             elif enable_drift_monitor:
-                print("⚠️  Drift monitoring requested but parallel reasoning unavailable")
+                logger.warning("Drift monitoring requested but parallel reasoning unavailable")
         except Exception as e:
             self.drift_monitor = None
             self.enable_drift_monitor = False
-            print(f"⚠️  Drift monitor initialization failed: {e}")
+            logger.warning(f"Drift monitor initialization failed: {e}")
         
         # Plugin System (extensible investigation tools)
         self.investigation_plugins = investigation_plugins or {}
         if self.investigation_plugins:
-            print(f"🔌 Loaded {len(self.investigation_plugins)} investigation plugins:")
+            logger.info(f"Loaded {len(self.investigation_plugins)} investigation plugins:")
             for plugin_name in self.investigation_plugins.keys():
-                print(f"   • {plugin_name}")
+                logger.info(f"   • {plugin_name}")
         
         # Action Hooks (real-time tmux dashboard updates)
         self.enable_action_hooks = enable_action_hooks and ACTION_HOOKS_AVAILABLE
         if self.enable_action_hooks:
-            print("🔗 Action Hooks enabled (real-time dashboard updates)")
+            logger.info("Action Hooks enabled (real-time dashboard updates)")
             
             # Auto-start dashboard if requested
             if auto_start_dashboard:
                 try:
                     initialize_tmux_dashboard()
-                    print("   🖥️ TMux dashboard auto-started")
+                    logger.info("TMux dashboard auto-started")
                 except Exception as e:
-                    print(f"   ⚠️ Dashboard auto-start failed: {e}")
+                    logger.warning(f"Dashboard auto-start failed: {e}")
         
         # Session Database (stores all epistemic states to SQLite)
         self.enable_session_db = enable_session_db and SESSION_DB_AVAILABLE
@@ -330,17 +333,17 @@ class CanonicalEpistemicCascade:
                 self.session_json = SessionJSONHandler()
                 self.current_session_id = None
                 self.current_cascade_id = None
-                print("📊 Session Database enabled (epistemic tracking)")
+                logger.info("Session Database enabled (epistemic tracking)")
             except Exception as e:
                 self.enable_session_db = False
                 self.session_db = None
                 self.session_json = None
-                print(f"⚠️  Session database failed: {e}")
+                logger.warning(f"Session database failed: {e}")
         else:
             self.session_db = None
             self.session_json = None
             if enable_session_db:
-                print("⚠️  Session database requested but not available")
+                logger.warning("Session database requested but not available")
 
     async def run_epistemic_cascade(
         self,
@@ -372,17 +375,17 @@ class CanonicalEpistemicCascade:
         # Generate task ID
         task_id = self._generate_task_id(task)
 
-        print(f"\n🧠 Canonical Epistemic Cascade - Enhanced 7-Phase Workflow")
-        print(f"   Task: '{task[:60]}...'")
-        print(f"   Task ID: {task_id}")
-        print(f"   Agent: {self.agent_id}")
+        logger.info("Canonical Epistemic Cascade - Enhanced 7-Phase Workflow")
+        logger.info(f"   Task: '{task[:60]}...'")
+        logger.info(f"   Task ID: {task_id}")
+        logger.info(f"   Agent: {self.agent_id}")
 
         # ================================================================
         # PHASE 0: PREFLIGHT - Baseline Epistemic Assessment
         # ================================================================
-        print(f"\n{'='*70}")
-        print(f"  PHASE 0: PREFLIGHT - Baseline Epistemic Assessment")
-        print(f"{'='*70}")
+        logger.info(f"\n{'='*70}")
+        logger.info(f"  PHASE 0: PREFLIGHT - Baseline Epistemic Assessment")
+        logger.info(f"{'='*70}")
         
         self._enter_phase(CascadePhase.PREFLIGHT)
         
@@ -411,12 +414,12 @@ class CanonicalEpistemicCascade:
                 phase="preflight"
             )
         
-        print(f"\n📊 PREFLIGHT Baseline Established:")
-        print(f"   Overall Confidence: {preflight_assessment.overall_confidence:.2f}")
-        print(f"   Foundation (KNOW/DO/CONTEXT): {preflight_assessment.foundation_confidence:.2f}")
-        print(f"   Comprehension (CLARITY/COHERENCE): {preflight_assessment.comprehension_confidence:.2f}")
-        print(f"   Execution Readiness: {preflight_assessment.execution_confidence:.2f}")
-        print(f"   Explicit Uncertainty: {preflight_assessment.uncertainty.score:.2f}")
+        logger.info(f"\n📊 PREFLIGHT Baseline Established:")
+        logger.info(f"   Overall Confidence: {preflight_assessment.overall_confidence:.2f}")
+        logger.info(f"   Foundation (KNOW/DO/CONTEXT): {preflight_assessment.foundation_confidence:.2f}")
+        logger.info(f"   Comprehension (CLARITY/COHERENCE): {preflight_assessment.comprehension_confidence:.2f}")
+        logger.info(f"   Execution Readiness: {preflight_assessment.execution_confidence:.2f}")
+        logger.info(f"   Explicit Uncertainty: {preflight_assessment.uncertainty.score:.2f}")
         
         # Action hooks: Log PREFLIGHT
         if self.enable_action_hooks:
@@ -429,9 +432,9 @@ class CanonicalEpistemicCascade:
         # ================================================================
         # PHASE 1: THINK - Initial epistemic assessment
         # ================================================================
-        print(f"\n{'='*70}")
-        print(f"  PHASE 1: THINK - Initial Reasoning")
-        print(f"{'='*70}")
+        logger.info(f"\n{'='*70}")
+        logger.info(f"  PHASE 1: THINK - Initial Reasoning")
+        logger.info(f"{'='*70}")
         
         self._enter_phase(CascadePhase.THINK)
 
@@ -452,10 +455,10 @@ class CanonicalEpistemicCascade:
         # ENGAGEMENT GATE CHECK
         # ================================================================
         if not assessment.engagement_gate_passed:
-            print(f"\n🚫 ENGAGEMENT GATE FAILED")
-            print(f"   Score: {assessment.engagement.score:.2f} (threshold: {ENGAGEMENT_THRESHOLD:.2f})")
-            print(f"   Rationale: {assessment.engagement.rationale}")
-            print(f"   Recommendation: Request clarification or reframe task")
+            logger.warning(f"\n🚫 ENGAGEMENT GATE FAILED")
+            logger.warning(f"   Score: {assessment.engagement.score:.2f} (threshold: {ENGAGEMENT_THRESHOLD:.2f})")
+            logger.warning(f"   Rationale: {assessment.engagement.rationale}")
+            logger.warning(f"   Recommendation: Request clarification or reframe task")
 
             # Early return: CLARIFY action
             final_decision = {
@@ -480,9 +483,9 @@ class CanonicalEpistemicCascade:
 
             return final_decision
 
-        print(f"\n✅ ENGAGEMENT GATE PASSED")
-        print(f"   Score: {assessment.engagement.score:.2f}")
-        print(f"   Rationale: {assessment.engagement.rationale}")
+        logger.info(f"\n✅ ENGAGEMENT GATE PASSED")
+        logger.info(f"   Score: {assessment.engagement.score:.2f}")
+        logger.info(f"   Rationale: {assessment.engagement.rationale}")
 
         # ================================================================
         # PHASE 2: THINK continues - Identify knowledge gaps
@@ -491,14 +494,14 @@ class CanonicalEpistemicCascade:
         
         knowledge_gaps = self._identify_knowledge_gaps(assessment)
 
-        print(f"\n📊 Self-Assessed Knowledge Gaps: {len(knowledge_gaps)}")
+        logger.info(f"\n📊 Self-Assessed Knowledge Gaps: {len(knowledge_gaps)}")
         if knowledge_gaps:
             for gap in knowledge_gaps:
                 priority_emoji = {'critical': '🔴', 'high': '🟠', 'medium': '🟡', 'low': '🟢'}.get(gap['priority'], '⚪')
-                print(f"   {priority_emoji} {gap['vector'].upper()} ({gap['score']:.2f}) - {gap['priority']}")
-                print(f"      Reason: {gap['reason']}")
+                logger.info(f"   {priority_emoji} {gap['vector'].upper()} ({gap['score']:.2f}) - {gap['priority']}")
+                logger.info(f"      Reason: {gap['reason']}")
         else:
-            print(f"   ✓ No gaps flagged for investigation")
+            logger.info(f"   ✓ No gaps flagged for investigation")
 
         # Already logged in THINK phase above
         
@@ -537,8 +540,8 @@ class CanonicalEpistemicCascade:
                     initial_variance=0.3
                 )
                 
-                print(f"\n   🧮 Bayesian Guardian activated for {self.current_domain} domain")
-                print(f"      Initialized beliefs from assessment")
+                logger.info(f"\n   🧮 Bayesian Guardian activated for {self.current_domain} domain")
+                logger.info(f"      Initialized beliefs from assessment")
         
         # Action hooks: Log 12D state and UNCERTAINTY phase
         if self.enable_action_hooks:
@@ -602,18 +605,18 @@ class CanonicalEpistemicCascade:
             # Decide whether to investigate
             if confidence_low:
                 # Mandatory investigation due to low confidence
-                print(f"\n🔬 Investigation Round {investigation_rounds + 1}/{max_rounds or '∞'} (REQUIRED - confidence {current_assessment.overall_confidence:.2f} < {threshold})")
+                logger.info(f"\n🔬 Investigation Round {investigation_rounds + 1}/{max_rounds or '∞'} (REQUIRED - confidence {current_assessment.overall_confidence:.2f} < {threshold})")
                 should_investigate = True
             elif critical_gaps:
                 # Voluntary investigation due to self-assessed critical gaps
-                print(f"\n🔬 Investigation Round {investigation_rounds + 1}/{max_rounds or '∞'} (VOLUNTARY - {len(critical_gaps)} critical/high priority gaps)")
+                logger.info(f"\n🔬 Investigation Round {investigation_rounds + 1}/{max_rounds or '∞'} (VOLUNTARY - {len(critical_gaps)} critical/high priority gaps)")
                 for gap in critical_gaps:
-                    print(f"   • {gap['vector']}: {gap['reason']}")
+                    logger.info(f"   • {gap['vector']}: {gap['reason']}")
                 should_investigate = True
             else:
                 # Confidence met and no critical gaps - skip investigation
-                print(f"\n✓ Confidence threshold met ({current_assessment.overall_confidence:.2f} ≥ {threshold})")
-                print(f"   No critical gaps flagged - proceeding to CHECK")
+                logger.info(f"\n✓ Confidence threshold met ({current_assessment.overall_confidence:.2f} ≥ {threshold})")
+                logger.info(f"   No critical gaps flagged - proceeding to CHECK")
                 should_investigate = False
 
             if not should_investigate:
@@ -661,13 +664,13 @@ class CanonicalEpistemicCascade:
                     )
                     db.close()
                 except Exception as e:
-                    print(f"   ⚠️  Could not log investigation to DB: {e}")
+                    logger.warning(f"   ⚠️  Could not log investigation to DB: {e}")
 
             self._update_tmux_display(
                 CascadePhase.INVESTIGATE, current_assessment, knowledge_gaps, investigation_rounds
             )
 
-            print(f"   Updated confidence: {current_assessment.overall_confidence:.2f}")
+            logger.info(f"   Updated confidence: {current_assessment.overall_confidence:.2f}")
 
         # ================================================================
         # PHASE 4: CHECK - Verify readiness to act
@@ -706,7 +709,7 @@ class CanonicalEpistemicCascade:
                 )
                 db.close()
             except Exception as e:
-                print(f"   ⚠️  Could not log ACT to DB: {e}")
+                logger.warning(f"Could not log ACT to DB: {e}")
 
         self._update_tmux_display(CascadePhase.ACT, current_assessment)
 
@@ -723,10 +726,10 @@ class CanonicalEpistemicCascade:
 
         self.cascade_history.append(self.current_state)
 
-        print(f"\n🎯 CASCADE COMPLETE")
-        print(f"   Action: {final_decision['action'].upper()}")
-        print(f"   Confidence: {final_decision['confidence']:.2f}")
-        print(f"   Investigation Rounds: {investigation_rounds}")
+        logger.info(f"\n🎯 CASCADE COMPLETE")
+        logger.info(f"   Action: {final_decision['action'].upper()}")
+        logger.info(f"   Confidence: {final_decision['confidence']:.2f}")
+        logger.info(f"   Investigation Rounds: {investigation_rounds}")
         
         # Action hook for ACT phase (final)
         if self.enable_action_hooks:
@@ -750,9 +753,9 @@ class CanonicalEpistemicCascade:
         # ================================================================
         # PHASE 6: POSTFLIGHT - Final Epistemic Assessment & Calibration
         # ================================================================
-        print(f"\n{'='*70}")
-        print(f"  PHASE 6: POSTFLIGHT - Final Epistemic Assessment")
-        print(f"{'='*70}")
+        logger.info(f"\n{'='*70}")
+        logger.info(f"  PHASE 6: POSTFLIGHT - Final Epistemic Assessment")
+        logger.info(f"{'='*70}")
         
         self._enter_phase(CascadePhase.POSTFLIGHT)
         
@@ -795,12 +798,12 @@ class CanonicalEpistemicCascade:
                 delta=epistemic_delta
             )
         
-        print(f"\n📊 POSTFLIGHT Assessment Complete:")
-        print(f"   Final Confidence: {postflight_assessment.overall_confidence:.2f}")
-        print(f"   Δ Foundation: {epistemic_delta.get('foundation_confidence', 0):+.2f}")
-        print(f"   Δ Comprehension: {epistemic_delta.get('comprehension_confidence', 0):+.2f}")
-        print(f"   Δ Execution: {epistemic_delta.get('execution_confidence', 0):+.2f}")
-        print(f"   Δ Uncertainty: {epistemic_delta.get('uncertainty', 0):+.2f} (should decrease)")
+        logger.info(f"\n📊 POSTFLIGHT Assessment Complete:")
+        logger.info(f"   Final Confidence: {postflight_assessment.overall_confidence:.2f}")
+        logger.info(f"   Δ Foundation: {epistemic_delta.get('foundation_confidence', 0):+.2f}")
+        logger.info(f"   Δ Comprehension: {epistemic_delta.get('comprehension_confidence', 0):+.2f}")
+        logger.info(f"   Δ Execution: {epistemic_delta.get('execution_confidence', 0):+.2f}")
+        logger.info(f"   Δ Uncertainty: {epistemic_delta.get('uncertainty', 0):+.2f} (should decrease)")
         
         # Calibration check: Did confidence match reality?
         calibration_check = self._check_calibration_accuracy(
@@ -810,10 +813,10 @@ class CanonicalEpistemicCascade:
         )
         
         # Report calibration delta without judgment
-        print(f"\n📊 Calibration Delta: {calibration_check['note']}")
-        print(f"   PREFLIGHT confidence: {calibration_check['preflight_confidence']:.2f}")
-        print(f"   POSTFLIGHT confidence: {calibration_check['postflight_confidence']:.2f}")
-        print(f"   Learning occurred: {'Yes' if calibration_check['confidence_delta'] > 0 else 'No change' if calibration_check['confidence_delta'] == 0 else 'Decreased'}")
+        logger.info(f"\n📊 Calibration Delta: {calibration_check['note']}")
+        logger.info(f"   PREFLIGHT confidence: {calibration_check['preflight_confidence']:.2f}")
+        logger.info(f"   POSTFLIGHT confidence: {calibration_check['postflight_confidence']:.2f}")
+        logger.info(f"   Learning occurred: {'Yes' if calibration_check['confidence_delta'] > 0 else 'No change' if calibration_check['confidence_delta'] == 0 else 'Decreased'}")
         
         # Action hooks: Log POSTFLIGHT
         if self.enable_action_hooks:
@@ -872,7 +875,7 @@ class CanonicalEpistemicCascade:
         if self.session_db:
             real_assessment = await self._retrieve_mcp_assessment(task_id, phase)
             if real_assessment:
-                print(f"\n   ✅ Using genuine self-assessment from MCP for phase: {phase.value}")
+                logger.info(f"\n   ✅ Using genuine self-assessment from MCP for phase: {phase.value}")
                 return real_assessment
         
         # Get self-assessment prompt from canonical assessor
@@ -881,8 +884,8 @@ class CanonicalEpistemicCascade:
         # Check if we need AI self-assessment
         if isinstance(assessment_request, dict) and 'self_assessment_prompt' in assessment_request:
             # No MCP assessment found - use baseline
-            print(f"\n   🤔 No MCP assessment found - using baseline for phase: {phase.value}")
-            print(f"   📋 (In MCP mode, call execute_{phase.value} to get self-assessment prompt)")
+            logger.info(f"\n   🤔 No MCP assessment found - using baseline for phase: {phase.value}")
+            logger.info(f"   📋 (In MCP mode, call execute_{phase.value} to get self-assessment prompt)")
             
             # Create baseline assessment
             from empirica.core.canonical.reflex_frame import VectorState
