@@ -104,16 +104,26 @@ class CanonicalGoalOrchestrator:
     Pure LLM reasoning based on epistemic assessment.
     """
     
-    def __init__(self, llm_client=None, use_placeholder: bool = True):
+    def __init__(self, llm_client=None, llm_callback=None, use_placeholder: bool = True):
         """
         Initialize orchestrator
         
         Args:
-            llm_client: LLM client for generating goals (optional)
+            llm_client: LLM client for generating goals (optional, legacy)
+            llm_callback: Function(prompt: str) -> str for AI reasoning (preferred)
             use_placeholder: If True, use placeholder simulation (for testing)
+                           If False, requires llm_client or llm_callback
         """
         self.llm_client = llm_client
+        self.llm_callback = llm_callback
         self.use_placeholder = use_placeholder
+        
+        # Validate: if not using placeholder, need callback or client
+        if not use_placeholder and not llm_callback and not llm_client:
+            raise ValueError(
+                "When use_placeholder=False, must provide llm_callback or llm_client. "
+                "llm_callback is preferred: a function that takes a prompt (str) and returns AI response (str)."
+            )
         
         if not CANONICAL_AVAILABLE:
             logger.warning("Canonical components not available, functionality limited")
@@ -141,14 +151,19 @@ class CanonicalGoalOrchestrator:
             current_state
         )
         
-        # Generate goals using LLM or placeholder
-        if self.use_placeholder or not self.llm_client:
+        # Generate goals using LLM, callback, or placeholder
+        if self.use_placeholder or (not self.llm_callback and not self.llm_client):
             goals = self._placeholder_goal_generation(
                 conversation_context,
                 epistemic_assessment,
                 current_state
             )
+        elif self.llm_callback:
+            # Use callback (synchronous function)
+            llm_response = self.llm_callback(meta_prompt)
+            goals = self._parse_llm_goal_response(llm_response)
         else:
+            # Use llm_client (async)
             llm_response = await self.llm_client.generate(meta_prompt)
             goals = self._parse_llm_goal_response(llm_response)
         
@@ -439,9 +454,33 @@ Generate the goals now:
 
 
 # Convenience function
-def create_goal_orchestrator(llm_client=None, use_placeholder: bool = True) -> CanonicalGoalOrchestrator:
-    """Create and return a CanonicalGoalOrchestrator instance"""
-    return CanonicalGoalOrchestrator(llm_client, use_placeholder)
+def create_goal_orchestrator(llm_client=None, llm_callback=None, use_placeholder: bool = True) -> CanonicalGoalOrchestrator:
+    """
+    Create and return a CanonicalGoalOrchestrator instance
+    
+    Args:
+        llm_client: LLM client (legacy, async)
+        llm_callback: Function(prompt: str) -> str for AI reasoning (preferred)
+        use_placeholder: If True, use threshold-based goals (default)
+                        If False, use llm_callback or llm_client for AI reasoning
+    
+    Returns:
+        CanonicalGoalOrchestrator instance
+        
+    Examples:
+        # Threshold-based mode (default)
+        orchestrator = create_goal_orchestrator(use_placeholder=True)
+        
+        # AI reasoning mode with callback
+        def my_llm(prompt: str) -> str:
+            return ai_client.reason(prompt)
+        
+        orchestrator = create_goal_orchestrator(
+            llm_callback=my_llm,
+            use_placeholder=False
+        )
+    """
+    return CanonicalGoalOrchestrator(llm_client, llm_callback, use_placeholder)
 
 
 if __name__ == "__main__":

@@ -97,10 +97,11 @@ class OptimalMetacognitiveBootstrap:
         level_map = {"minimal": 0, "standard": 1, "full": 2}
         return level_map.get(level, 1)
     
-    def __init__(self, ai_id: str = "empirica_ai", level: str = "standard"):
+    def __init__(self, ai_id: str = "empirica_ai", level: str = "standard", llm_callback=None):
         self.ai_id = ai_id
         # Normalize level to handle both numeric and named inputs
         self.level = self._normalize_level(level)
+        self.llm_callback = llm_callback
         self.components = {}
         self.bootstrap_start_time = time.time()
         
@@ -178,12 +179,21 @@ class OptimalMetacognitiveBootstrap:
                 create_goal_orchestrator
             )
             
-            self.components['canonical_goal_orchestrator'] = create_goal_orchestrator(use_placeholder=True)
+            # Create orchestrator with llm_callback if provided
+            if self.llm_callback:
+                self.components['canonical_goal_orchestrator'] = create_goal_orchestrator(
+                    llm_callback=self.llm_callback,
+                    use_placeholder=False
+                )
+                print("   ✅ Canonical goal orchestrator loaded (AI reasoning mode)")
+                print("   🧠 Self-referential goal generation: ACTIVE")
+            else:
+                self.components['canonical_goal_orchestrator'] = create_goal_orchestrator(use_placeholder=True)
+                print("   ✅ Canonical goal orchestrator loaded (threshold-based mode)")
+            
             # Legacy aliases for backward compatibility
             self.components['orchestrate'] = self.components['canonical_goal_orchestrator'].orchestrate_goals
             self.components['goal_orchestrator'] = self.components['canonical_goal_orchestrator']
-            
-            print("   ✅ Canonical goal orchestrator loaded (threshold-based mode)")
             print("   🎯 ENGAGEMENT-driven autonomy: ACTIVE")
         except Exception as e:
             print(f"   ⚠️ Canonical goal orchestrator failed: {e}")
@@ -403,18 +413,29 @@ class OptimalMetacognitiveBootstrap:
 
 
 # Convenience function for quick bootstrap
-def bootstrap_metacognition(ai_id: str = "empirica_ai", level: str = "standard") -> Dict[str, Any]:
+def bootstrap_metacognition(ai_id: str = "empirica_ai", level: str = "standard", llm_callback=None) -> Dict[str, Any]:
     """
     Quick bootstrap function
     
     Args:
         ai_id: AI identifier
         level: Bootstrap level (minimal, standard, full)
+        llm_callback: Optional function(prompt: str) -> str for AI-powered goal generation
         
     Returns:
         Dictionary of loaded components
+        
+    Example:
+        # Threshold-based mode (default)
+        components = bootstrap_metacognition("my-ai", "minimal")
+        
+        # AI reasoning mode
+        def my_llm(prompt: str) -> str:
+            return ai_client.reason(prompt)
+        
+        components = bootstrap_metacognition("my-ai", "minimal", llm_callback=my_llm)
     """
-    bootstrap = OptimalMetacognitiveBootstrap(ai_id, level)
+    bootstrap = OptimalMetacognitiveBootstrap(ai_id, level, llm_callback)
     return bootstrap.bootstrap()
 
 
