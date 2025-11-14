@@ -1262,21 +1262,21 @@ class CanonicalEpistemicCascade:
         # Show which tools can address the gaps AI flagged
         self_assessed_gaps = [g for g in gaps if isinstance(g, dict) and 'vector' in g]
 
-        print(f"\n   🛠️  Available tools ({len(tool_capabilities)} tools with capabilities):")
+        logger.info(f"\n   🛠️  Available tools ({len(tool_capabilities)} tools with capabilities):")
         for tool_name, capability in list(tool_capabilities.items())[:5]:
-            print(f"      • {tool_name}")
-            print(f"        Improves: {', '.join(capability['improves_vectors'])}")
-            print(f"        {capability['description'][:70]}...")
+            logger.info(f"      • {tool_name}")
+            logger.info(f"        Improves: {', '.join(capability['improves_vectors'])}")
+            logger.info(f"        {capability['description'][:70]}...")
 
         if self_assessed_gaps:
             priority_gaps = [g for g in self_assessed_gaps if g.get('priority') in ['critical', 'high']]
             if priority_gaps:
-                print(f"\n   🎯 Focus on self-assessed gaps: {', '.join(g['vector'] for g in priority_gaps[:3])}")
-                print(f"      AI reasoning: {priority_gaps[0].get('reason', 'Gap flagged for investigation')}")
+                logger.info(f"\n   🎯 Focus on self-assessed gaps: {', '.join(g['vector'] for g in priority_gaps[:3])}")
+                logger.info(f"      AI reasoning: {priority_gaps[0].get('reason', 'Gap flagged for investigation')}")
             else:
-                print(f"\n   🎯 Investigating {len(self_assessed_gaps)} self-assessed gaps")
+                logger.info(f"\n   🎯 Investigating {len(self_assessed_gaps)} self-assessed gaps")
         else:
-            print(f"\n   🎯 No specific gaps flagged - exploratory investigation")
+            logger.info(f"\n   🎯 No specific gaps flagged - exploratory investigation")
         
         # Action hook for INVESTIGATE phase
         if self.enable_action_hooks:
