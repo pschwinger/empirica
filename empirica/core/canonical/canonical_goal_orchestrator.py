@@ -36,6 +36,13 @@ except ImportError:
         EpistemicAssessment = Any
         Action = Any
 
+# Import centralized thresholds
+try:
+    from ..thresholds import GOAL_CONFIDENCE_THRESHOLD
+except ImportError:
+    # Fallback: use default value
+    GOAL_CONFIDENCE_THRESHOLD = 0.70
+
 
 class GoalPriority(Enum):
     """Goal priority levels"""
@@ -332,31 +339,31 @@ Generate the goals now:
                 ))
             
             # Low KNOW → need investigation
-            if epistemic_assessment.know.score < 0.70:
+            if epistemic_assessment.know.score < GOAL_CONFIDENCE_THRESHOLD:
                 goals.append(Goal(
                     goal="Investigate domain knowledge and gather necessary information",
                     priority=8,
                     action_type="INVESTIGATE",
                     autonomy_level=autonomy,
-                    reasoning=f"KNOW vector is {epistemic_assessment.know.score:.2f} (below 0.70). Rationale: {epistemic_assessment.know.rationale}. Knowledge gap needs addressing.",
+                    reasoning=f"KNOW vector is {epistemic_assessment.know.score:.2f} (below {GOAL_CONFIDENCE_THRESHOLD:.2f}). Rationale: {epistemic_assessment.know.rationale}. Knowledge gap needs addressing.",
                     estimated_time="10-20 minutes",
                     success_criteria="Sufficient domain knowledge to proceed confidently"
                 ))
             
             # Low CONTEXT → need environment mapping
-            if epistemic_assessment.context.score < 0.70:
+            if epistemic_assessment.context.score < GOAL_CONFIDENCE_THRESHOLD:
                 goals.append(Goal(
                     goal="Map environmental context and validate assumptions",
                     priority=7,
                     action_type="INVESTIGATE",
                     autonomy_level=autonomy,
-                    reasoning=f"CONTEXT vector is {epistemic_assessment.context.score:.2f} (below 0.70). Rationale: {epistemic_assessment.context.rationale}. Environmental understanding needed.",
+                    reasoning=f"CONTEXT vector is {epistemic_assessment.context.score:.2f} (below {GOAL_CONFIDENCE_THRESHOLD:.2f}). Rationale: {epistemic_assessment.context.rationale}. Environmental understanding needed.",
                     estimated_time="10-15 minutes",
                     success_criteria="Clear understanding of working environment"
                 ))
             
             # Overall confidence met → proceed to action
-            if epistemic_assessment.overall_confidence >= 0.70:
+            if epistemic_assessment.overall_confidence >= GOAL_CONFIDENCE_THRESHOLD:
                 goals.append(Goal(
                     goal="Execute the task based on current understanding",
                     priority=10,
