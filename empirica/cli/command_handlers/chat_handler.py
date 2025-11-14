@@ -9,6 +9,7 @@ Supports markdown rendering via glow for beautiful terminal output.
 import sys
 import uuid
 import json
+import logging
 import subprocess
 import tempfile
 from pathlib import Path
@@ -22,6 +23,9 @@ from ..uvl_formatter import (
     format_uvl_stream_message,
     get_agent_emoji
 )
+
+# Set up logging for chat handler
+logger = logging.getLogger(__name__)
 
 
 def render_markdown(text: str, use_glow: bool = True) -> str:
@@ -427,9 +431,11 @@ def _load_chat_session(session_id: str) -> List[Dict]:
             session_data = json.load(f)
         
         conversation = session_data.get('conversation', [])
+        logger.info(f"Loaded session {session_id} with {len(conversation)} messages")
         print(f"✅ Loaded session: {session_id} ({len(conversation)} messages)")
         return conversation
     except Exception as e:
+        logger.warning(f"Failed to load session: {e}")
         print(f"⚠️  Failed to load session: {e}")
         return []
 
