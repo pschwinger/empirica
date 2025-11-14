@@ -142,7 +142,7 @@ class OptimalMetacognitiveBootstrap:
         
         # 1. Load 13-vector metacognition (FOUNDATION)
         print("1️⃣ Loading 13-vector metacognition...")
-        from core.metacognition_12d_monitor import (
+        from empirica.core.metacognition_12d_monitor import (
             ComprehensiveSelfAwarenessAssessment,
             TwelveVectorSelfAwarenessMonitor,
             EngagementDimension,
@@ -158,7 +158,7 @@ class OptimalMetacognitiveBootstrap:
         
         # 2. Load adaptive uncertainty calibration (EMPIRICAL LEARNING)
         print("\n2️⃣ Loading adaptive uncertainty calibration...")
-        from calibration.adaptive_uncertainty_calibration import (
+        from empirica.calibration.adaptive_uncertainty_calibration import (
             AdaptiveUncertaintyCalibration,
             UQVector,
             CalibrationResult
@@ -173,7 +173,7 @@ class OptimalMetacognitiveBootstrap:
         # 3. Load canonical goal orchestrator (LLM-POWERED, NO HEURISTICS)
         print("\n3️⃣ Loading canonical goal orchestrator...")
         try:
-            from core.canonical.canonical_goal_orchestrator import (
+            from empirica.core.canonical.canonical_goal_orchestrator import (
                 CanonicalGoalOrchestrator,
                 create_goal_orchestrator
             )
@@ -189,7 +189,7 @@ class OptimalMetacognitiveBootstrap:
             print(f"   ⚠️ Canonical goal orchestrator failed: {e}")
             print("   ⚠️ Falling back to legacy goal orchestrator (heuristic-based)")
             
-            from goal_management.autonomous_goal_orchestrator import (
+            from empirica.components.goal_management.autonomous_goal_orchestrator import (
                 DynamicContextAnalyzer,
                 create_dynamic_goals,
                 enhanced_orchestrate_with_context
@@ -231,7 +231,7 @@ class OptimalMetacognitiveBootstrap:
         # Load canonical cascade (includes Enhanced Cascade Workflow)
         print("1️⃣ Loading canonical epistemic cascade...")
         try:
-            from core.metacognitive_cascade import CanonicalEpistemicCascade
+            from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
             self.components['canonical_cascade'] = CanonicalEpistemicCascade()
             print("   ✅ Canonical cascade loaded (7-phase workflow integrated)")
             print("   📊 Workflow: PREFLIGHT → Think → Plan → Investigate → Check → Act → POSTFLIGHT")
@@ -388,7 +388,7 @@ class OptimalMetacognitiveBootstrap:
         if 'calibration' not in self.components:
             raise RuntimeError("Bootstrap minimal or higher first")
         
-        from calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import FeedbackOutcome
+        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import FeedbackOutcome
         
         feedback = FeedbackOutcome(
             accuracy=outcome.get('accuracy', 0.5),
