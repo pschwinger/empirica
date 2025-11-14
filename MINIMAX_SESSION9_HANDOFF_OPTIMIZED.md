@@ -1,8 +1,8 @@
-# Minimax Session 9: Git Integration Test - OPTIMIZED FOR 50-ROUND SESSIONS
+# Minimax Session 9: Git Integration Test - OPTIMIZED FOR 100-ROUND SESSIONS
 
 **Primary Goal:** Test Phase 1.5 git integration and measure token efficiency  
-**Secondary Goal:** Continue work on assigned development tasks  
-**Optimization:** Structured for 50-round mini-agent sessions with minimal logging
+**Secondary Goal:** Continue work on assigned development tasks (P1 print refactoring)  
+**Optimization:** Structured for 100-round mini-agent sessions with minimal logging
 
 ---
 
@@ -55,11 +55,16 @@ git notes --help > /dev/null && echo "✓ Git notes available"
 
 ---
 
-## ⚡ OPTIMIZED WORKFLOW (Rounds 11-50)
+## ⚡ OPTIMIZED WORKFLOW (Rounds 11-100)
 
 ### Strategy: Minimize Logging, Maximize Work
 
 **Key Insight:** You don't need verbose logging every round. Use git commits as your log.
+
+**With 100 rounds, you have time for:**
+- Comprehensive testing (not just smoke tests)
+- P1 work continuation (2,990 prints remaining)
+- Documentation and handoff preparation
 
 ### Round 11-15: CHECK & DECIDE
 ```bash
@@ -78,11 +83,11 @@ git notes add -m '{
 }'
 ```
 
-### Round 16-40: ACT (Main Work - 25 Rounds Available!)
+### Round 16-85: ACT (Main Work - 70 Rounds Available!)
 
-**Split into 3 sub-tasks:**
+**Split into 4 sub-tasks:**
 
-#### Sub-task 1: Test Git Integration (Rounds 16-25)
+#### Sub-task 1: Test Git Integration (Rounds 16-30)
 ```python
 # Test 1: Create checkpoint and verify
 from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
@@ -112,7 +117,7 @@ git commit -m "test: Verify git checkpoint creation and retrieval"
 git notes add -m '{"phase": "ACT", "round": 20, "progress": 0.3}'
 ```
 
-#### Sub-task 2: Measure Token Efficiency (Rounds 26-35)
+#### Sub-task 2: Measure Token Efficiency (Rounds 31-45)
 ```python
 # Compare baseline vs git-backed context
 from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
@@ -145,15 +150,33 @@ git commit -m "feat: Session 9 token efficiency report - XX% reduction measured"
 git notes add -m '{"phase": "ACT", "round": 30, "progress": 0.6, "token_savings": "XX%"}'
 ```
 
-#### Sub-task 3: P1 Work If Time (Rounds 36-40)
+#### Sub-task 3: P1 Print Refactoring (Rounds 46-75)
 ```bash
-# Only if Sub-tasks 1-2 complete with time remaining
-# Continue P1 print statement refactoring (2,990 remaining)
-# Or: Document findings
-# Or: Write integration guide
+# With 100 rounds, you have time for real P1 progress!
+# 2,990 prints remaining - target: 200-300 prints in this session
+
+# Strategy:
+# 1. Start with high-frequency print patterns (most used)
+# 2. Batch convert 30-50 at a time, test, commit
+# 3. Use logging.info(), logging.debug() as appropriate
+# 4. Create checkpoints every 100 prints converted
+
+# Example:
+git grep "print(" empirica/ | head -50 > /tmp/prints_to_convert.txt
+# Convert batch, test, commit
+git commit -m "refactor: Convert 50 prints to logging in core/"
+git notes add -m '{"progress": "150/2990 prints converted"}'
 ```
 
-### Round 41-45: POSTFLIGHT
+#### Sub-task 4: Documentation (Rounds 76-85)
+```bash
+# Document what you learned and accomplished
+# 1. Update session summary
+# 2. Create handoff for Session 10
+# 3. Document any issues discovered
+```
+
+### Round 86-95: POSTFLIGHT
 ```python
 # Final assessment
 # Compare to PREFLIGHT:
@@ -164,11 +187,12 @@ git notes add -m '{"phase": "ACT", "round": 30, "progress": 0.6, "token_savings"
 # Create final checkpoint
 git notes add -m '{
   "phase": "POSTFLIGHT",
-  "round": 45,
+  "round": 95,
   "confidence": 0.92,
   "learning": {
     "know_delta": 0.15,
     "token_savings_measured": "85%",
+    "prints_converted": 250,
     "status": "well_calibrated"
   }
 }'
@@ -179,7 +203,7 @@ git add SESSION9_SUMMARY.md
 git commit -m "docs: Session 9 complete - Git integration tested and validated"
 ```
 
-### Round 46-50: BUFFER (Cleanup/Documentation)
+### Round 96-100: BUFFER (Cleanup/Final Review)
 ```bash
 # Use remaining rounds for:
 # - Clean up test files
@@ -253,8 +277,8 @@ pytest --collect-only > /tmp/test_list.txt
 7. ✅ Git notes created at phase boundaries
 8. ✅ Session summary written
 
-### Nice to Have (Optional)
-9. ⭕ P1 work continued (if time permits)
+### Nice to Have (Achievable with 100 rounds!)
+9. ✅ P1 work: 200-300 prints converted (30 rounds allocated)
 10. ⭕ Integration guide written
 11. ⭕ Additional tests added
 
@@ -267,15 +291,17 @@ pytest --collect-only > /tmp/test_list.txt
 | PREFLIGHT | 1-5 | Bootstrap, initial assessment |
 | INVESTIGATE | 6-10 | Verify Phase 1.5 ready, read docs |
 | CHECK | 11-15 | Decision gate (proceed?) |
-| ACT - Test 1 | 16-25 | Git integration testing |
-| ACT - Test 2 | 26-35 | Token efficiency measurement |
-| ACT - Extra | 36-40 | P1 work or documentation |
-| POSTFLIGHT | 41-45 | Final assessment, calibration |
-| BUFFER | 46-50 | Cleanup, handoff prep |
+| ACT - Test 1 | 16-30 | Git integration testing (15 rounds) |
+| ACT - Test 2 | 31-45 | Token efficiency measurement (15 rounds) |
+| ACT - P1 Work | 46-75 | Print refactoring (30 rounds, ~250 prints) |
+| ACT - Docs | 76-85 | Documentation and handoff (10 rounds) |
+| POSTFLIGHT | 86-95 | Final assessment, calibration (10 rounds) |
+| BUFFER | 96-100 | Cleanup, final review (5 rounds) |
 
-**Total:** 50 rounds
+**Total:** 100 rounds
 
-**Padding:** 5 rounds buffer (if things take longer)
+**Primary Work:** 70 rounds (testing + P1 + docs)  
+**Padding:** 5 rounds buffer for unexpected issues
 
 ---
 
@@ -310,21 +336,27 @@ pytest --collect-only > /tmp/test_list.txt
 # Create mid-session checkpoint
 git notes add -m '{
   "phase": "ACT_INTERRUPTED",
-  "round": 50,
-  "progress": 0.75,
-  "next_steps": ["Complete token measurement", "Write summary"]
+  "round": 100,
+  "progress": 0.90,
+  "next_steps": ["Complete P1 batch", "Finalize summary"]
 }'
 
-git commit -m "checkpoint: Session 9 round 50 - 75% complete, continue next session"
+git commit -m "checkpoint: Session 9 round 100 - 90% complete, continue next session"
 ```
 
 ### Option 2: Prioritize Critical Work
 ```bash
-# If running low on rounds (round 40+):
-# 1. Skip P1 work (optional)
-# 2. Skip extra documentation (optional)
-# 3. Focus on: token measurement + POSTFLIGHT
-# 4. Must have: efficiency report and session summary
+# If running low on rounds (round 85+):
+# Priority order:
+# 1. MUST COMPLETE: Token efficiency measurement + report (critical)
+# 2. SHOULD COMPLETE: P1 progress (at least 150 prints converted)
+# 3. NICE TO HAVE: Comprehensive documentation (can be minimal)
+# 4. MUST HAVE: POSTFLIGHT assessment (for calibration)
+
+# Drop extra documentation if needed, but keep:
+# - Token efficiency report
+# - Session summary (1-2 paragraphs)
+# - POSTFLIGHT assessment
 ```
 
 ---
