@@ -19,6 +19,9 @@ from enum import Enum
 from datetime import datetime, UTC
 import json
 
+# Import centralized thresholds
+from ..thresholds import ENGAGEMENT_THRESHOLD, CRITICAL_THRESHOLDS
+
 
 class Action(Enum):
     """Metacognitive action decisions"""
@@ -316,12 +319,5 @@ CANONICAL_WEIGHTS = {
     'engagement': 0.15       # engagement (gate + weight)
 }
 
-# ENGAGEMENT GATE THRESHOLD
-ENGAGEMENT_THRESHOLD = 0.60
-
-# CRITICAL THRESHOLDS
-CRITICAL_THRESHOLDS = {
-    'coherence_min': 0.50,  # Below this: RESET
-    'density_max': 0.90,    # Above this: RESET
-    'change_min': 0.50      # Below this: STOP
-}
+# ENGAGEMENT and CRITICAL thresholds now imported from centralized configuration
+# See empirica/core/thresholds.py for definitions

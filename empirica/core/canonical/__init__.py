@@ -21,10 +21,11 @@ from .reflex_frame import (
     EpistemicAssessment,
     ReflexFrame,
     Action,
-    CANONICAL_WEIGHTS,
-    ENGAGEMENT_THRESHOLD,
-    CRITICAL_THRESHOLDS
+    CANONICAL_WEIGHTS
 )
+
+# Import centralized thresholds
+from ..thresholds import ENGAGEMENT_THRESHOLD, CRITICAL_THRESHOLDS
 
 from .reflex_logger import (
     ReflexLogger,
