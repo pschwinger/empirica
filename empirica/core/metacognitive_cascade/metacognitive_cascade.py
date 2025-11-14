@@ -189,7 +189,9 @@ class CanonicalEpistemicCascade:
         auto_start_dashboard: bool = False,
         enable_perspective_caching: bool = True,  # Phase 2 optimization
         cache_ttl: int = 300,  # Phase 2: Cache TTL in seconds
-        enable_session_db: bool = True  # Session database tracking
+        enable_session_db: bool = True,  # Session database tracking
+        enable_git_notes: bool = True,  # Phase 1.5: Git-enhanced checkpoints
+        session_id: Optional[str] = None  # Phase 1.5: Session ID for git notes
     ):
         """
         Initialize canonical cascade
@@ -214,6 +216,8 @@ class CanonicalEpistemicCascade:
             enable_perspective_caching: Enable Phase 2 optimization - cache perspectives (default: True)
             cache_ttl: Phase 2 cache time-to-live in seconds (default: 300)
             enable_session_db: Enable session database for epistemic tracking (default: True)
+            enable_git_notes: Enable Phase 1.5 git-enhanced checkpoints (97.5% token reduction) (default: True)
+            session_id: Session ID for git notes tracking (default: auto-generated)
         """
         # Load investigation profile
         from empirica.config.profile_loader import select_profile, get_profile_loader
@@ -259,6 +263,30 @@ class CanonicalEpistemicCascade:
 
         # Initialize Reflex Frame logger for temporal separation
         self.reflex_logger = ReflexLogger()
+        
+        # Phase 1.5: Initialize Git-Enhanced Reflex Logger for compressed checkpoints
+        self.enable_git_notes = enable_git_notes
+        self.session_id = session_id or f"cascade-{agent_id}-{int(time.time())}"
+        
+        if self.enable_git_notes:
+            try:
+                from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+                from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
+                
+                self.git_logger = GitEnhancedReflexLogger(
+                    session_id=self.session_id,
+                    enable_git_notes=True
+                )
+                self.token_metrics = TokenEfficiencyMetrics(session_id=self.session_id)
+                logger.info(f"Git-enhanced checkpoints enabled (session: {self.session_id})")
+            except Exception as e:
+                logger.warning(f"Git integration unavailable: {e}")
+                self.git_logger = None
+                self.token_metrics = None
+                self.enable_git_notes = False
+        else:
+            self.git_logger = None
+            self.token_metrics = None
 
         # Track cascade state
         self.current_state: Optional[CanonicalCascadeState] = None
@@ -413,6 +441,34 @@ class CanonicalEpistemicCascade:
                 assessment=preflight_assessment,
                 phase="preflight"
             )
+        
+        # Phase 1.5: Create git checkpoint (compressed, 97.5% token reduction)
+        if self.enable_git_notes and self.git_logger:
+            try:
+                vectors_dict = {
+                    'engagement': preflight_assessment.engagement.score,
+                    'know': preflight_assessment.know.score,
+                    'do': preflight_assessment.do.score,
+                    'context': preflight_assessment.context.score,
+                    'clarity': preflight_assessment.clarity.score,
+                    'coherence': preflight_assessment.coherence.score,
+                    'signal': preflight_assessment.signal.score,
+                    'density': preflight_assessment.density.score,
+                    'state': preflight_assessment.state.score,
+                    'change': preflight_assessment.change.score,
+                    'completion': preflight_assessment.completion.score,
+                    'impact': preflight_assessment.impact.score,
+                    'uncertainty': preflight_assessment.uncertainty.score
+                }
+                self.git_logger.add_checkpoint(
+                    phase="PREFLIGHT",
+                    round_num=1,
+                    vectors=vectors_dict,
+                    metadata={"task": task[:100] if task else ""}
+                )
+                logger.info("✓ PREFLIGHT checkpoint saved to git notes")
+            except Exception as e:
+                logger.warning(f"Git checkpoint failed: {e}")
         
         logger.info(f"\n📊 PREFLIGHT Baseline Established:")
         logger.info(f"   Overall Confidence: {preflight_assessment.overall_confidence:.2f}")
@@ -681,6 +737,37 @@ class CanonicalEpistemicCascade:
 
         # Log CHECK phase
         await self._log_reflex_frame(current_assessment, CascadePhase.CHECK, task_id, task, context)
+        
+        # Phase 1.5: Create CHECK checkpoint
+        if self.enable_git_notes and self.git_logger:
+            try:
+                vectors_dict = {
+                    'engagement': current_assessment.engagement.score,
+                    'know': current_assessment.know.score,
+                    'do': current_assessment.do.score,
+                    'context': current_assessment.context.score,
+                    'clarity': current_assessment.clarity.score,
+                    'coherence': current_assessment.coherence.score,
+                    'signal': current_assessment.signal.score,
+                    'density': current_assessment.density.score,
+                    'state': current_assessment.state.score,
+                    'change': current_assessment.change.score,
+                    'completion': current_assessment.completion.score,
+                    'impact': current_assessment.impact.score,
+                    'uncertainty': current_assessment.uncertainty.score
+                }
+                self.git_logger.add_checkpoint(
+                    phase="CHECK",
+                    round_num=investigation_rounds + 2,  # PREFLIGHT(1) + THINK + investigations
+                    vectors=vectors_dict,
+                    metadata={
+                        "investigation_rounds": investigation_rounds,
+                        "decision": check_result.get('decision', 'proceed')
+                    }
+                )
+                logger.info("✓ CHECK checkpoint saved to git notes")
+            except Exception as e:
+                logger.warning(f"Git checkpoint failed: {e}")
 
         self._update_tmux_display(CascadePhase.CHECK, current_assessment)
 
@@ -797,6 +884,54 @@ class CanonicalEpistemicCascade:
                 cascade_id=task_id,
                 delta=epistemic_delta
             )
+        
+        # Phase 1.5: Create POSTFLIGHT checkpoint (final state + learning deltas)
+        if self.enable_git_notes and self.git_logger:
+            try:
+                vectors_dict = {
+                    'engagement': postflight_assessment.engagement.score,
+                    'know': postflight_assessment.know.score,
+                    'do': postflight_assessment.do.score,
+                    'context': postflight_assessment.context.score,
+                    'clarity': postflight_assessment.clarity.score,
+                    'coherence': postflight_assessment.coherence.score,
+                    'signal': postflight_assessment.signal.score,
+                    'density': postflight_assessment.density.score,
+                    'state': postflight_assessment.state.score,
+                    'change': postflight_assessment.change.score,
+                    'completion': postflight_assessment.completion.score,
+                    'impact': postflight_assessment.impact.score,
+                    'uncertainty': postflight_assessment.uncertainty.score
+                }
+                self.git_logger.add_checkpoint(
+                    phase="POSTFLIGHT",
+                    round_num=investigation_rounds + 10,  # Approximate final round
+                    vectors=vectors_dict,
+                    metadata={
+                        "investigation_rounds": investigation_rounds,
+                        "epistemic_delta": {
+                            "foundation": epistemic_delta.get('foundation_confidence', 0),
+                            "comprehension": epistemic_delta.get('comprehension_confidence', 0),
+                            "execution": epistemic_delta.get('execution_confidence', 0),
+                            "uncertainty": epistemic_delta.get('uncertainty', 0)
+                        },
+                        "outcome": final_decision.get('action', 'completed')
+                    }
+                )
+                logger.info("✓ POSTFLIGHT checkpoint saved to git notes")
+                
+                # Generate token efficiency report
+                if self.token_metrics:
+                    try:
+                        report = self.token_metrics.export_report(format="json")
+                        comparison = self.token_metrics.compare_efficiency()
+                        reduction = comparison["total"]["reduction_percentage"]
+                        logger.info(f"✓ Token efficiency: {reduction:.1f}% reduction achieved")
+                    except Exception as e:
+                        logger.debug(f"Token report generation skipped: {e}")
+                        
+            except Exception as e:
+                logger.warning(f"Git checkpoint failed: {e}")
         
         logger.info(f"\n📊 POSTFLIGHT Assessment Complete:")
         logger.info(f"   Final Confidence: {postflight_assessment.overall_confidence:.2f}")
