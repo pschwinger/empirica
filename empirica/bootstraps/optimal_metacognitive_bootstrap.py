@@ -170,7 +170,7 @@ class OptimalMetacognitiveBootstrap:
         print("   ✅ Calibration system loaded (KNOW-DO-CONTEXT)")
         print("   🔄 Empirical feedback loop: ACTIVE")
         
-        # 3. Load canonical goal orchestrator (LLM-POWERED, NO HEURISTICS)
+        # 3. Load canonical goal orchestrator (configuration-based)
         print("\n3️⃣ Loading canonical goal orchestrator...")
         try:
             from empirica.core.canonical.canonical_goal_orchestrator import (
@@ -183,11 +183,11 @@ class OptimalMetacognitiveBootstrap:
             self.components['orchestrate'] = self.components['canonical_goal_orchestrator'].orchestrate_goals
             self.components['goal_orchestrator'] = self.components['canonical_goal_orchestrator']
             
-            print("   ✅ Canonical goal orchestrator loaded (LLM-powered, no heuristics)")
+            print("   ✅ Canonical goal orchestrator loaded (threshold-based mode)")
             print("   🎯 ENGAGEMENT-driven autonomy: ACTIVE")
         except Exception as e:
             print(f"   ⚠️ Canonical goal orchestrator failed: {e}")
-            print("   ⚠️ Falling back to legacy goal orchestrator (heuristic-based)")
+            print("   ⚠️ Goal orchestrator unavailable (minimal profile or load failure)")
             
             from empirica.components.goal_management.autonomous_goal_orchestrator import (
                 DynamicContextAnalyzer,

@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-Canonical Goal Orchestrator - LLM-Powered Dynamic Goal Generation
+Canonical Goal Orchestrator - Configurable Goal Generation
 
-This orchestrator uses genuine LLM reasoning to generate goals based on:
-- Conversation context
-- ENGAGEMENT vector from canonical epistemic assessment
-- Current epistemic state (all 12 vectors)
-- No heuristics, no keyword matching, no hardcoded templates
+This orchestrator generates goals based on epistemic state.
 
-Philosophy: Goals emerge from understanding, not pattern matching.
+Two modes available:
+- LLM mode (use_placeholder=False): AI reasoning via llm_callback
+  Uses genuine LLM reasoning based on conversation context and epistemic state
+- Heuristic mode (use_placeholder=True): Threshold-based generation (default)
+  Uses hardcoded thresholds for performance and simplicity
+
+Philosophy: Goals can emerge from understanding (LLM) or patterns (heuristics).
 """
 
 import time

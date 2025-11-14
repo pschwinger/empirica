@@ -566,13 +566,13 @@ def handle_postflight_command(args):
                             'uncertainty': assessment.uncertainty.score
                         }
                     except Exception as e:
-                        print(f"\n❌ Failed to parse assessment: {e}")
+                        logger.error(f"\n❌ Failed to parse assessment: {e}")
                         return
                 else:
-                    print("\n⚠️  Skipping postflight - no genuine assessment provided")
+                    logger.warning("\n⚠️  Skipping postflight - no genuine assessment provided")
                     return
             else:
-                print("\n⚠️  Cannot complete postflight in --quiet mode without --assessment-json")
+                logger.warning("\n⚠️  Cannot complete postflight in --quiet mode without --assessment-json")
                 return
         
         # Try to get preflight vectors for delta calculation
