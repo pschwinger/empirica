@@ -126,9 +126,9 @@ class EpistemicAssessment:
 
     def __post_init__(self):
         """Compute critical flags based on thresholds"""
-        self.coherence_critical = self.coherence.score < 0.50
-        self.density_critical = self.density.score > 0.90
-        self.change_critical = self.change.score < 0.50
+        self.coherence_critical = self.coherence.score < CRITICAL_THRESHOLDS['coherence_min']
+        self.density_critical = self.density.score > CRITICAL_THRESHOLDS['density_max']
+        self.change_critical = self.change.score < CRITICAL_THRESHOLDS['change_min']
 
         # Validate tier confidences
         if not all(0.0 <= c <= 1.0 for c in [
