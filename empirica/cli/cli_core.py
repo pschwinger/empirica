@@ -72,6 +72,12 @@ Examples:
     # Session commands
     _add_session_parsers(subparsers)
     
+    # Checkpoint commands (Phase 2)
+    _add_checkpoint_parsers(subparsers)
+    
+    # Profile commands
+    _add_profile_parsers(subparsers)
+    
     # User interface commands (for human users)
     _add_user_interface_parsers(subparsers)
     
@@ -624,6 +630,13 @@ def main(args=None):
             'sessions-list': handle_sessions_list_command,
             'sessions-show': handle_sessions_show_command,
             'sessions-export': handle_sessions_export_command,
+            
+            # Checkpoint commands (Phase 2)
+            'checkpoint-create': handle_checkpoint_create_command,
+            'checkpoint-load': handle_checkpoint_load_command,
+            'checkpoint-list': handle_checkpoint_list_command,
+            'checkpoint-diff': handle_checkpoint_diff_command,
+            'efficiency-report': handle_efficiency_report_command,
             
             # User interface commands (for human users)
             'ask': handle_ask_command,

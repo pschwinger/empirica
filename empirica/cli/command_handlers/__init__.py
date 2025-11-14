@@ -29,6 +29,11 @@ from .mcp_commands import (
 from .session_commands import (
     handle_sessions_list_command, handle_sessions_show_command, handle_sessions_export_command
 )
+from .checkpoint_commands import (
+    handle_checkpoint_create_command, handle_checkpoint_load_command,
+    handle_checkpoint_list_command, handle_checkpoint_diff_command,
+    handle_efficiency_report_command
+)
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
     handle_monitor_reset_command, handle_monitor_cost_command
@@ -87,6 +92,13 @@ __all__ = [
     'handle_sessions_list_command',
     'handle_sessions_show_command',
     'handle_sessions_export_command',
+    
+    # Checkpoint commands (Phase 2)
+    'handle_checkpoint_create_command',
+    'handle_checkpoint_load_command',
+    'handle_checkpoint_list_command',
+    'handle_checkpoint_diff_command',
+    'handle_efficiency_report_command',
     
     # Monitor commands
     'handle_monitor_command',
