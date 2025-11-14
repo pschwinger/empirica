@@ -4,7 +4,11 @@ Bootstrap Commands - System initialization and bootstrap functionality
 
 import time
 import asyncio
+import logging
 from ..cli_utils import print_component_status, handle_cli_error, format_execution_time
+
+# Set up logging for bootstrap commands
+logger = logging.getLogger(__name__)
 
 
 def handle_bootstrap_command(args):
@@ -19,6 +23,7 @@ def handle_bootstrap_command(args):
         test_mode = getattr(args, 'test', False)
         
         # Call MCP server bootstrap_session tool
+        logger.info(f"Starting bootstrap with level: {bootstrap_level}, profile: {profile}")
         print("🚀 Bootstrapping Empirica semantic framework...")
         
         start_time = time.time()
@@ -38,6 +43,7 @@ def handle_bootstrap_command(args):
             if result and result.get('ok'):
                 end_time = time.time()
                 
+                logger.info("Bootstrap process completed successfully")
                 print(f"\n✅ Bootstrap complete!")
                 print(f"   📊 Components loaded: {result.get('component_count', 0)}")
                 print(f"   ⏱️ Bootstrap time: {format_execution_time(start_time, end_time)}")
@@ -65,6 +71,7 @@ def handle_bootstrap_command(args):
             
             end_time = time.time()
             
+            logger.info("Bootstrap process completed successfully")
             print(f"\n✅ Bootstrap complete!")
             print(f"   📊 Components loaded: {len(components)}")
             print(f"   ⏱️ Bootstrap time: {format_execution_time(start_time, end_time)}")
@@ -115,6 +122,8 @@ def handle_bootstrap_system_command(args):
         
         end_time = time.time()
         
+        
+        logger.info("Extended bootstrap process completed successfully")
         print(f"\n✅ Extended bootstrap complete!")
         print(f"   📊 Total components: {len(components)}")
         print(f"   🎯 Init level: {bootstrap.init_level}")
@@ -330,6 +339,7 @@ def handle_profile_create_command(args):
             print("\n💾 Profile configuration saved successfully")
             print(f"  Profile ID: profile_{profile_name}_{int(__import__('time').time())}")
         
+        logger.info(f"Profile '{profile_name}' created and configured successfully")
         print(f"\n✅ Profile '{profile_name}' created successfully!")
         
     except Exception as e:
