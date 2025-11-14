@@ -408,50 +408,50 @@ def handle_preflight_command(args):
             logger.info(f"task={prompt}")
             logger.info(f"timestamp={datetime.utcnow().isoformat()}")
             for key, value in vectors.items():
-                print(f"{key}={value:.2f}")
-            print(f"recommendation={_get_recommendation(vectors)['action']}")
+                logger.info(f"{key}={value:.2f}")
+            logger.info(f"recommendation={_get_recommendation(vectors)['action']}")
         
         else:
             # Human-friendly format (default)
-            print("📊 Epistemic Vectors:")
+            logger.info("📊 Epistemic Vectors:")
             
             # Tier 1: Foundation
-            print("\n  🏛️  TIER 1: Foundation (35% weight)")
-            print(f"    • KNOW:    {vectors.get('know', 0.5):.2f}  {_interpret_score(vectors.get('know', 0.5), 'knowledge')}")
-            print(f"    • DO:      {vectors.get('do', 0.5):.2f}  {_interpret_score(vectors.get('do', 0.5), 'capability')}")
-            print(f"    • CONTEXT: {vectors.get('context', 0.5):.2f}  {_interpret_score(vectors.get('context', 0.5), 'information')}")
+            logger.info("\n  🏛️  TIER 1: Foundation (35% weight)")
+            logger.info(f"    • KNOW:    {vectors.get('know', 0.5):.2f}  {_interpret_score(vectors.get('know', 0.5), 'knowledge')}")
+            logger.info(f"    • DO:      {vectors.get('do', 0.5):.2f}  {_interpret_score(vectors.get('do', 0.5), 'capability')}")
+            logger.info(f"    • CONTEXT: {vectors.get('context', 0.5):.2f}  {_interpret_score(vectors.get('context', 0.5), 'information')}")
             
             # Tier 2: Comprehension
-            print("\n  🧠 TIER 2: Comprehension (30% weight)")
-            print(f"    • CLARITY:    {vectors.get('clarity', 0.5):.2f}  {_interpret_score(vectors.get('clarity', 0.5), 'clarity')}")
-            print(f"    • COHERENCE:  {vectors.get('coherence', 0.5):.2f}  {_interpret_score(vectors.get('coherence', 0.5), 'coherence')}")
-            print(f"    • SIGNAL:     {vectors.get('signal', 0.5):.2f}  {_interpret_score(vectors.get('signal', 0.5), 'signal')}")
-            print(f"    • DENSITY:    {vectors.get('density', 0.5):.2f}  {_interpret_score(vectors.get('density', 0.5), 'density')}")
+            logger.info("\n  🧠 TIER 2: Comprehension (30% weight)")
+            logger.info(f"    • CLARITY:    {vectors.get('clarity', 0.5):.2f}  {_interpret_score(vectors.get('clarity', 0.5), 'clarity')}")
+            logger.info(f"    • COHERENCE:  {vectors.get('coherence', 0.5):.2f}  {_interpret_score(vectors.get('coherence', 0.5), 'coherence')}")
+            logger.info(f"    • SIGNAL:     {vectors.get('signal', 0.5):.2f}  {_interpret_score(vectors.get('signal', 0.5), 'signal')}")
+            logger.info(f"    • DENSITY:    {vectors.get('density', 0.5):.2f}  {_interpret_score(vectors.get('density', 0.5), 'density')}")
             
             # Tier 3: Execution
-            print("\n  ⚡ TIER 3: Execution (25% weight)")
-            print(f"    • STATE:      {vectors.get('state', 0.5):.2f}  {_interpret_score(vectors.get('state', 0.5), 'state')}")
-            print(f"    • CHANGE:     {vectors.get('change', 0.5):.2f}  {_interpret_score(vectors.get('change', 0.5), 'change')}")
-            print(f"    • COMPLETION: {vectors.get('completion', 0.5):.2f}  {_interpret_score(vectors.get('completion', 0.5), 'completion')}")
-            print(f"    • IMPACT:     {vectors.get('impact', 0.5):.2f}  {_interpret_score(vectors.get('impact', 0.5), 'impact')}")
+            logger.info("\n  ⚡ TIER 3: Execution (25% weight)")
+            logger.info(f"    • STATE:      {vectors.get('state', 0.5):.2f}  {_interpret_score(vectors.get('state', 0.5), 'state')}")
+            logger.info(f"    • CHANGE:     {vectors.get('change', 0.5):.2f}  {_interpret_score(vectors.get('change', 0.5), 'change')}")
+            logger.info(f"    • COMPLETION: {vectors.get('completion', 0.5):.2f}  {_interpret_score(vectors.get('completion', 0.5), 'completion')}")
+            logger.info(f"    • IMPACT:     {vectors.get('impact', 0.5):.2f}  {_interpret_score(vectors.get('impact', 0.5), 'impact')}")
             
             # Meta-cognitive
-            print("\n  🎯 Meta-Cognitive (10% weight)")
-            print(f"    • ENGAGEMENT:  {vectors.get('engagement', 0.5):.2f}  {_interpret_score(vectors.get('engagement', 0.5), 'engagement')}")
-            print(f"    • UNCERTAINTY: {vectors.get('uncertainty', 0.5):.2f}  {_interpret_score(vectors.get('uncertainty', 0.5), 'uncertainty')}")
+            logger.info("\n  🎯 Meta-Cognitive (10% weight)")
+            logger.info(f"    • ENGAGEMENT:  {vectors.get('engagement', 0.5):.2f}  {_interpret_score(vectors.get('engagement', 0.5), 'engagement')}")
+            logger.info(f"    • UNCERTAINTY: {vectors.get('uncertainty', 0.5):.2f}  {_interpret_score(vectors.get('uncertainty', 0.5), 'uncertainty')}")
             
             # Recommendation
             recommendation = _get_recommendation(vectors)
-            print(f"\n💡 Recommendation: {recommendation['message']}")
-            print(f"   Action: {recommendation['action']}")
+            logger.info(f"\n💡 Recommendation: {recommendation['message']}")
+            logger.info(f"   Action: {recommendation['action']}")
             
             if recommendation['warnings']:
-                print("\n⚠️  Warnings:")
+                logger.info("\n⚠️  Warnings:")
                 for warning in recommendation['warnings']:
-                    print(f"   • {warning}")
+                    logger.info(f"   • {warning}")
             
-            print(f"\n🆔 Session ID: {session_id}")
-            print(f"💾 Use this ID for postflight: empirica postflight {session_id}")
+            logger.info(f"\n🆔 Session ID: {session_id}")
+            logger.info(f"💾 Use this ID for postflight: empirica postflight {session_id}")
         
     except Exception as e:
         handle_cli_error(e, "Preflight assessment", getattr(args, 'verbose', False))
@@ -468,9 +468,9 @@ def handle_postflight_command(args):
         session_id = args.session_id
         summary = args.summary or "Task completed"
         
-        print(f"🆔 Session ID: {session_id}")
-        print(f"📋 Task Summary: {summary}")
-        print(f"\n⏳ Reassessing epistemic state...\n")
+        logger.info(f"🆔 Session ID: {session_id}")
+        logger.info(f"📋 Task Summary: {summary}")
+        logger.info(f"\n⏳ Reassessing epistemic state...\n")
         
         # Execute postflight assessment - GENUINE self-assessment required
         from empirica.core.canonical import CanonicalEpistemicAssessor
@@ -481,7 +481,7 @@ def handle_postflight_command(args):
         assessment_request = asyncio.run(assessor.assess(task_description, {"phase": "postflight"}))
         
         if not isinstance(assessment_request, dict) or 'self_assessment_prompt' not in assessment_request:
-            print("❌ Failed to generate self-assessment prompt")
+            logger.error("❌ Failed to generate self-assessment prompt")
             return
         
         # Check if AI self-assessment was provided
@@ -524,19 +524,19 @@ def handle_postflight_command(args):
                     'uncertainty': assessment.uncertainty.score
                 }
             except Exception as e:
-                print(f"❌ Failed to parse self-assessment: {e}")
+                logger.error(f"❌ Failed to parse self-assessment: {e}")
                 return
         else:
             # Interactive mode
-            print("\n" + "=" * 70)
-            print("GENUINE POSTFLIGHT SELF-ASSESSMENT REQUIRED")
-            print("=" * 70)
-            print("\n⚠️  NO HEURISTICS. NO STATIC VALUES. NO CONFABULATION.")
-            print("\n📋 SELF-ASSESSMENT PROMPT:")
-            print("=" * 70)
-            print(assessment_request['self_assessment_prompt'])
-            print("=" * 70)
-            print("\n💡 Provide genuine postflight self-assessment via --assessment-json")
+            logger.info("\n" + "=" * 70)
+            logger.info("GENUINE POSTFLIGHT SELF-ASSESSMENT REQUIRED")
+            logger.info("=" * 70)
+            logger.info("\n⚠️  NO HEURISTICS. NO STATIC VALUES. NO CONFABULATION.")
+            logger.info("\n📋 SELF-ASSESSMENT PROMPT:")
+            logger.info("=" * 70)
+            logger.info(assessment_request['self_assessment_prompt'])
+            logger.info("=" * 70)
+            logger.info("\n💡 Provide genuine postflight self-assessment via --assessment-json")
             print("   or use MCP server for automated genuine assessment.")
             
             if not args.quiet:
