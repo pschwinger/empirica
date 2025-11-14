@@ -24,10 +24,13 @@ import sqlite3
 import json
 import uuid
 import time
+import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 from dataclasses import asdict
+
+logger = logging.getLogger(__name__)
 
 # Import canonical structures
 try:
@@ -54,7 +57,7 @@ class SessionDatabase:
         self.conn.row_factory = sqlite3.Row  # Return rows as dicts
         
         self._create_tables()
-        print(f"📊 Session Database initialized: {self.db_path}")
+        logger.info(f"📊 Session Database initialized: {self.db_path}")
     
     def _create_tables(self):
         """Create all database tables"""
@@ -147,19 +150,19 @@ class SessionDatabase:
         # Migration: Add reflex_log_path to existing tables (for databases created before this update)
         try:
             cursor.execute("ALTER TABLE epistemic_assessments ADD COLUMN reflex_log_path TEXT")
-            print("✓ Migration: Added reflex_log_path column to epistemic_assessments")
+            logger.info("✓ Migration: Added reflex_log_path column to epistemic_assessments")
         except sqlite3.OperationalError:
             pass  # Column already exists
         
         try:
             cursor.execute("ALTER TABLE preflight_assessments ADD COLUMN reflex_log_path TEXT")
-            print("✓ Migration: Added reflex_log_path column to preflight_assessments")
+            logger.info("✓ Migration: Added reflex_log_path column to preflight_assessments")
         except sqlite3.OperationalError:
             pass  # Column already exists
         
         try:
             cursor.execute("ALTER TABLE postflight_assessments ADD COLUMN reflex_log_path TEXT")
-            print("✓ Migration: Added reflex_log_path column to postflight_assessments")
+            logger.info("✓ Migration: Added reflex_log_path column to postflight_assessments")
         except sqlite3.OperationalError:
             pass  # Column already exists
         
@@ -602,7 +605,7 @@ class SessionDatabase:
                                 phase: str):
         """Store 13D epistemic assessment (12 vectors + UNCERTAINTY)"""
         if not CANONICAL_AVAILABLE:
-            print("[DB] Canonical structures not available, skipping epistemic assessment")
+            logger.warning("[DB] Canonical structures not available, skipping epistemic assessment")
             return
         
         cursor = self.conn.cursor()
@@ -1252,33 +1255,33 @@ class SessionDatabase:
 
 if __name__ == "__main__":
     # Test the database
-    print("🧪 Testing Session Database...")
+    logger.info("🧪 Testing Session Database...")
     
     db = SessionDatabase()
     
     # Create test session
     session_id = db.create_session("test_claude", bootstrap_level=2, components_loaded=30)
-    print(f"✅ Created session: {session_id}")
+    logger.info(f"✅ Created session: {session_id}")
     
     # Create test cascade
     cascade_id = db.create_cascade(session_id, "Test task", {"test": True})
-    print(f"✅ Created cascade: {cascade_id}")
+    logger.info(f"✅ Created cascade: {cascade_id}")
     
     # Mark phases complete
     for phase in ['think', 'uncertainty', 'investigate', 'check', 'act']:
         db.update_cascade_phase(cascade_id, phase, True)
-    print(f"✅ Updated cascade phases")
+    logger.info(f"✅ Updated cascade phases")
     
     # Complete cascade
     db.complete_cascade(cascade_id, "proceed", 0.85, 2, 5000, True, True, True)
-    print(f"✅ Completed cascade")
+    logger.info(f"✅ Completed cascade")
     
     # Query back
     session = db.get_session(session_id)
-    print(f"✅ Retrieved session: {session['ai_id']}")
+    logger.info(f"✅ Retrieved session: {session['ai_id']}")
     
     cascades = db.get_session_cascades(session_id)
-    print(f"✅ Retrieved {len(cascades)} cascades")
+    logger.info(f"✅ Retrieved {len(cascades)} cascades")
     
     db.close()
-    print("\n🎉 Session Database tests passed!")
+    logger.info("\n🎉 Session Database tests passed!")

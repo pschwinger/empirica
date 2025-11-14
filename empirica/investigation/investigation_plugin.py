@@ -142,13 +142,13 @@ class PluginRegistry:
             raise ValueError(f"Plugin '{plugin.name}' already registered")
         
         self.plugins[plugin.name] = plugin
-        print(f"📦 Registered plugin: {plugin.name}")
+        logger.info(f"📦 Registered plugin: {plugin.name}")
     
     def unregister(self, plugin_name: str) -> None:
         """Unregister a plugin"""
         if plugin_name in self.plugins:
             del self.plugins[plugin_name]
-            print(f"🗑️  Unregistered plugin: {plugin_name}")
+            logger.info(f"🗑️  Unregistered plugin: {plugin_name}")
     
     def get(self, plugin_name: str) -> Optional[InvestigationPlugin]:
         """Get a plugin by name"""
@@ -272,7 +272,7 @@ def create_common_plugins() -> Dict[str, InvestigationPlugin]:
 
 if __name__ == "__main__":
     # Demo usage
-    print("🔌 Investigation Plugin System Demo\n")
+    logger.info("🔌 Investigation Plugin System Demo\n")
     
     # Create registry
     registry = PluginRegistry()
@@ -282,19 +282,19 @@ if __name__ == "__main__":
     registry.register(create_confluence_plugin())
     registry.register(create_github_plugin())
     
-    print(f"\n✓ Registered {len(registry)} plugins")
-    print(f"  Plugins: {registry.list_plugins()}")
+    logger.info(f"\n✓ Registered {len(registry)} plugins")
+    logger.info(f"  Plugins: {registry.list_plugins()}")
     
     # Find plugins by vector
     know_plugins = registry.find_by_vector('know')
-    print(f"\n✓ Plugins that improve 'know' vector: {[p.name for p in know_plugins]}")
+    logger.info(f"\n✓ Plugins that improve 'know' vector: {[p.name for p in know_plugins]}")
     
     # Get capabilities for cascade integration
     capabilities = registry.get_all_capabilities()
-    print(f"\n✓ Plugin capabilities ready for tool mapping:")
+    logger.info(f"\n✓ Plugin capabilities ready for tool mapping:")
     for name, cap in capabilities.items():
-        print(f"  • {name}: {cap['description'][:50]}...")
-        print(f"    Improves: {', '.join(cap['improves_vectors'])}")
-        print(f"    Gain: +{cap['confidence_gain']:.2f}")
+        logger.info(f"  • {name}: {cap['description'][:50]}...")
+        logger.info(f"    Improves: {', '.join(cap['improves_vectors'])}")
+        logger.info(f"    Gain: +{cap['confidence_gain']:.2f}")
     
-    print("\n✅ Plugin system ready for integration!")
+    logger.info("\n✅ Plugin system ready for integration!")

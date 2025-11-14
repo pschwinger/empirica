@@ -1605,7 +1605,7 @@ class CanonicalEpistemicCascade:
         belief_key = f"{self.current_context_key}:{vector_addressed}"
         updated_belief = self.bayesian_tracker.update_belief(belief_key, evidence)
         
-        print(f"   🧮 Bayesian: Updated {vector_addressed} → {updated_belief.mean:.2f} (variance: {updated_belief.variance:.2f})")
+        logger.info(f"   🧮 Bayesian: Updated {vector_addressed} → {updated_belief.mean:.2f} (variance: {updated_belief.variance:.2f})")
         
         return {
             'updated': True,
@@ -1641,22 +1641,22 @@ class CanonicalEpistemicCascade:
             )
         }
 
-        print(f"\n   ✅ Readiness Check:")
-        print(f"      Recommended Action: {assessment.recommended_action.value.upper()}")
-        print(f"      Overall Confidence: {assessment.overall_confidence:.2f}")
-        print(f"      Engagement Gate: {'PASSED' if assessment.engagement_gate_passed else 'FAILED'}")
+        logger.info(f"\n   ✅ Readiness Check:")
+        logger.info(f"      Recommended Action: {assessment.recommended_action.value.upper()}")
+        logger.info(f"      Overall Confidence: {assessment.overall_confidence:.2f}")
+        logger.info(f"      Engagement Gate: {'PASSED' if assessment.engagement_gate_passed else 'FAILED'}")
 
         if any(readiness_check['critical_flags'].values()):
-            print(f"      ⚠️  Critical flags detected:")
+            logger.info(f"      ⚠️  Critical flags detected:")
             for flag, value in readiness_check['critical_flags'].items():
                 if value:
-                    print(f"         - {flag}")
+                    logger.info(f"         - {flag}")
         
         # ================================================================
         # BAYESIAN GUARDIAN: Discrepancy Detection
         # ================================================================
         if self.bayesian_tracker and self.bayesian_tracker.active:
-            print(f"\n   🧮 Bayesian Guardian: Checking belief calibration...")
+            logger.info(f"\n   🧮 Bayesian Guardian: Checking belief calibration...")
             
             # Get intuitive beliefs from current assessment
             intuitive_beliefs = {
@@ -1678,18 +1678,18 @@ class CanonicalEpistemicCascade:
             )
             
             if discrepancies:
-                print(f"   ⚠️  Detected {len(discrepancies)} belief discrepancies:")
+                logger.info(f"   ⚠️  Detected {len(discrepancies)} belief discrepancies:")
                 for d in discrepancies:
-                    print(f"      • {d['type'].upper()}: {d['vector']}")
-                    print(f"        Intuitive: {d['intuitive']:.2f} | Evidence-based: {d['bayesian_mean']:.2f}")
-                    print(f"        Gap: {d['gap']:.2f} (severity: {d['severity']:.2f})")
+                    logger.info(f"      • {d['type'].upper()}: {d['vector']}")
+                    logger.info(f"        Intuitive: {d['intuitive']:.2f} | Evidence-based: {d['bayesian_mean']:.2f}")
+                    logger.info(f"        Gap: {d['gap']:.2f} (severity: {d['severity']:.2f})")
                     
                     if d['type'] == 'overconfidence':
-                        print(f"        ⚠️  You may be overconfident about {d['vector']}")
+                        logger.info(f"        ⚠️  You may be overconfident about {d['vector']}")
                     else:
-                        print(f"        💡 You may be underconfident about {d['vector']}")
+                        logger.info(f"        💡 You may be underconfident about {d['vector']}")
             else:
-                print(f"   ✅ Beliefs aligned with accumulated evidence")
+                logger.info(f"   ✅ Beliefs aligned with accumulated evidence")
             
             # Add to readiness check
             readiness_check['bayesian_discrepancies'] = discrepancies
@@ -1701,25 +1701,25 @@ class CanonicalEpistemicCascade:
         # DRIFT MONITOR: Behavioral Drift Analysis
         # ================================================================
         if self.enable_drift_monitor and self.drift_monitor and self.parallel_reasoner and len(self.parallel_reasoner.synthesis_history) >= 10:
-            print(f"\n   📊 Drift Monitor: Analyzing behavioral patterns...")
+            logger.info(f"\n   📊 Drift Monitor: Analyzing behavioral patterns...")
 
             drift_analysis = self.drift_monitor.analyze_drift(self.parallel_reasoner.synthesis_history)
             
             if drift_analysis['sycophancy_drift']['detected']:
                 severity = drift_analysis['sycophancy_drift']['severity']
                 evidence = drift_analysis['sycophancy_drift']['evidence']
-                print(f"   ⚠️  Sycophancy drift detected (severity: {severity:.2f})")
-                print(f"      Evidence: {evidence}")
-                print(f"      Recommendation: Increase trustee weight or activate skeptic mode")
+                logger.info(f"   ⚠️  Sycophancy drift detected (severity: {severity:.2f})")
+                logger.info(f"      Evidence: {evidence}")
+                logger.info(f"      Recommendation: Increase trustee weight or activate skeptic mode")
             
             if drift_analysis['tension_avoidance']['detected']:
                 evidence = drift_analysis['tension_avoidance']['evidence']
-                print(f"   ⚠️  Tension avoidance detected")
-                print(f"      Evidence: {evidence}")
-                print(f"      Recommendation: Force tension analysis in synthesizer")
+                logger.info(f"   ⚠️  Tension avoidance detected")
+                logger.info(f"      Evidence: {evidence}")
+                logger.info(f"      Recommendation: Force tension analysis in synthesizer")
             
             if not drift_analysis['sycophancy_drift']['detected'] and not drift_analysis['tension_avoidance']['detected']:
-                print(f"   ✅ No behavioral drift detected - maintaining intellectual honesty")
+                logger.info(f"   ✅ No behavioral drift detected - maintaining intellectual honesty")
             
             readiness_check['drift_analysis'] = drift_analysis
         
@@ -1945,9 +1945,9 @@ class CanonicalEpistemicCascade:
 
     def _enter_phase(self, phase: CascadePhase):
         """Enter a new cascade phase"""
-        print(f"\n{'='*70}")
-        print(f"🔄 Phase: {phase.value.upper()}")
-        print(f"{'='*70}")
+        logger.info(f"\n{'='*70}")
+        logger.info(f"🔄 Phase: {phase.value.upper()}")
+        logger.info(f"{'='*70}")
 
     def _update_tmux_display(
         self,
@@ -1988,7 +1988,7 @@ class CanonicalEpistemicCascade:
                 self.tmux_extension.trigger_action_update('epistemic_cascade', cascade_state)
 
         except Exception as e:
-            print(f"   ⚠️  Tmux update failed: {e}")
+            logger.warning(f"   ⚠️  Tmux update failed: {e}")
 
 
 # CONVENIENCE FUNCTION
