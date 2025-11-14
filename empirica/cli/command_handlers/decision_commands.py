@@ -5,6 +5,7 @@ Provides interactive epistemic assessment and intelligent adapter routing.
 """
 
 import json
+import logging
 import sys
 from typing import Dict, Any, Optional
 
@@ -15,6 +16,9 @@ from empirica.plugins.modality_switcher.modality_switcher import (
 )
 from empirica.plugins.modality_switcher.plugin_registry import AdapterResponse, AdapterError
 from ..cli_utils import handle_cli_error
+
+# Set up logging for decision commands
+logger = logging.getLogger(__name__)
 
 
 # 13 epistemic vectors with descriptions
@@ -74,10 +78,12 @@ def handle_decision_command(args):
         if hasattr(args, 'epistemic_state') and args.epistemic_state:
             # Load from JSON file
             epistemic_state = load_epistemic_state_from_file(args.epistemic_state)
+            logger.info(f"Loaded epistemic state from {args.epistemic_state}")
             print(f"✅ Loaded epistemic state from {args.epistemic_state}")
         elif hasattr(args, 'know') and args.know is not None:
             # Load from individual flags
             epistemic_state = load_epistemic_state_from_flags(args)
+            logger.info("Loaded epistemic state from command-line flags")
             print(f"✅ Loaded epistemic state from command-line flags")
         else:
             # Interactive assessment
@@ -134,6 +140,7 @@ def handle_decision_command(args):
             context=context
         )
         
+        logger.info(f"Selected adapter: {decision.selected_adapter} with strategy {strategy.value}")
         print(f"\n✅ Selected Adapter: {decision.selected_adapter}")
         print(f"   Strategy: {strategy.value}")
         print(f"   Rationale: {decision.rationale}")
@@ -162,6 +169,7 @@ def handle_decision_command(args):
         print("=" * 70)
         
         if isinstance(response, AdapterError):
+            logger.warning(f"Adapter error: {response.message} (code: {response.code})")
             print(f"\n❌ Error: {response.message}")
             print(f"   Code: {response.code}")
             print(f"   Provider: {response.provider}")
@@ -203,6 +211,7 @@ def handle_decision_command(args):
             print("✅ Decision confirmed")
         
         print("\n" + "=" * 70)
+        logger.info("Decision process completed successfully")
         print("✅ Decision Process Complete")
         print("=" * 70)
         
@@ -249,6 +258,7 @@ def interactive_epistemic_assessment() -> Dict[str, float]:
         
         epistemic_state[key] = value
     
+    logger.info("Interactive epistemic assessment completed")
     print("\n" + "=" * 70)
     print("✅ Epistemic Assessment Complete")
     print("=" * 70)
