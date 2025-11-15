@@ -24,6 +24,7 @@ async def test_cascade_creates_checkpoints_automatically():
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir(tmpdir)
         os.system("git init > /dev/null 2>&1")
+        os.system("git commit --allow-empty -m 'Initial commit' > /dev/null 2>&1")
         
         cascade = CanonicalEpistemicCascade(
             enable_git_notes=True,
@@ -77,30 +78,39 @@ async def test_cascade_creates_checkpoints_automatically():
 async def test_cascade_graceful_fallback_no_git():
     """Verify graceful fallback when git unavailable"""
     
-    # Create CASCADE with git disabled
-    cascade = CanonicalEpistemicCascade(
-        enable_git_notes=False,
-        session_id="test-no-git"
-    )
-    
-    # Should work without git
-    assert cascade.git_logger is None, "Git logger should be None when disabled"
-    
-    print("✅ Graceful fallback verified")
+    # Create temp directory (but no git repo)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        os.chdir(tmpdir)
+        
+        # Create CASCADE with git disabled
+        cascade = CanonicalEpistemicCascade(
+            enable_git_notes=False,
+            session_id="test-no-git"
+        )
+        
+        # Should work without git
+        assert cascade.git_logger is None, "Git logger should be None when disabled"
+        
+        print("✅ Graceful fallback verified")
 
 
 def test_token_efficiency_tracking():
     """Verify token metrics are tracked when enabled"""
     
-    cascade = CanonicalEpistemicCascade(
-        enable_git_notes=True,
-        session_id="test-efficiency-tracking"
-    )
-    
-    # Verify token metrics initialized
-    assert cascade.token_metrics is not None, "Token metrics not initialized"
-    
-    print("✅ Token efficiency tracking enabled")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        os.chdir(tmpdir)
+        os.system("git init > /dev/null 2>&1")
+        os.system("git commit --allow-empty -m 'Initial commit' > /dev/null 2>&1")
+        
+        cascade = CanonicalEpistemicCascade(
+            enable_git_notes=True,
+            session_id="test-efficiency-tracking"
+        )
+        
+        # Verify token metrics initialized
+        assert cascade.token_metrics is not None, "Token metrics not initialized"
+        
+        print("✅ Token efficiency tracking enabled")
 
 
 @pytest.mark.asyncio  
@@ -110,6 +120,7 @@ async def test_checkpoint_compression():
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir(tmpdir)
         os.system("git init > /dev/null 2>&1")
+        os.system("git commit --allow-empty -m 'Initial commit' > /dev/null 2>&1")
         
         cascade = CanonicalEpistemicCascade(
             enable_git_notes=True,
