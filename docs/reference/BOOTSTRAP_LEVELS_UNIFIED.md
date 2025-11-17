@@ -250,7 +250,7 @@ All level formats have been tested and verified:
 
 ```bash
 # Run test suite
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 -c "from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap; \
             b = OptimalMetacognitiveBootstrap(level='1'); print(f'✅ Level: {b.level}')"
 

@@ -189,7 +189,7 @@ grep -rn "print(" empirica/core empirica/data --include="*.py" | grep -v "# prin
 # Should be empty
 
 # 2. Test imports work
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 -c "
 import sys
 sys.path.insert(0, '.')

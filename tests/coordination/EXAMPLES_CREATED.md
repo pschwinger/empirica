@@ -202,7 +202,7 @@ python3 02_knowledge_transfer.py import knowledge_package_session_ai_a.json
 
 **Step 1: Create test session**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 empirica bootstrap --ai-id test-agent
 ```
@@ -373,7 +373,7 @@ empirica query-reasoning "temporal separation" --session session_abc
 
 ---
 
-**Files Location:** `/home/yogapad/empirical-ai/empirica/examples/reasoning_reconstruction/`
+**Files Location:** `/path/to/empirica/examples/reasoning_reconstruction/`
 
 **Total Size:** ~35KB (documentation + executable scripts)
 

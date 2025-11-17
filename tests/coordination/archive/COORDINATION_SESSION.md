@@ -206,7 +206,7 @@ Review: [Test quality feedback]
 
 ### Qwen (Pane 0):
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Read architecture
@@ -222,7 +222,7 @@ mkdir -p tests/unit/cascade
 
 ### Gemini (Pane 1):
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Read architecture

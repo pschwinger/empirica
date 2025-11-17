@@ -57,3 +57,4 @@ test_goals_session
 .empirica/
 .empirica_reflex_logs/
 .empirica_sessions/
+.agent_memory.json

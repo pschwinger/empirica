@@ -13,6 +13,46 @@ from typing import Optional
 # Set up logging for checkpoint commands
 logger = logging.getLogger(__name__)
 
+
+def _get_checkpoint_profile_thresholds():
+    """Get checkpoint display and diff thresholds from investigation profiles"""
+    try:
+        from empirica.config.profile_loader import ProfileLoader
+        
+        loader = ProfileLoader()
+        universal = loader.universal_constraints
+        
+        try:
+            profile = loader.get_profile('balanced')
+            constraints = profile.constraints
+            
+            return {
+                'display_high': getattr(constraints, 'display_high_threshold', 0.7),
+                'display_medium': getattr(constraints, 'display_medium_threshold', 0.5),
+                'diff_threshold': getattr(constraints, 'diff_significance_threshold', 0.15),
+                'default_vector_score': getattr(constraints, 'default_vector_score', 0.5),
+                'engagement_gate': universal.engagement_gate,
+                'coherence_min': universal.coherence_min,
+            }
+        except:
+            return {
+                'display_high': 0.7,
+                'display_medium': 0.5,
+                'diff_threshold': 0.15,
+                'default_vector_score': 0.5,
+                'engagement_gate': 0.6,
+                'coherence_min': 0.5,
+            }
+    except Exception:
+        return {
+            'display_high': 0.7,
+            'display_medium': 0.5,
+            'diff_threshold': 0.15,
+            'default_vector_score': 0.5,
+            'engagement_gate': 0.6,
+            'coherence_min': 0.5,
+        }
+
 def handle_checkpoint_create_command(args):
     """
     Create git checkpoint for session
@@ -61,20 +101,23 @@ def handle_checkpoint_create_command(args):
                 elif 'assessment' in reflex_data:
                     # Extract from assessment object
                     assessment = reflex_data['assessment']
+                    thresholds = _get_checkpoint_profile_thresholds()
+                    default_score = thresholds['default_vector_score']
+                    
                     vectors = {
-                        'engagement': assessment.get('engagement', {}).get('score', 0.5),
-                        'know': assessment.get('know', {}).get('score', 0.5),
-                        'do': assessment.get('do', {}).get('score', 0.5),
-                        'context': assessment.get('context', {}).get('score', 0.5),
-                        'clarity': assessment.get('clarity', {}).get('score', 0.5),
-                        'coherence': assessment.get('coherence', {}).get('score', 0.5),
-                        'signal': assessment.get('signal', {}).get('score', 0.5),
-                        'density': assessment.get('density', {}).get('score', 0.5),
-                        'state': assessment.get('state', {}).get('score', 0.5),
-                        'change': assessment.get('change', {}).get('score', 0.5),
-                        'completion': assessment.get('completion', {}).get('score', 0.5),
-                        'impact': assessment.get('impact', {}).get('score', 0.5),
-                        'uncertainty': assessment.get('uncertainty', {}).get('score', 0.5)
+                        'engagement': assessment.get('engagement', {}).get('score', default_score),
+                        'know': assessment.get('know', {}).get('score', default_score),
+                        'do': assessment.get('do', {}).get('score', default_score),
+                        'context': assessment.get('context', {}).get('score', default_score),
+                        'clarity': assessment.get('clarity', {}).get('score', default_score),
+                        'coherence': assessment.get('coherence', {}).get('score', default_score),
+                        'signal': assessment.get('signal', {}).get('score', default_score),
+                        'density': assessment.get('density', {}).get('score', default_score),
+                        'state': assessment.get('state', {}).get('score', default_score),
+                        'change': assessment.get('change', {}).get('score', default_score),
+                        'completion': assessment.get('completion', {}).get('score', default_score),
+                        'impact': assessment.get('impact', {}).get('score', default_score),
+                        'uncertainty': assessment.get('uncertainty', {}).get('score', default_score)
                     }
         except Exception as e:
             logger.warning(f"Could not load vectors from session: {e}")
@@ -165,7 +208,8 @@ def handle_checkpoint_load_command(args):
             print(f"\nEpistemic Vectors:")
             vectors = checkpoint.get('vectors', {})
             for key, value in sorted(vectors.items()):
-                indicator = "📈" if value >= 0.7 else "📊" if value >= 0.5 else "📉"
+                thresholds = _get_checkpoint_profile_thresholds()
+                indicator = "📈" if value >= thresholds['display_high'] else "📊" if value >= thresholds['display_medium'] else "📉"
                 print(f"  {indicator} {key:12s}: {value:.2f}")
             
             # Show metadata if present
@@ -255,7 +299,8 @@ def handle_checkpoint_diff_command(args):
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         
         session_id = args.session_id
-        threshold = args.threshold if hasattr(args, 'threshold') else 0.15
+        thresholds = _get_checkpoint_profile_thresholds()
+        threshold = args.threshold if hasattr(args, 'threshold') else thresholds['diff_threshold']
         
         git_logger = GitEnhancedReflexLogger(
             session_id=session_id,
@@ -286,7 +331,8 @@ def handle_checkpoint_diff_command(args):
         def show_tier(name, tier_vectors):
             print(f"\n{name}:")
             for key, value in tier_vectors.items():
-                indicator = "📈" if value >= 0.7 else "📊" if value >= 0.5 else "📉"
+                thresholds = _get_checkpoint_profile_thresholds()
+                indicator = "📈" if value >= thresholds['display_high'] else "📊" if value >= thresholds['display_medium'] else "📉"
                 print(f"  {indicator} {key:12s}: {value:.2f}")
         
         show_tier("GATE", gate)

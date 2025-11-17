@@ -64,7 +64,7 @@ tests/
 ### Setup
 ```bash
 # 1. Copy test suite to empirica-dev
-cd /home/yogapad/empirical-ai
+cd ~/empirica-parent
 cp -r empirica/tests empirica-dev/
 
 # 2. Copy cache buster

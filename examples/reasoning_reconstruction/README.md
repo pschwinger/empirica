@@ -355,7 +355,7 @@ db.close()
 
 **1. Create a test session:**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Bootstrap a session
@@ -393,7 +393,7 @@ cat reasoning_analysis_<session_id>/summary_report.txt
 **Installation:**
 ```bash
 # Empirica already installed
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Install jq (if not present)
 sudo apt-get install jq  # Ubuntu/Debian

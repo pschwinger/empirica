@@ -118,7 +118,7 @@ rm -rf _dev/      # Dev tools and test files
 
 **Option A: Create separate dev environment** (Recommended)
 ```bash
-cd /home/yogapad/empirical-ai/
+cd ~/empirica-parent/
 cp -r empirica empirica-dev
 
 # empirica-dev/ = Our development work (keep our data)
@@ -132,7 +132,7 @@ rm -rf empirica/.empirica/
 
 **Option B: Just clean dev data**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 rm -rf .empirica/sessions/*.db
 rm -rf .empirica_reflex_logs/*
 rm -rf empirica/.empirica/
@@ -176,13 +176,13 @@ rmdir docs/empirica_skills
 2. **Clean development data:**
 ```bash
 # Option A: Separate dev environment (recommended)
-cd /home/yogapad/empirical-ai/
+cd ~/empirica-parent/
 cp -r empirica empirica-dev
 cd empirica
 rm -rf .empirica/sessions/*.db .empirica_reflex_logs/* empirica/.empirica/
 
 # Option B: Just clean
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 rm -rf .empirica/sessions/*.db .empirica_reflex_logs/* empirica/.empirica/
 ```
 
@@ -194,7 +194,7 @@ rm -rf _archive/ _dev/
 ### Git Setup (Production Ready):
 
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Initialize git
 git init
@@ -220,7 +220,7 @@ Version: 1.0.0-phase0"
 git tag -a v1.0.0-phase0 -m "Phase 0 MVP Release"
 
 # Optional: Push to GitHub
-# git remote add origin https://github.com/your-org/empirica.git
+# git remote add origin https://github.com/Nubaeon/empirica.git
 # git push -u origin main
 # git push --tags
 ```

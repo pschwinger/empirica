@@ -94,7 +94,7 @@ tests/unit/test_drift_monitor.py::test_drift_monitor_defensive_parsing PASSED
 
 ### 1. Quick Validation (Fastest)
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 pytest tests/ -v --cov=empirica
 ```

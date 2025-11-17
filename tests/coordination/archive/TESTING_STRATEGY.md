@@ -259,7 +259,7 @@ python3 test_epistemic_quality.py
 cascade = CanonicalEpistemicCascade(enable_bayesian=True, enable_drift_monitor=True)
 result = await cascade.run_epistemic_cascade(
     task="Debug why the drift monitor crashed in test_empirica_live.py",
-    context={"codebase_path": "/home/yogapad/empirical-ai/empirica"}
+    context={"codebase_path": "/path/to/empirica"}
 )
 ```
 

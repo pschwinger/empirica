@@ -26,9 +26,9 @@ Claude (me) just completed comprehensive code quality analysis of Empirica frame
 ## Step 1: Read the Reports (5 minutes)
 
 **Required Reading (in order):**
-1. `/home/yogapad/empirical-ai/empirica/CODE_QUALITY_REPORT.md` - Overview of all issues
-2. `/home/yogapad/empirical-ai/empirica/REFACTORING_PRIORITIES.md` - Your action plan
-3. `/home/yogapad/empirical-ai/empirica/DEEP_DIVE_ANALYSIS.md` - Security findings
+1. `/path/to/empirica/CODE_QUALITY_REPORT.md` - Overview of all issues
+2. `/path/to/empirica/REFACTORING_PRIORITIES.md` - Your action plan
+3. `/path/to/empirica/DEEP_DIVE_ANALYSIS.md` - Security findings
 
 **What to look for:**
 - Priority levels (P1-P6)
@@ -249,7 +249,7 @@ git checkout -b refactor/p1-p2-quick-wins
 python3 -m py_compile empirica/core/**/*.py empirica/data/*.py
 
 # Run Python import test
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 -c "
 import sys
 sys.path.insert(0, '.')
@@ -352,11 +352,11 @@ Good luck! 🚀
 ---
 
 **Reports Location:**
-- `/home/yogapad/empirical-ai/empirica/CODE_QUALITY_REPORT.md`
-- `/home/yogapad/empirical-ai/empirica/REFACTORING_PRIORITIES.md`
-- `/home/yogapad/empirical-ai/empirica/DEEP_DIVE_ANALYSIS.md`
+- `/path/to/empirica/CODE_QUALITY_REPORT.md`
+- `/path/to/empirica/REFACTORING_PRIORITIES.md`
+- `/path/to/empirica/DEEP_DIVE_ANALYSIS.md`
 
-**Working Directory:** `/home/yogapad/empirical-ai/empirica`
+**Working Directory:** `/path/to/empirica`
 
 ---
 

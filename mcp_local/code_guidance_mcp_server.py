@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(name)s:%(message
 logger = logging.getLogger("code-guidance-mcp")
 
 # Path to the AI code guide
-CODE_GUIDE_PATH = Path("/home/yogapad/empirical-ai/Documentation/Dev_Guides/ai_code_guide.md")
+CODE_GUIDE_PATH = Path("~/empirica-parent/Documentation/Dev_Guides/ai_code_guide.md")
 
 def load_code_guide():
     """Load the AI code guide content"""

@@ -17,7 +17,7 @@ Successfully built a production-ready API-based adapter for the MiniMax-M2 model
 ## ✅ What Was Delivered
 
 ### 1. Core Implementation (361 lines)
-**File:** `/home/yogapad/empirical-ai/empirica/modality_switcher/adapters/minimax_adapter.py`
+**File:** `/path/to/empirica/modality_switcher/adapters/minimax_adapter.py`
 
 - ✅ Full `AdapterInterface` protocol compliance
 - ✅ `health_check()` - API availability verification
@@ -178,14 +178,14 @@ else:
 
 ### Quick Test (No API Key)
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv/bin/activate
 python3 modality_switcher/adapters/test_minimax_adapter.py
 ```
 
 ### Full Test (With API Key)
 ```bash
-export MINIMAX_API_KEY=$(cat /home/yogapad/empirical-ai/.minimax_api)
+export MINIMAX_API_KEY=$(cat ~/empirica-parent/.minimax_api)
 python3 modality_switcher/adapters/test_minimax_live.py
 ```
 
@@ -241,7 +241,7 @@ empirica/
 - ✅ Uses environment variable (MINIMAX_API_KEY)
 - ✅ Never hardcoded
 - ✅ Not exposed in logs or errors
-- Location: `/home/yogapad/empirical-ai/.minimax_api`
+- Location: `~/empirica-parent/.minimax_api`
 
 ### Phase 1 Limitations
 - Epistemic vectors estimated via heuristics (not extracted from model)
@@ -297,7 +297,7 @@ empirica/
 ### Resources
 - **MiniMax API:** https://api.minimax.io/docs
 - **Anthropic SDK:** https://github.com/anthropics/anthropic-sdk-python
-- **Empirica Docs:** `/home/yogapad/empirical-ai/empirica/docs/`
+- **Empirica Docs:** `/path/to/empirica/docs/`
 
 ---
 

@@ -7,5 +7,5 @@ unset LD_LIBRARY_PATH
 unset LD_PRELOAD
 
 # Use the venv Python with clean environment
-exec /home/yogapad/empirical-ai/empirica/.venv-mcp/bin/python3 \
-  /home/yogapad/empirical-ai/empirica/mcp_local/empirica_mcp_server.py "$@"
+exec /path/to/empirica/.venv-mcp/bin/python3 \
+  /path/to/empirica/mcp_local/empirica_mcp_server.py "$@"

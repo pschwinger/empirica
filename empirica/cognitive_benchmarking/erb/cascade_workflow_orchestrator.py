@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Cascade Workflow Orchestrator
+Cascade Workflow Orchestrator - REFACTORED
+Uses canonical metacognitive cascade instead of reimplementing workflow.
 
-Orchestrates the full Enhanced Cascade Workflow v1.1:
-PREFLIGHT → Think → Plan → Investigate → Check → Act → POSTFLIGHT
-
-Handles auto-tracking of epistemic assessments to reflex logs and session DB.
+This file now serves as a compatibility layer and adapter for the cognitive
+benchmarking suite to work with the canonical cascade implementation.
 """
 
 import uuid
@@ -13,121 +12,133 @@ from typing import Dict, Optional, Any, List
 from dataclasses import dataclass
 from pathlib import Path
 
-# Import assessment components
+# Import CANONICAL cascade implementation
 try:
     # Try relative imports first (when used as package)
-    from .preflight_assessor import PreflightAssessor, PreflightAssessment
-    from .check_phase_evaluator import CheckPhaseEvaluator, CheckPhaseResult
-    from .postflight_assessor import PostflightAssessor, PostflightAssessment
+    from ..core.metacognitive_cascade.metacognitive_cascade import (
+        CanonicalEpistemicCascade,
+        EpistemicAssessment,
+        Action
+    )
 except ImportError:
     # Fall back to absolute imports (when used standalone)
-    from preflight_assessor import PreflightAssessor, PreflightAssessment
-    from check_phase_evaluator import CheckPhaseEvaluator, CheckPhaseResult
-    from postflight_assessor import PostflightAssessor, PostflightAssessment
+    from empirica.core.metacognitive_cascade.metacognitive_cascade import (
+        CanonicalEpistemicCascade,
+        EpistemicAssessment,
+        Action
+    )
 
-
+# Legacy compatibility - map to canonical types
 @dataclass
 class WorkflowState:
-    """Current state of cascade workflow"""
+    """Legacy compatibility wrapper for WorkflowState"""
     session_id: str
-    current_phase: str  # 'preflight', 'think', 'plan', 'investigate', 'check', 'act', 'postflight'
-    investigation_cycle: int
-    preflight_assessment: Optional[PreflightAssessment]
-    check_results: List[CheckPhaseResult]
-    postflight_assessment: Optional[PostflightAssessment]
+    current_phase: str = "preflight"
+    investigation_cycle: int = 0
+    preflight_result: Optional[Dict] = None
+    check_result: Optional[Dict] = None
+    postflight_result: Optional[Dict] = None
+
+# Legacy assessment types for backward compatibility
+@dataclass
+class PreflightAssessment:
+    """Legacy compatibility wrapper - now uses canonical EpistemicAssessment"""
+    session_id: str
+    timestamp: str
+    prompt_summary: str
+    vectors: Dict[str, float]
+    initial_uncertainty_notes: str
+    
+    @classmethod
+    def from_canonical(cls, canonical_assessment: EpistemicAssessment) -> 'PreflightAssessment':
+        """Convert from canonical EpistemicAssessment to legacy format"""
+        return cls(
+            session_id=canonical_assessment.session_id,
+            timestamp=canonical_assessment.timestamp.isoformat(),
+            prompt_summary=canonical_assessment.prompt_summary,
+            vectors=canonical_assessment.vectors,
+            initial_uncertainty_notes=getattr(canonical_assessment, 'uncertainty_notes', "")
+        )
+
+@dataclass
+class CheckPhaseResult:
+    """Legacy compatibility wrapper - now uses canonical Action enum"""
+    decision: str  # "proceed", "investigate", "recalibrate"
+    confidence: float
+    gaps: List[str]
+    reasoning: str
+    
+    @classmethod
+    def from_canonical(cls, action: Action, reasoning: str = "") -> 'CheckPhaseResult':
+        """Convert from canonical Action to legacy format"""
+        decision_map = {
+            Action.PROCEED: "proceed",
+            Action.INVESTIGATE: "investigate", 
+            Action.RETHINK: "recalibrate"
+        }
+        
+        return cls(
+            decision=decision_map.get(action, "investigate"),
+            confidence=0.8,  # Canonical doesn't provide confidence separately
+            gaps=[],  # Would need to extract from reasoning
+            reasoning=reasoning
+        )
+
+@dataclass  
+class PostflightAssessment:
+    """Legacy compatibility wrapper - now uses canonical EpistemicAssessment"""
+    session_id: str
+    timestamp: str
+    task_summary: str
+    vectors: Dict[str, float]
+    changes_from_preflight: Dict[str, float]
+    
+    @classmethod
+    def from_canonical(cls, canonical_assessment: EpistemicAssessment, 
+                      task_summary: str = "", preflight_vectors: Optional[Dict] = None) -> 'PostflightAssessment':
+        """Convert from canonical EpistemicAssessment to legacy format"""
+        changes = {}
+        if preflight_vectors:
+            for key, value in canonical_assessment.vectors.items():
+                changes[key] = value - preflight_vectors.get(key, 0.5)
+        
+        return cls(
+            session_id=canonical_assessment.session_id,
+            timestamp=canonical_assessment.timestamp.isoformat(),
+            task_summary=task_summary,
+            vectors=canonical_assessment.vectors,
+            changes_from_preflight=changes
+        )
 
 
-class CascadeWorkflowOrchestrator:
+class CanonicalCascadeAdapter:
     """
-    Orchestrates Enhanced Cascade Workflow v1.1
+    Adapter that provides legacy interface while using canonical implementation.
     
-    Automates:
-    - Preflight epistemic baseline
-    - Check phase self-assessment loops
-    - Postflight calibration validation
-    - Auto-writing to reflex logs and session DB
-    
-    Philosophy:
-    - Measurement and transparency (not control)
-    - Trust with verification (not enforcement)
-    - Learning from calibration patterns (not punishment)
+    This allows the cognitive benchmarking suite to migrate to the canonical
+    cascade without breaking existing code.
     """
     
-    def __init__(self, reflex_logs_dir: Optional[Path] = None):
-        """
-        Initialize workflow orchestrator
-        
-        Args:
-            reflex_logs_dir: Path to reflex logs directory
-        """
-        self.reflex_logs_dir = reflex_logs_dir or Path.cwd() / ".empirica_reflex_logs"
-        
-        # Initialize assessment components
-        self.preflight_assessor = PreflightAssessor(reflex_logs_dir=self.reflex_logs_dir)
-        self.check_evaluator = CheckPhaseEvaluator(reflex_logs_dir=self.reflex_logs_dir)
-        self.postflight_assessor = PostflightAssessor(reflex_logs_dir=self.reflex_logs_dir)
-        
-        # Current workflow state
-        self.state: Optional[WorkflowState] = None
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.canonical_cascade = CanonicalEpistemicCascade(session_id)
+        self.state = WorkflowState(session_id=session_id)
     
-    def start_workflow(
+    def execute_preflight_assessment(
         self,
-        user_prompt: str,
-        session_id: Optional[str] = None
-    ) -> WorkflowState:
+        prompt: str,
+        vectors: Optional[Dict[str, float]] = None,
+        uncertainty_notes: str = ""
+    ) -> PreflightAssessment:
         """
-        Start new cascade workflow with PREFLIGHT assessment
-        
-        Args:
-            user_prompt: User's task/request
-            session_id: Optional session ID (generates UUID if not provided)
-        
-        Returns:
-            WorkflowState initialized with preflight assessment
+        Execute preflight assessment using canonical implementation
         """
-        # Generate session ID if not provided
-        if session_id is None:
-            session_id = str(uuid.uuid4())
+        # Use canonical preflight method
+        preflight_result = self.canonical_cascade.execute_preflight(prompt)
         
-        print(f"\n{'='*70}")
-        print(f"EMPIRICA ENHANCED CASCADE WORKFLOW v1.1")
-        print(f"Session ID: {session_id}")
-        print(f"{'='*70}\n")
-        
-        # Execute PREFLIGHT assessment
-        print(f"[PHASE 1/7] PREFLIGHT - Baseline Epistemic Assessment")
-        preflight = self.preflight_assessor.execute_preflight_assessment(
-            session_id=session_id,
-            prompt=user_prompt
-        )
-        
-        # Initialize workflow state
-        self.state = WorkflowState(
-            session_id=session_id,
-            current_phase='preflight',
-            investigation_cycle=0,
-            preflight_assessment=preflight,
-            check_results=[],
-            postflight_assessment=None
-        )
-        
-        return self.state
-    
-    def enter_investigate_phase(self):
-        """
-        Enter INVESTIGATE phase
-        
-        This doesn't do the actual investigation (AI/tools do that),
-        but tracks that we're in investigation mode.
-        """
-        if self.state is None:
-            raise RuntimeError("Workflow not started - call start_workflow() first")
-        
-        self.state.investigation_cycle += 1
-        self.state.current_phase = 'investigate'
-        
-        print(f"\n[PHASE 4/7] INVESTIGATE - Cycle {self.state.investigation_cycle}")
-        print(f"Gathering information to reduce uncertainty...")
+        # Convert to legacy format for compatibility
+        self.state.preflight_result = preflight_result
+        return PreflightAssessment.from_canonical(preflight_result)
     
     def execute_check_phase(
         self,
@@ -136,203 +147,50 @@ class CascadeWorkflowOrchestrator:
         gaps: Optional[List[str]] = None
     ) -> CheckPhaseResult:
         """
-        Execute CHECK phase self-assessment
-        
-        Args:
-            investigation_summary: What was investigated
-            confidence: Optional pre-computed confidence
-            gaps: Optional pre-identified gaps
-        
-        Returns:
-            CheckPhaseResult with decision (proceed/recalibrate)
+        Execute CHECK phase using canonical implementation
         """
-        if self.state is None:
-            raise RuntimeError("Workflow not started - call start_workflow() first")
+        # Prepare context for canonical check phase
+        context = {
+            'investigation_summary': investigation_summary,
+            'confidence': confidence,
+            'gaps': gaps or []
+        }
         
-        print(f"\n[PHASE 5/7] CHECK - Self-Assessment (Cycle {self.state.investigation_cycle})")
+        # Use canonical check method
+        check_result = self.canonical_cascade.execute_check(context)
         
-        # Execute check phase
-        check_result = self.check_evaluator.execute_check_phase(
-            session_id=self.state.session_id,
-            investigation_summary=investigation_summary,
-            current_cycle=self.state.investigation_cycle,
-            confidence=confidence,
-            gaps=gaps
-        )
-        
-        # Store result
-        self.state.check_results.append(check_result)
-        self.state.current_phase = 'check'
-        
-        # Report decision
-        if check_result.decision == 'proceed':
-            print(f"✅ Decision: PROCEED to Act (confidence: {check_result.confidence:.2f})")
-        elif check_result.decision == 'proceed_with_caveat':
-            print(f"⚠️  Decision: PROCEED WITH CAVEAT (confidence: {check_result.confidence:.2f})")
-        elif check_result.decision == 'recalibrate':
-            print(f"🔄 Decision: RECALIBRATE (confidence: {check_result.confidence:.2f})")
-            print(f"   Gaps: {', '.join(check_result.gaps_identified[:3])}")
-            print(f"   Next: {', '.join(check_result.next_investigation_targets[:3])}")
-        elif check_result.decision == 'request_user_guidance':
-            print(f"❓ Decision: REQUEST USER GUIDANCE (max cycles reached)")
-        
-        return check_result
+        # Convert to legacy format
+        self.state.check_result = check_result
+        return CheckPhaseResult.from_canonical(check_result.recommended_action, check_result.reasoning)
     
-    def enter_act_phase(self):
-        """
-        Enter ACT phase
-        
-        Marks that we're proceeding with action.
-        """
-        if self.state is None:
-            raise RuntimeError("Workflow not started - call start_workflow() first")
-        
-        self.state.current_phase = 'act'
-        print(f"\n[PHASE 6/7] ACT - Executing Action")
-    
-    def complete_workflow(
+    def execute_postflight_assessment(
         self,
         task_summary: str,
-        postflight_vectors: Optional[Dict[str, float]] = None,
-        learning_notes: str = ""
+        final_vectors: Optional[Dict[str, float]] = None
     ) -> PostflightAssessment:
         """
-        Complete workflow with POSTFLIGHT assessment
-        
-        Args:
-            task_summary: What was accomplished
-            postflight_vectors: Optional pre-computed vectors
-            learning_notes: Insights and learnings
-        
-        Returns:
-            PostflightAssessment with calibration validation
+        Execute postflight assessment using canonical implementation
         """
-        if self.state is None:
-            raise RuntimeError("Workflow not started - call start_workflow() first")
+        # Get preflight vectors for comparison
+        preflight_vectors = self.state.preflight_result.vectors if self.state.preflight_result else None
         
-        if self.state.preflight_assessment is None:
-            raise RuntimeError("No preflight assessment found")
+        # Prepare context for canonical postflight
+        context = {
+            'task_summary': task_summary,
+            'final_vectors': final_vectors or {}
+        }
         
-        print(f"\n[PHASE 7/7] POSTFLIGHT - Calibration Validation")
+        # Use canonical postflight method  
+        postflight_result = self.canonical_cascade.execute_postflight(context)
         
-        # Extract check confidences
-        check_confidences = [
-            check.confidence for check in self.state.check_results
-        ]
-        
-        # Execute postflight assessment
-        postflight = self.postflight_assessor.execute_postflight_assessment(
-            session_id=self.state.session_id,
-            task_summary=task_summary,
-            preflight_vectors=self.state.preflight_assessment.vectors,
-            check_confidences=check_confidences,
-            postflight_vectors=postflight_vectors,
-            learning_notes=learning_notes
-        )
-        
-        # Store result
-        self.state.postflight_assessment = postflight
-        self.state.current_phase = 'postflight'
-        
-        # Print summary
-        self._print_workflow_summary()
-        
-        return postflight
-    
-    def _print_workflow_summary(self):
-        """Print final workflow summary"""
-        if self.state is None or self.state.postflight_assessment is None:
-            return
-        
-        print(f"\n{'='*70}")
-        print(f"CASCADE WORKFLOW COMPLETE")
-        print(f"{'='*70}")
-        print(f"Session ID:           {self.state.session_id}")
-        print(f"Investigation Cycles: {self.state.investigation_cycle}")
-        print(f"Check Assessments:    {len(self.state.check_results)}")
-        print(f"Calibration:          {self.state.postflight_assessment.calibration_accuracy.upper()}")
-        
-        # Show vector deltas
-        print(f"\nEpistemic Vector Changes (Preflight → Postflight):")
-        for vector, delta in self.state.postflight_assessment.delta_from_preflight.items():
-            if abs(delta) > 0.05:  # Only show significant changes
-                direction = "↑" if delta > 0 else "↓"
-                print(f"  {vector:30s} {direction} {abs(delta):+.2f}")
-        
-        print(f"{'='*70}\n")
+        # Convert to legacy format
+        self.state.postflight_result = postflight_result
+        return PostflightAssessment.from_canonical(postflight_result, task_summary, preflight_vectors)
 
 
-# Convenience function for simple workflow execution
-def run_cascade_workflow(
-    user_prompt: str,
-    task_executor_func=None,
-    session_id: Optional[str] = None
-) -> Dict[str, Any]:
+# Legacy class name for backward compatibility
+class CascadeWorkflowOrchestrator(CanonicalCascadeAdapter):
     """
-    Run complete cascade workflow with auto-tracking
-    
-    Args:
-        user_prompt: User's task/request
-        task_executor_func: Optional function that performs actual task
-        session_id: Optional session ID
-    
-    Returns:
-        Dict with workflow results and calibration
-    
-    Example:
-        def my_task():
-            # Do actual work
-            return "Task completed"
-        
-        result = run_cascade_workflow(
-            "Refactor authentication module",
-            task_executor_func=my_task
-        )
+    Legacy compatibility class - now uses canonical implementation via adapter
     """
-    orchestrator = CascadeWorkflowOrchestrator()
-    
-    # Start workflow (PREFLIGHT)
-    state = orchestrator.start_workflow(user_prompt, session_id)
-    
-    # Think & Plan phases (not explicitly tracked - AI does this)
-    print(f"\n[PHASE 2/7] THINK - Initial Reasoning")
-    print(f"[PHASE 3/7] PLAN - Structured Approach (if needed)")
-    
-    # Investigate → Check loop
-    max_cycles = 5
-    for cycle in range(1, max_cycles + 1):
-        # Investigate
-        orchestrator.enter_investigate_phase()
-        investigation_summary = "Investigation conducted (placeholder)"
-        
-        # Check
-        check_result = orchestrator.execute_check_phase(investigation_summary)
-        
-        # Decision
-        if check_result.decision in ['proceed', 'proceed_with_caveat']:
-            break
-        elif check_result.decision == 'request_user_guidance':
-            print(f"⚠️  Workflow requires user guidance")
-            break
-        # Otherwise recalibrate (continue loop)
-    
-    # Act
-    orchestrator.enter_act_phase()
-    if task_executor_func:
-        task_result = task_executor_func()
-    else:
-        task_result = "No executor function provided"
-    
-    # Postflight
-    postflight = orchestrator.complete_workflow(
-        task_summary=str(task_result),
-        learning_notes="Workflow completed successfully"
-    )
-    
-    return {
-        'session_id': state.session_id,
-        'investigation_cycles': state.investigation_cycle,
-        'calibration': postflight.calibration_accuracy,
-        'task_result': task_result,
-        'postflight': postflight.to_dict()
-    }
+    pass

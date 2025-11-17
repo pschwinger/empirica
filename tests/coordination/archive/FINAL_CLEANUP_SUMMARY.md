@@ -123,7 +123,7 @@ pytest tests/ --cov=empirica
 
 ### 1. Quick Validation (Recommended First)
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Test individual fixed files

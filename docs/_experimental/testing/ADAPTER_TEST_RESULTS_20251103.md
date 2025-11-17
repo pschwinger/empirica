@@ -160,7 +160,7 @@ All 7 adapters have **full Phase 4 integration**:
 
 ### Test Environment
 - **Python:** 3.13
-- **Location:** /home/yogapad/empirical-ai/empirica
+- **Location:** /path/to/empirica
 - **Credentials:** .empirica/credentials.yaml
 - **Snapshot System:** Phase 4 complete
 - **MCP Integration:** Phase 3 complete

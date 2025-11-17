@@ -60,7 +60,7 @@ class DashboardSpawner:
 
         # Fallback to common locations
         possible = [
-            Path("/home/yogapad/empirical-ai/empirica"),
+            Path("/path/to/empirica"),
             Path.cwd(),
         ]
 

@@ -153,7 +153,7 @@ The **Empirica Framework** - a comprehensive epistemic humility system that prov
 python3 --version  # Should be 3.11+
 
 # 2. Empirica installation
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 pip list | grep empirica  # Should show installed
 
 # 3. Dependencies
@@ -187,7 +187,7 @@ cat mcp_config.json | grep empirica_mcp_server
 ```python
 # test_imports.py
 import sys
-sys.path.insert(0, '/home/yogapad/empirical-ai/empirica')
+sys.path.insert(0, '/path/to/empirica')
 
 # Core components
 from empirica.core.epistemic_state.monitor_12d import CognitiveStateMonitor
@@ -516,7 +516,7 @@ def test_mcp_tools_available():
         ["python", "-m", "empirica.mcp_local.empirica_mcp_server", "--list-tools"],
         capture_output=True,
         text=True,
-        cwd="/home/yogapad/empirical-ai/empirica"
+        cwd="/path/to/empirica"
     )
     
     tools = json.loads(result.stdout)
@@ -581,7 +581,7 @@ def test_mcp_cascade_preflight():
         input=json.dumps(request),
         capture_output=True,
         text=True,
-        cwd="/home/yogapad/empirical-ai/empirica"
+        cwd="/path/to/empirica"
     )
     
     response = json.loads(result.stdout)

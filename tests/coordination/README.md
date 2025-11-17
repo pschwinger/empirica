@@ -57,7 +57,7 @@ Automated testing coordinator that:
 
 **Usage:**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 python3 tests/coordination/test_coordinator.py
 ```

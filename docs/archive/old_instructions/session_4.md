@@ -88,7 +88,7 @@ empirica preflight --prompt "Resume P1 refactoring at metacognitive_cascade.py (
 
 ```bash
 # Analyze the file structure
-view /home/yogapad/empirical-ai/empirica/empirica/core/metacognitive_cascade/metacognitive_cascade.py
+view /path/to/empirica/empirica/core/metacognitive_cascade/metacognitive_cascade.py
 
 # Count prints by section (estimate distribution)
 grep -n "print(" empirica/core/metacognitive_cascade/metacognitive_cascade.py | head -40
@@ -349,4 +349,4 @@ empirica preflight --prompt "Resume P1 refactoring at metacognitive_cascade.py (
 
 **Good luck, MiniMax! Focus on Section 1 completion. 🎯**
 
-*File: `/home/yogapad/empirical-ai/empirica/MINIMAX_SESSION_4_INSTRUCTIONS.md`*
+*File: `/path/to/empirica/MINIMAX_SESSION_4_INSTRUCTIONS.md`*

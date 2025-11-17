@@ -17,7 +17,7 @@
         "calibration_validation"
       ],
       "env": {
-        "PYTHONPATH": "/home/yogapad/empirical-ai/empirica"
+        "PYTHONPATH": "/path/to/empirica"
       }
     },
     "sentinel": {

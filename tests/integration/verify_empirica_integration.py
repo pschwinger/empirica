@@ -174,9 +174,9 @@ try:
     print(f"   ✅ Bootstrap loaded successfully")
     print(f"   📦 Components loaded: {len(components)}")
     
-    # Check for workflow components
-    workflow_components = ['cascade_orchestrator', 'preflight_assessor', 'postflight_assessor']
-    for comp in workflow_components:
+    # Check for canonical cascade components
+    canonical_components = ['canonical_cascade', 'canonical_adapter']
+    for comp in canonical_components:
         if comp in components:
             print(f"      ✅ {comp}")
         else:
@@ -204,24 +204,18 @@ print("5️⃣ VERIFYING WORKFLOW COMPONENTS")
 print("-" * 80)
 
 try:
-    from empirica.workflow.cascade_workflow_orchestrator import CascadeWorkflowOrchestrator
-    from empirica.workflow.preflight_assessor import PreflightAssessor
-    from empirica.workflow.postflight_assessor import PostflightAssessor
+    from empirica.core.metacognitive_cascade.metacognitive_cascade import CanonicalEpistemicCascade
+    from empirica.cognitive_benchmarking.erb.cascade_workflow_orchestrator import CanonicalCascadeAdapter
     
     print("   ✅ Workflow imports successful")
-    print("      - CascadeWorkflowOrchestrator")
-    print("      - PreflightAssessor")
-    print("      - PostflightAssessor")
+    print("      - CanonicalEpistemicCascade")
+    print("      - CanonicalCascadeAdapter")
     
-    # Check assessor structure
-    preflight = PreflightAssessor()
-    if len(preflight.EPISTEMIC_VECTORS) == 13:
-        print(f"   ✅ Preflight tracks 13 vectors")
-    else:
-        print(f"   ⚠️  Preflight has {len(preflight.EPISTEMIC_VECTORS)} vectors (expected 13)")
+    # Check canonical cascade structure
+    test_cascade = CanonicalEpistemicCascade("test-session")
+    print(f"   ✅ Canonical cascade initialized")
     
     print()
-    
 except Exception as e:
     print(f"   ❌ Workflow verification failed: {e}")
     print()

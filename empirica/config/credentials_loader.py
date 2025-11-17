@@ -149,7 +149,7 @@ class CredentialsLoader:
         # Map dotfiles to providers
         dotfile_map = {
             'qwen': '.qwen_api',
-            'minimax': '.minimax_api2',  # Note: user has .minimax_api2
+            'minimax': '.minimax_key',  # Note: user has .minimax_key
             'rovodev': '.rovodev_api',
             'gemini': '.gemini_api',
             'qodo': '.qodo_api',
@@ -291,7 +291,7 @@ if __name__ == "__main__":
         print("\n⚠️ No providers configured!")
         print("\nExpected one of:")
         print("  - .empirica/credentials.yaml")
-        print("  - Legacy dotfiles (.qwen_api, .minimax_api2, etc.)")
+        print("  - Legacy dotfiles (.qwen_api, .minimax_key, etc.)")
     else:
         for provider in providers:
             print(f"\n{provider.upper()}:")

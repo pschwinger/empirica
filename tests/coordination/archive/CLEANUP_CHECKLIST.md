@@ -29,7 +29,7 @@ rmdir docs/empirica_skills
 
 **Option A: Separate Dev Environment** (✅ RECOMMENDED)
 ```bash
-cd /home/yogapad/empirical-ai/
+cd ~/empirica-parent/
 
 # Copy to separate dev environment
 cp -r empirica empirica-dev
@@ -45,7 +45,7 @@ rm -rf empirica/.empirica/
 
 **Option B: Just Clean Current**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 rm -rf .empirica/sessions/*.db
 rm -rf .empirica_reflex_logs/*
 rm -rf empirica/.empirica/
@@ -53,7 +53,7 @@ rm -rf empirica/.empirica/
 
 ### 3. Optional: Delete Archived Artifacts
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # These contain old development files (already backed up)
 rm -rf _archive/
@@ -62,7 +62,7 @@ rm -rf _dev/
 
 ### 4. Initialize Git (Production Ready)
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Initialize
 git init
@@ -88,7 +88,7 @@ Version: 1.0.0-phase0"
 git tag -a v1.0.0-phase0 -m "Phase 0 MVP Release"
 
 # Optional: Push to GitHub
-# git remote add origin https://github.com/your-org/empirica.git
+# git remote add origin https://github.com/Nubaeon/empirica.git
 # git push -u origin main
 # git push --tags
 ```

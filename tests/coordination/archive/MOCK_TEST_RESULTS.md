@@ -187,7 +187,7 @@ pytest tests/ -v --tb=no
 Before starting:
 - [ ] Terminal font readable (size 14+)
 - [ ] Colors high contrast
-- [ ] Working directory: `/home/yogapad/empirical-ai/empirica`
+- [ ] Working directory: `/path/to/empirica`
 - [ ] Virtual environment activated
 - [ ] Tmux session clean (no old windows)
 - [ ] asciinema ready: `asciinema rec empirica-testing-demo.cast`

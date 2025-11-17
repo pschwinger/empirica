@@ -7,7 +7,7 @@ Tests the adapter interface implementation without requiring actual API calls.
 
 import os
 import sys
-sys.path.insert(0, '/home/yogapad/empirical-ai/empirica')
+sys.path.insert(0, '/path/to/empirica')
 
 from empirica.plugins.modality_switcher.plugin_registry import AdapterPayload
 from modality_switcher.adapters.minimax_adapter import MinimaxAdapter, ADAPTER_METADATA

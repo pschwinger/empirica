@@ -77,7 +77,7 @@ empirica onboard --ai-id <your-name>
 
 **Installation:**
 ```bash
-git clone https://github.com/[org]/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 pip install -e .
 ```
@@ -173,7 +173,7 @@ High uncertainty is **good** when appropriate. Acknowledge what you don't know.
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 
 # Install

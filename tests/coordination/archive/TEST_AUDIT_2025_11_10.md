@@ -150,10 +150,10 @@ tests/
 **Update Line 88:**
 ```markdown
 # Before:
-context={"codebase_path": "/home/yogapad/empirical-ai/semantic_self_aware_kit"}
+context={"codebase_path": "~/empirica-parent/semantic_self_aware_kit"}
 
 # After:
-context={"codebase_path": "/home/yogapad/empirical-ai/empirica"}
+context={"codebase_path": "/path/to/empirica"}
 ```
 
 **Add Section:**

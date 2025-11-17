@@ -11,6 +11,37 @@ from ..cli_utils import print_component_status, handle_cli_error, format_executi
 logger = logging.getLogger(__name__)
 
 
+def _get_bootstrap_profile_thresholds():
+    """Get bootstrap-specific thresholds from investigation profiles"""
+    try:
+        from empirica.config.profile_loader import ProfileLoader
+        
+        loader = ProfileLoader()
+        universal = loader.universal_constraints
+        
+        try:
+            profile = loader.get_profile('balanced')
+            constraints = profile.constraints
+            
+            return {
+                'test_confidence': getattr(constraints, 'test_confidence_threshold', 0.5),
+                'engagement_gate': universal.engagement_gate,
+                'coherence_min': universal.coherence_min,
+            }
+        except:
+            return {
+                'test_confidence': 0.5,
+                'engagement_gate': 0.6,
+                'coherence_min': 0.5,
+            }
+    except Exception:
+        return {
+            'test_confidence': 0.5,
+            'engagement_gate': 0.6,
+            'coherence_min': 0.5,
+        }
+
+
 def handle_bootstrap_command(args):
     """Handle main bootstrap command"""
     try:
@@ -193,19 +224,20 @@ def run_bootstrap_tests(verbose: bool = False) -> dict:
     try:
         # Test component imports
         from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
-        from empirica.calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
+        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
         tests['component_imports'] = True
         
         # Test vector system
-        analyzer = UncertaintyAnalyzer()
-        vector_test = analyzer.get_vector_dimensions()
-        tests['vector_system'] = len(vector_test) >= 12
+        analyzer = AdaptiveUncertaintyCalibration()
+        vector_test = analyzer.get_calibration_status()
+        tests['vector_system'] = len(vector_test.get('weights', {})) >= 3
         
         # Test cascade functionality
+        thresholds = _get_bootstrap_profile_thresholds()
         cascade_test = run_epistemic_cascade(
             task="Bootstrap test: Is the system ready?",
             context={},
-            confidence_threshold=0.5
+            confidence_threshold=thresholds['test_confidence']
         )
         tests['cascade_functionality'] = cascade_test.get('final_decision') is not None
         

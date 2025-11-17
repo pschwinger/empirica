@@ -23,6 +23,15 @@ from pathlib import Path
 import os
 
 
+class EmpricaJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles Empirica dataclasses"""
+    
+    def default(self, obj):
+        if isinstance(obj, (BeliefState, Evidence)):
+            return obj.to_dict()
+        return super().default(obj)
+
+
 @dataclass
 class Evidence:
     """Single piece of evidence from an investigation tool"""
@@ -32,6 +41,17 @@ class Evidence:
     source: str  # Which tool provided this evidence
     vector_addressed: str  # Which epistemic vector this addresses (e.g., "know", "context")
     metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert Evidence to JSON-serializable dictionary"""
+        return {
+            'outcome': self.outcome,
+            'strength': self.strength,
+            'timestamp': self.timestamp,
+            'source': self.source,
+            'vector_addressed': self.vector_addressed,
+            'metadata': self.metadata
+        }
 
 
 @dataclass
@@ -54,6 +74,19 @@ class BeliefState:
     def is_confident(self, threshold: float = 0.15) -> bool:
         """Is variance low enough to be considered confident?"""
         return self.variance < threshold
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert BeliefState to JSON-serializable dictionary"""
+        return {
+            'mean': self.mean,
+            'variance': self.variance,
+            'evidence_count': self.evidence_count,
+            'last_updated': self.last_updated,
+            'prior_mean': self.prior_mean,
+            'prior_variance': self.prior_variance,
+            'confidence_interval': self.confidence_interval(),
+            'is_confident': self.is_confident()
+        }
 
 
 class DomainClassifier:
@@ -332,40 +365,43 @@ class BayesianBeliefTracker:
         result = {}
 
         for belief_key, belief_state in self.beliefs.items():
-            result[belief_key] = {
-                'mean': belief_state.mean,
-                'variance': belief_state.variance,
-                'evidence_count': belief_state.evidence_count,
-                'last_updated': belief_state.last_updated,
-                'prior_mean': belief_state.prior_mean,
-                'prior_variance': belief_state.prior_variance,
-                'is_confident': belief_state.is_confident(),
-                'confidence_interval': belief_state.confidence_interval()
-            }
+            result[belief_key] = belief_state.to_dict()
 
         return result
+    
+    def to_json(self) -> str:
+        """
+        Convert entire tracker state to JSON string
+        
+        Returns:
+            JSON string representation of the tracker state
+        """
+        state = {
+            'beliefs': self.beliefs,
+            'evidence_history': self.evidence_history,
+            'active': self.active,
+            'activation_reason': self.activation_reason,
+            'summary': {
+                'total_beliefs': len(self.beliefs),
+                'total_evidence': len(self.evidence_history),
+                'active_status': self.active
+            }
+        }
+        
+        return json.dumps(state, indent=2, cls=EmpricaJSONEncoder)
     
     def save_state(self, filename: str = "bayesian_state.json") -> None:
         """Persist Bayesian state to disk"""
         state = {
-            'beliefs': {
-                k: {
-                    'mean': v.mean,
-                    'variance': v.variance,
-                    'evidence_count': v.evidence_count,
-                    'last_updated': v.last_updated,
-                    'prior_mean': v.prior_mean,
-                    'prior_variance': v.prior_variance
-                }
-                for k, v in self.beliefs.items()
-            },
+            'beliefs': self.beliefs,  # Use the custom encoder to handle BeliefState objects
+            'evidence_history': self.evidence_history,  # Save evidence history too
             'active': self.active,
             'activation_reason': self.activation_reason
         }
         
         filepath = self.persistence_dir / filename
         with open(filepath, 'w') as f:
-            json.dump(state, f, indent=2)
+            json.dump(state, f, indent=2, cls=EmpricaJSONEncoder)
     
     def load_state(self, filename: str = "bayesian_state.json") -> None:
         """Load Bayesian state from disk"""
@@ -381,14 +417,30 @@ class BayesianBeliefTracker:
             # Restore beliefs
             self.beliefs = {}
             for k, v in state.get('beliefs', {}).items():
-                self.beliefs[k] = BeliefState(
-                    mean=v['mean'],
-                    variance=v['variance'],
-                    evidence_count=v['evidence_count'],
-                    last_updated=v['last_updated'],
-                    prior_mean=v['prior_mean'],
-                    prior_variance=v['prior_variance']
-                )
+                # Handle both old format (dict) and new format (dict with to_dict structure)
+                if isinstance(v, dict) and 'mean' in v:
+                    self.beliefs[k] = BeliefState(
+                        mean=v['mean'],
+                        variance=v['variance'],
+                        evidence_count=v['evidence_count'],
+                        last_updated=v['last_updated'],
+                        prior_mean=v['prior_mean'],
+                        prior_variance=v['prior_variance']
+                    )
+            
+            # Restore evidence history if available
+            self.evidence_history = []
+            for ev_data in state.get('evidence_history', []):
+                if isinstance(ev_data, dict):
+                    evidence = Evidence(
+                        outcome=ev_data['outcome'],
+                        strength=ev_data['strength'],
+                        timestamp=ev_data['timestamp'],
+                        source=ev_data['source'],
+                        vector_addressed=ev_data['vector_addressed'],
+                        metadata=ev_data.get('metadata', {})
+                    )
+                    self.evidence_history.append(evidence)
             
             self.active = state.get('active', False)
             self.activation_reason = state.get('activation_reason')

@@ -543,7 +543,7 @@ python3 -c "from empirica.core.metacognitive_cascade import CanonicalEpistemicCa
 
 2. **Run unit tests:**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 -m pytest tests/unit/ -v -k "cascade or canonical" --tb=short
 ```
 

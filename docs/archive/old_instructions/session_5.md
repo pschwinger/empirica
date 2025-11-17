@@ -99,7 +99,7 @@ empirica preflight --prompt "Complete P1 refactoring: 49 prints remaining in met
 
 ```bash
 # Get full list of remaining prints
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 grep -n "print(" empirica/core/metacognitive_cascade/metacognitive_cascade.py > /tmp/remaining_prints.txt
 cat /tmp/remaining_prints.txt
 
@@ -468,4 +468,4 @@ empirica preflight --prompt "Complete P1 refactoring: 49 prints remaining in met
 
 **Good luck, MiniMax! Let's finish P1 strong! 💪**
 
-*File: `/home/yogapad/empirical-ai/empirica/MINIMAX_SESSION5_FINAL_PUSH.md`*
+*File: `/path/to/empirica/MINIMAX_SESSION5_FINAL_PUSH.md`*

@@ -211,7 +211,7 @@ print(f"Status: {status['status']}")
 
 ### All Tests
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 pytest tests/ -v
 ```

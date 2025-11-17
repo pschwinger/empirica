@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 # Add semantic_self_aware_kit parent directory to path
-# This should point to /home/yogapad/empirical-ai/semantic_self_aware_kit
+# This should point to ~/empirica-parent/semantic_self_aware_kit
 sys.path.insert(0, str(Path(__file__).parent.parent.absolute()))
 
 import pytest

@@ -277,7 +277,7 @@ Expected: "⚠️ Calibration Warning: Overconfident - discovered unknowns"
 
 ### Check Database Status
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 -c "
 from empirica.data.session_database import SessionDatabase
 db = SessionDatabase()
@@ -307,7 +307,7 @@ print(cursor.fetchone())
 
 ### Test MCP Server Startup
 ```bash
-cd /home/yogapad/empirical-ai/empirica/mcp_local
+cd /path/to/empirica/mcp_local
 python3 empirica_mcp_server.py
 # Should start without errors
 # Use Ctrl+C to stop

@@ -108,7 +108,7 @@ These are informational docs that could be updated but don't block testing.
 
 **Quick validation:**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Quick test to verify imports work

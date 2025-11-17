@@ -8,7 +8,7 @@ Get up and running with Empirica in 5 minutes.
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/empirica
+git clone https://github.com/Nubaeon/empirica
 cd empirica
 
 # Install dependencies

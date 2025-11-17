@@ -22,7 +22,7 @@
 - [ ] Virtual environment activated: `.venv-empirica`
 - [ ] pytest-cov installed and working
 - [ ] empirica command available
-- [ ] Working directory: `/home/yogapad/empirical-ai/empirica`
+- [ ] Working directory: `/path/to/empirica`
 
 ### Test Commands Ready
 ```bash

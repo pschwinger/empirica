@@ -142,7 +142,7 @@ empirica/
 ## 🚀 Cleanup Execution Commands
 
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Create archive directories
 mkdir -p docs/archive/{session_notes,investigations,completed_work,test_results,phases,old_instructions}

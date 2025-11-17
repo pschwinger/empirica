@@ -1,7 +1,7 @@
 #!/bin/bash
 # Quick test of mini-agent setup
 
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║         MINI-AGENT SETUP VERIFICATION                        ║"
@@ -60,7 +60,7 @@ echo "╚═══════════════════════�
 echo ""
 echo "To test mini-agent with Empirica:"
 echo ""
-echo "  cd /home/yogapad/empirical-ai/empirica"
+echo "  cd /path/to/empirica"
 echo "  mini-agent --workspace ."
 echo ""
 echo "Then try a simple task:"

@@ -346,7 +346,7 @@ You (internally):
 
 ## Documentation
 
-Full docs at `/home/yogapad/empirical-ai/empirica/docs/`
+Full docs at `/path/to/empirica/docs/`
 
 **Key docs:**
 - `docs/01_a_AI_AGENT_START.md` - Quick start guide

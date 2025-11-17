@@ -342,7 +342,7 @@ Phase 4: Production Deploy      [░░░░░░░░░░░░░░░�
 
 ### Quick Test
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv/bin/activate
 python3 empirica/core/modality/register_adapters.py
 ```

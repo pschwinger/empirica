@@ -148,7 +148,7 @@ Adapter  Adapter  Adapter   Adapter
 ### Run the Test Suite
 
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 tests/test_phase0_plugin_registry.py
 ```
 
@@ -233,7 +233,7 @@ Your Empirica MCP server is configured at:
     "args": [
       "empirica/mcp_local/empirica_mcp_server.py"
     ],
-    "cwd": "/home/yogapad/empirical-ai",
+    "cwd": "~/empirica-parent",
     "tools": ["*"],
     "description": "Empirica AI Self-Awareness - 12-vector metacognition and uncertainty assessment"
   }

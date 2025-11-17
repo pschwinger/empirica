@@ -7,6 +7,37 @@ import json
 from ..cli_utils import print_component_status, handle_cli_error, format_execution_time, parse_json_safely
 
 
+def _get_profile_performance_thresholds():
+    """Get performance thresholds from investigation profiles"""
+    try:
+        from empirica.config.profile_loader import ProfileLoader
+        
+        loader = ProfileLoader()
+        universal = loader.universal_constraints
+        
+        try:
+            profile = loader.get_profile('balanced')
+            constraints = profile.constraints
+            
+            return {
+                'performance_low': getattr(constraints, 'performance_low_threshold', 0.6),
+                'performance_high': getattr(constraints, 'performance_high_threshold', 0.8),
+                'engagement_gate': universal.engagement_gate,
+            }
+        except:
+            return {
+                'performance_low': 0.6, 
+                'performance_high': 0.8,
+                'engagement_gate': universal.engagement_gate,
+            }
+    except Exception:
+        return {
+            'performance_low': 0.6, 
+            'performance_high': 0.8,
+            'engagement_gate': 0.6,
+        }
+
+
 def handle_benchmark_command(args):
     """Handle benchmark command for performance testing"""
     try:
@@ -49,9 +80,10 @@ def handle_benchmark_command(args):
         
         # Show component performance
         if result.get('component_performance'):
+            thresholds = _get_profile_performance_thresholds()
             print("🧩 Component performance:")
             for component, perf in result['component_performance'].items():
-                status = "✅" if perf > 0.8 else "⚠️" if perf > 0.6 else "❌"
+                status = "✅" if perf > thresholds['performance_high'] else "⚠️" if perf > thresholds['performance_low'] else "❌"
                 print(f"   {status} {component}: {perf:.2f}")
         
         # Show memory usage if included
@@ -108,9 +140,10 @@ def handle_performance_command(args):
         
         # Show performance dimensions
         if result.get('dimensions'):
+            thresholds = _get_profile_performance_thresholds()
             print("📏 Performance dimensions:")
             for dimension, score in result['dimensions'].items():
-                status = "🟢" if score > 0.8 else "🟡" if score > 0.6 else "🔴"
+                status = "🟢" if score > thresholds['performance_high'] else "🟡" if score > thresholds['performance_low'] else "🔴"
                 print(f"   {status} {dimension}: {score:.2f}")
         
         # Show bottlenecks

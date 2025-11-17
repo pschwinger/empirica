@@ -162,14 +162,14 @@
 
 ### Root Directory
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 ls -1 *.md
 # Should show only 9 essential files
 ```
 
 ### docs/ Structure
 ```bash
-cd /home/yogapad/empirical-ai/empirica/docs
+cd /path/to/empirica/docs
 tree -L 2 -d
 # Should show organized hierarchy
 ```

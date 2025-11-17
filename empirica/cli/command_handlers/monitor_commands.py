@@ -5,6 +5,7 @@ Provides real-time visibility into adapter usage, costs, and performance.
 """
 
 import json
+import logging
 import time
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +16,9 @@ from empirica.plugins.modality_switcher.modality_switcher import ModalitySwitche
 from empirica.plugins.modality_switcher.register_adapters import get_registry
 from empirica.plugins.modality_switcher.config_loader import get_config
 from ..cli_utils import handle_cli_error
+
+# Set up logging for monitor commands
+logger = logging.getLogger(__name__)
 
 
 class UsageMonitor:
@@ -53,7 +57,8 @@ class UsageMonitor:
             try:
                 with open(self.stats_file, 'r') as f:
                     return json.load(f)
-            except:
+            except Exception as e:
+                logger.warning(f"Could not load stats from {self.stats_file}: {e}")
                 pass
         
         # Initialize new stats
@@ -85,6 +90,7 @@ class UsageMonitor:
     ):
         """Record a request."""
         if adapter not in self.stats["adapters"]:
+            logger.debug(f"Creating new stats entry for adapter: {adapter}")
             self.stats["adapters"][adapter] = {"requests": 0, "tokens": 0, "cost": 0.0, "errors": 0}
         
         self.stats["adapters"][adapter]["requests"] += 1
@@ -93,9 +99,12 @@ class UsageMonitor:
         
         if not success:
             self.stats["adapters"][adapter]["errors"] += 1
+            logger.warning(f"Request error recorded for adapter: {adapter}")
         
         self.stats["total_requests"] += 1
         self.stats["total_cost"] += cost
+        
+        logger.debug(f"Recorded request: adapter={adapter}, success={success}, tokens={tokens}, cost=${cost:.4f}")
         
         # Add to history
         self.stats["history"].append({
@@ -109,6 +118,7 @@ class UsageMonitor:
         
         # Keep only last 1000 records
         if len(self.stats["history"]) > 1000:
+            logger.debug("Trimming history to last 1000 records")
             self.stats["history"] = self.stats["history"][-1000:]
         
         self._save_stats()
@@ -119,6 +129,7 @@ class UsageMonitor:
     
     def reset_stats(self):
         """Reset all statistics."""
+        logger.info("Resetting all monitoring statistics")
         self.stats = {
             "session_start": datetime.now().isoformat(),
             "adapters": {
@@ -141,11 +152,14 @@ def handle_monitor_command(args):
     Shows current usage statistics with optional live updates.
     """
     try:
+        logger.info("Displaying monitoring dashboard")
         print("\n📊 Empirica Usage Monitor")
         print("=" * 70)
         
         monitor = UsageMonitor()
         stats = monitor.get_stats()
+        
+        logger.debug(f"Loaded stats: {stats.get('total_requests', 0)} total requests")
         
         # Get config for cost estimates
         config = get_config()

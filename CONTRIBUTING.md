@@ -5,7 +5,7 @@ We welcome contributions to the Semantic Self-Aware Kit! This document provides 
 ## 🤝 How to Contribute
 
 ### Reporting Issues
-- Use the [GitHub Issues](https://github.com/Nubaeon/semantic-self-aware-kit/issues) page
+- Use the [GitHub Issues](https://github.com/Nubaeon/empirica/issues) page
 - Provide clear description of the problem
 - Include steps to reproduce if applicable
 - Add relevant system information
@@ -151,7 +151,7 @@ Contributors will be recognized in:
 ## 📞 Getting Help
 
 - Join our [Discord - Collaborative AI](https://discord.gg/collaborative-ai)
-- Check existing [GitHub Issues](https://github.com/Nubaeon/semantic-self-aware-kit/issues)
+- Check existing [GitHub Issues](https://github.com/Nubaeon/empirica/issues)
 - Review the web interface documentation
 - Ask questions in discussions
 

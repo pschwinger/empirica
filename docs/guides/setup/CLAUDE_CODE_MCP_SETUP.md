@@ -24,7 +24,7 @@ This guide shows you how to enable the **Empirica MCP Server** and **Empirica TM
 ### 1. Python Requirements
 ```bash
 # Ensure you have Python 3.8+ and required packages
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 pip install -r empirica/requirements.txt
 
 # Install MCP SDK
@@ -63,9 +63,9 @@ Create or update the `mcp_config.json` file with the following configuration:
     "empirica-core": {
       "command": "python3",
       "args": [
-        "/home/yogapad/empirical-ai/empirica/empirica/mcp_local/empirica_mcp_server.py"
+        "/path/to/empirica/empirica/mcp_local/empirica_mcp_server.py"
       ],
-      "cwd": "/home/yogapad/empirical-ai/empirica",
+      "cwd": "/path/to/empirica",
       "description": "Empirica AI Self-Awareness Framework - Core cognitive components",
       "capabilities": [
         "metacognitive_cascade",
@@ -80,9 +80,9 @@ Create or update the `mcp_config.json` file with the following configuration:
     "empirica-tmux": {
       "command": "python3",
       "args": [
-        "/home/yogapad/empirical-ai/empirica/empirica/mcp_local/empirica_tmux_mcp_server.py"
+        "/path/to/empirica/empirica/mcp_local/empirica_tmux_mcp_server.py"
       ],
-      "cwd": "/home/yogapad/empirical-ai/empirica",
+      "cwd": "/path/to/empirica",
       "description": "Empirica TMux Integration - Workspace orchestration and monitoring",
       "capabilities": [
         "session_management",
@@ -98,7 +98,7 @@ Create or update the `mcp_config.json` file with the following configuration:
 }
 ```
 
-**Important:** Update the paths to match your actual installation location. Replace `/home/yogapad/empirical-ai/empirica` with your actual path.
+**Important:** Update the paths to match your actual installation location. Replace `/path/to/empirica` with your actual path.
 
 ### Step 3: Alternative - Using Relative Paths
 
@@ -112,7 +112,7 @@ If you want the configuration to be more portable:
       "args": [
         "empirica/mcp_local/empirica_mcp_server.py"
       ],
-      "cwd": "/home/yogapad/empirical-ai/empirica",
+      "cwd": "/path/to/empirica",
       "description": "Empirica AI Self-Awareness Framework - Core cognitive components",
       "capabilities": [
         "metacognitive_cascade",
@@ -403,7 +403,7 @@ Recommendation: This is a HIGH severity vulnerability requiring immediate attent
 
 2. Test server manually:
    ```bash
-   cd /home/yogapad/empirical-ai/empirica
+   cd /path/to/empirica
    python3 empirica/mcp_local/empirica_mcp_server.py
    ```
 
@@ -441,7 +441,7 @@ Recommendation: This is a HIGH severity vulnerability requiring immediate attent
 
 2. Check plugin imports:
    ```bash
-   cd /home/yogapad/empirical-ai/empirica
+   cd /path/to/empirica
    python3 -c "from empirica.plugins import debug_runner_panel"
    ```
 
@@ -533,8 +533,8 @@ After enabling the MCP servers:
 ## Support
 
 ### Resources
-- **Documentation:** `/home/yogapad/empirical-ai/empirica/docs/`
-- **Examples:** `/home/yogapad/empirical-ai/empirica/examples/`
+- **Documentation:** `/path/to/empirica/docs/`
+- **Examples:** `/path/to/empirica/examples/`
 - **CLI Help:** Run `python3 -m empirica.cli --help`
 
 ### Common Commands

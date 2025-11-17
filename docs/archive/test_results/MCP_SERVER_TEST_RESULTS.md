@@ -20,7 +20,7 @@
 `empirica-resume_previous_session` tool with `resume_mode: "last_n"` returned error: "last_n mode not yet implemented"
 
 ### Solution
-**File:** `/home/yogapad/empirical-ai/empirica/mcp_local/empirica_mcp_server.py`  
+**File:** `/path/to/empirica/mcp_local/empirica_mcp_server.py`  
 **Lines:** 2273-2296
 
 Added implementation:
@@ -64,7 +64,7 @@ Found 1 sessions for empirica_agent
 ## MCP Server Architecture
 
 ### Main MCP Server ✅
-**File:** `/home/yogapad/empirical-ai/empirica/mcp_local/empirica_mcp_server.py` (121KB)
+**File:** `/path/to/empirica/mcp_local/empirica_mcp_server.py` (121KB)
 
 **Purpose:** Primary MCP server with all Empirica tools
 
@@ -84,7 +84,7 @@ Found 1 sessions for empirica_agent
 ---
 
 ### TMUX MCP Server 📊
-**File:** `/home/yogapad/empirical-ai/empirica/mcp_local/empirica_tmux_mcp_server.py` (23KB)
+**File:** `/path/to/empirica/mcp_local/empirica_tmux_mcp_server.py` (23KB)
 
 **Purpose:** Dashboard spawning and TMUX workspace management
 
@@ -108,7 +108,7 @@ Found 1 sessions for empirica_agent
 ## Dashboard Architecture
 
 ### Dashboard Spawner
-**File:** `/home/yogapad/empirical-ai/empirica/empirica/plugins/dashboard_spawner.py`
+**File:** `/path/to/empirica/empirica/plugins/dashboard_spawner.py`
 
 **API:**
 ```python
@@ -220,13 +220,13 @@ pip install libtmux>=0.36.0
 ## File Changes
 
 **Modified:**
-- `/home/yogapad/empirical-ai/empirica/mcp_local/empirica_mcp_server.py`
+- `/path/to/empirica/mcp_local/empirica_mcp_server.py`
   - Lines 2273-2296
   - Added `last_n` mode implementation
   - ~25 lines of code added
 
 **Created:**
-- `/home/yogapad/empirical-ai/empirica/MCP_SERVER_TEST_RESULTS.md` (this file)
+- `/path/to/empirica/MCP_SERVER_TEST_RESULTS.md` (this file)
 
 ---
 

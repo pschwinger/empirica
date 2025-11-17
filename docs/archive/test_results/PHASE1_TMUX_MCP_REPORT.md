@@ -24,7 +24,7 @@ Successfully corrected test instructions and validated core Empirica functionali
 
 ### 1. MCP Server Status ✅
 
-**Location:** `/home/yogapad/empirical-ai/empirica/mcp_local/empirica_tmux_mcp_server.py`
+**Location:** `/path/to/empirica/mcp_local/empirica_tmux_mcp_server.py`
 
 **MCP Tools Tested:**
 - ✅ `empirica-bootstrap_session` - Created session successfully
@@ -49,7 +49,7 @@ Successfully corrected test instructions and validated core Empirica functionali
 
 ### 2. Database Persistence ✅
 
-**Location:** `/home/yogapad/empirical-ai/empirica/.empirica/sessions/`
+**Location:** `/path/to/empirica/.empirica/sessions/`
 
 ```bash
 Sessions in database: 24
@@ -69,7 +69,7 @@ Database file: sessions.db (present)
 
 ### 3. Reflex Logs ✅
 
-**Location:** `/home/yogapad/empirical-ai/empirica/.empirica_reflex_logs/`
+**Location:** `/path/to/empirica/.empirica_reflex_logs/`
 
 **Structure:**
 ```
@@ -91,7 +91,7 @@ Database file: sessions.db (present)
 
 ### 4. Dashboard Status ⚠️
 
-**Dashboard Script:** `/home/yogapad/empirical-ai/empirica/empirica/dashboard/snapshot_monitor.py`
+**Dashboard Script:** `/path/to/empirica/empirica/dashboard/snapshot_monitor.py`
 
 **Testing Status:**
 - ✅ Dashboard script exists
@@ -104,7 +104,7 @@ Database file: sessions.db (present)
 ```bash
 # In TMUX session:
 tmux split-window -h -p 30
-python3 /home/yogapad/empirical-ai/empirica/empirica/dashboard/snapshot_monitor.py
+python3 /path/to/empirica/empirica/dashboard/snapshot_monitor.py
 
 # Or via MCP:
 # Call: launch_snapshot_dashboard with force=false
@@ -287,7 +287,7 @@ Sessions found:
 ```bash
 # Manual test (recommended but optional):
 tmux split-window -h -p 30
-python3 /home/yogapad/empirical-ai/empirica/empirica/dashboard/snapshot_monitor.py
+python3 /path/to/empirica/empirica/dashboard/snapshot_monitor.py
 
 # Save test snapshot to trigger update
 # (Use Python script from TMUX_INTEGRATION_TEST_RESULTS.md)

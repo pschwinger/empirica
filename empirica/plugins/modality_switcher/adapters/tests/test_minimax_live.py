@@ -8,7 +8,7 @@ Requires MINIMAX_API_KEY environment variable.
 
 import os
 import sys
-sys.path.insert(0, '/home/yogapad/empirical-ai/empirica')
+sys.path.insert(0, '/path/to/empirica')
 
 from empirica.plugins.modality_switcher.plugin_registry import AdapterPayload, AdapterResponse, AdapterError
 from modality_switcher.adapters.minimax_adapter import MinimaxAdapter
@@ -132,7 +132,7 @@ def main():
     if not api_key:
         print("❌ MINIMAX_API_KEY not set in environment")
         print("\nSet it with:")
-        print("   export MINIMAX_API_KEY=$(cat /home/yogapad/empirical-ai/.minimax_api)")
+        print("   export MINIMAX_API_KEY=$(cat ~/empirica-parent/.minimax_api)")
         return 1
     
     print(f"✅ API key loaded (length: {len(api_key)} chars)")

@@ -128,10 +128,10 @@ Create a separate Empirica installation for development:
 
 ```bash
 # Current structure:
-/home/yogapad/empirical-ai/empirica/  # Production codebase
+/path/to/empirica/  # Production codebase
 
 # Proposed structure:
-/home/yogapad/empirical-ai/
+~/empirica-parent/
 ├── empirica/                          # Clean production codebase
 │   ├── .empirica/                     # User config template only
 │   └── .empirica_reflex_logs/         # Empty (will be created by users)
@@ -144,7 +144,7 @@ Create a separate Empirica installation for development:
 **How to set up:**
 ```bash
 # Create dev environment
-cd /home/yogapad/empirical-ai/
+cd ~/empirica-parent/
 cp -r empirica empirica-dev
 
 # In empirica-dev: Keep our data, continue development
@@ -221,7 +221,7 @@ git tag v1.0.0-phase0
 
 #### Initialize Git
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Initialize
 git init
@@ -360,7 +360,7 @@ Result: 15 files → 8 files
 
 **2. Separate Development Environment** ✅ RECOMMENDED
 ```bash
-cd /home/yogapad/empirical-ai/
+cd ~/empirica-parent/
 cp -r empirica empirica-dev  # Our development environment
 cd empirica  # Clean for production
 rm -rf .empirica/sessions/*.db .empirica_reflex_logs/* empirica/.empirica/
@@ -368,7 +368,7 @@ rm -rf .empirica/sessions/*.db .empirica_reflex_logs/* empirica/.empirica/
 
 **3. Initialize Git**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 git init
 git add .
 git commit -m "Phase 0 MVP - Initial Release"
@@ -413,7 +413,7 @@ rm -rf empirica/.empirica/      # Nested development database
 **Option A: GitHub + pip install (Recommended)**
 ```bash
 # Users install via:
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 pip install -e .
 empirica onboard

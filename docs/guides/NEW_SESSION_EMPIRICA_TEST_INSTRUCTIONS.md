@@ -33,13 +33,13 @@
 
 ### Step 1A: Start TMUX Dashboard First
 
-**Dashboard Location:** `/home/yogapad/empirical-ai/empirica/empirica/dashboard/snapshot_monitor.py`
+**Dashboard Location:** `/path/to/empirica/empirica/dashboard/snapshot_monitor.py`
 
 **Method 1: Direct Python Launch (in TMUX)**
 ```bash
 # In a tmux session, split pane and launch dashboard
 tmux split-window -h -p 30
-python3 /home/yogapad/empirical-ai/empirica/empirica/dashboard/snapshot_monitor.py
+python3 /path/to/empirica/empirica/dashboard/snapshot_monitor.py
 ```
 
 **Method 2: Via MCP Tool (launch_snapshot_dashboard)**
@@ -110,13 +110,13 @@ Expected: Assessment completed, visible in dashboard
 
 ```bash
 # Check database location (.empirica in project root)
-ls -lah /home/yogapad/empirical-ai/empirica/.empirica/
+ls -lah /path/to/empirica/.empirica/
 
 # Verify sessions.db exists and has data
-sqlite3 /home/yogapad/empirical-ai/empirica/.empirica/sessions.db "SELECT COUNT(*) FROM sessions;"
+sqlite3 /path/to/empirica/.empirica/sessions.db "SELECT COUNT(*) FROM sessions;"
 
 # Check reflex logs (in project root)
-ls -lah /home/yogapad/empirical-ai/empirica/.empirica_reflex_logs/
+ls -lah /path/to/empirica/.empirica_reflex_logs/
 ```
 
 **Success Criteria:**
@@ -310,7 +310,7 @@ ls -la empirica/.empirica/
 ```python
 # Using Python directly
 import sys
-sys.path.insert(0, '/home/yogapad/empirical-ai/empirica')
+sys.path.insert(0, '/path/to/empirica')
 
 from empirica.core.canonical.canonical_session_manager import CanonicalSessionManager
 
@@ -438,7 +438,7 @@ tmux kill-pane -t <pane-id>
 
 # Restart dashboard in new pane
 tmux split-window -h -p 30
-python3 /home/yogapad/empirical-ai/empirica/empirica/dashboard/snapshot_monitor.py
+python3 /path/to/empirica/empirica/dashboard/snapshot_monitor.py
 
 # Or use MCP tool
 # Call: launch_snapshot_dashboard with force=true
@@ -1175,14 +1175,14 @@ If you encounter issues:
 ```bash
 # Terminal 1: Start dashboard (in TMUX)
 tmux split-window -h -p 30
-python3 /home/yogapad/empirical-ai/empirica/empirica/dashboard/snapshot_monitor.py
+python3 /path/to/empirica/empirica/dashboard/snapshot_monitor.py
 
 # Terminal 2: Work with Empirica
 # Use MCP tools via your IDE (Claude Desktop, Cursor, etc.)
 # or Python imports directly:
 python3
 >>> import sys
->>> sys.path.insert(0, '/home/yogapad/empirical-ai/empirica')
+>>> sys.path.insert(0, '/path/to/empirica')
 >>> from empirica.core.canonical import CanonicalEpistemicAssessor
 >>> # ... work with Empirica ...
 
@@ -1192,9 +1192,9 @@ python3
 >>> manager.export_session('<session-id>', 'final_report.json')
 ```
 
-**MCP Server Location:** `/home/yogapad/empirical-ai/empirica/mcp_local/empirica_tmux_mcp_server.py`
-**Dashboard Script:** `/home/yogapad/empirical-ai/empirica/empirica/dashboard/snapshot_monitor.py`
-**Main Package:** `/home/yogapad/empirical-ai/empirica/empirica/`
+**MCP Server Location:** `/path/to/empirica/mcp_local/empirica_tmux_mcp_server.py`
+**Dashboard Script:** `/path/to/empirica/empirica/dashboard/snapshot_monitor.py`
+**Main Package:** `/path/to/empirica/empirica/`
 
 **Good luck! 🚀**
 

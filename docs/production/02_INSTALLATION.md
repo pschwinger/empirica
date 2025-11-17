@@ -23,7 +23,7 @@
 ### 1. Clone Repository
 ```bash
 cd /your/workspace/
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 ```
 
@@ -62,7 +62,7 @@ python3 -c "from empirica.bootstraps import ExtendedMetacognitiveBootstrap; prin
 For active development and customization:
 
 ```bash
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 pip install -e .
 ```
@@ -308,7 +308,7 @@ sudo apt update
 sudo apt install python3 python3-pip git tmux sqlite3
 
 # Clone and install
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 pip install -r requirements.txt
 ```
@@ -319,7 +319,7 @@ pip install -r requirements.txt
 brew install python git tmux
 
 # Clone and install
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 pip3 install -r requirements.txt
 ```
@@ -330,7 +330,7 @@ pip3 install -r requirements.txt
 # Install Git from git-scm.com
 
 # Clone and install
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 pip install -r requirements.txt
 

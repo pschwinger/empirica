@@ -23,7 +23,7 @@ Modern Python installations use externally-managed environments. You must create
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 ```
 

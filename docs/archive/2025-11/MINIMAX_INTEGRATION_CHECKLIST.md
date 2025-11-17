@@ -261,7 +261,7 @@
 ### Resources
 - **MiniMax API Docs:** https://api.minimax.io/docs
 - **Anthropic SDK Docs:** https://github.com/anthropics/anthropic-sdk-python
-- **Empirica Docs:** /home/yogapad/empirical-ai/empirica/docs/
+- **Empirica Docs:** /path/to/empirica/docs/
 
 ---
 

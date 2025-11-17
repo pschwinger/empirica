@@ -107,7 +107,7 @@
 **Resolution needed:**
 ```bash
 # Install pytest-cov in .venv-mcp
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-mcp/bin/activate
 pip install pytest-cov
 ```

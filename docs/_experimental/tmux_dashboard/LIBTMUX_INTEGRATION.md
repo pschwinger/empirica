@@ -199,7 +199,7 @@ async def launch_snapshot_dashboard(self,
             pane_id = target_pane.id
 
         # Launch dashboard
-        dashboard_cmd = "cd /home/yogapad/empirical-ai/empirica && python3 empirica/dashboard/snapshot_monitor.py"
+        dashboard_cmd = "cd /path/to/empirica && python3 empirica/dashboard/snapshot_monitor.py"
 
         if target_pane:
             # Use libtmux (clean!)
@@ -231,7 +231,7 @@ async def launch_snapshot_dashboard(self,
 
 ```bash
 # From current pane, split horizontally
-tmux split-window -h -p 30 "cd /home/yogapad/empirical-ai/empirica && python3 empirica/dashboard/snapshot_monitor.py"
+tmux split-window -h -p 30 "cd /path/to/empirica && python3 empirica/dashboard/snapshot_monitor.py"
 ```
 
 ### **Via MCP Server (libtmux-powered)**
@@ -255,7 +255,7 @@ tmux kill-pane -t main:0.1
 
 # Launch new dashboard (fixed exception handling)
 tmux split-window -h -p 30
-tmux send-keys -t main:0.1 "cd /home/yogapad/empirical-ai/empirica && python3 empirica/dashboard/snapshot_monitor.py" Enter
+tmux send-keys -t main:0.1 "cd /path/to/empirica && python3 empirica/dashboard/snapshot_monitor.py" Enter
 
 # Test refresh (press 'R') - should NOT crash anymore!
 ```
@@ -421,7 +421,7 @@ async def orchestrate_cognitive_task(task: str):
 ### **For Users:**
 
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Install via pipenv (recommended)
 pipenv install libtmux

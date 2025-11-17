@@ -20,7 +20,7 @@ Create 15-25 tests covering:
 
 ### Option A: Bootstrap (Quick)
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 empirica bootstrap --ai-id gemini-test-validator
 ```

@@ -55,7 +55,7 @@ What should we prioritize?
         'session': 'next_steps_assessment',
         'phase': 'post_7_phase_implementation',
         'available_tools': ['read', 'write', 'bash', 'edit', 'create'],
-        'cwd': '/home/yogapad/empirical-ai/empirica',
+        'cwd': '/path/to/empirica',
         'recent_work': [
             'Implemented PREFLIGHT phase',
             'Implemented POSTFLIGHT phase',

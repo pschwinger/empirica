@@ -138,7 +138,7 @@ empirica onboard --ai-id minimax
 
 ### Quick Test (Already Passed):
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 -c "
 from empirica.plugins.modality_switcher.thinking_analyzer import *
 
@@ -272,7 +272,7 @@ if re.search(r"not sure|uncertain about", full_thinking):
 
 ```bash
 # 1. Test thinking analyzer (already passed)
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 empirica/plugins/modality_switcher/thinking_analyzer.py
 
 # 2. Test live MiniMax chat with genuine extraction

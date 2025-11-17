@@ -52,7 +52,7 @@ This protocol tests Empirica's core capability: **proving genuine AI learning th
 #### Step 1.1: Create Session Record
 
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Bootstrap session (retroactive documentation)
@@ -422,7 +422,7 @@ cat session_timeline.md
 
 **Environment:**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Verify Empirica is ready

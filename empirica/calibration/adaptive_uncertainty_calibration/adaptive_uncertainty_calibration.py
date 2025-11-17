@@ -13,6 +13,75 @@ from enum import Enum
 from copy import deepcopy
 import os
 
+
+def _get_uncertainty_profile_config():
+    """Get uncertainty calibration parameters from investigation profiles"""
+    try:
+        from empirica.config.profile_loader import ProfileLoader
+        
+        loader = ProfileLoader()
+        universal = loader.universal_constraints
+        
+        try:
+            profile = loader.get_profile('balanced')
+            constraints = profile.constraints
+            
+            # Get uncertainty calibration from nested structure
+            uncertainty_cal = getattr(constraints, 'uncertainty_calibration', {})
+            display_thresholds = getattr(constraints, 'display_thresholds', {})
+            
+            return {
+                # Core uncertainty calculation parameters
+                'uncertainty_baseline': uncertainty_cal.get('uncertainty_baseline', 0.5),
+                'domain_knowledge_reduction': uncertainty_cal.get('domain_knowledge_reduction', 0.2),
+                'info_confidence_scaling': uncertainty_cal.get('info_confidence_scaling', 0.1),
+                'info_confidence_max': uncertainty_cal.get('info_confidence_max', 0.3),
+                'complexity_penalty': uncertainty_cal.get('complexity_penalty', 0.3),
+                'uncertainty_alternative_baseline': uncertainty_cal.get('uncertainty_alternative_baseline', 0.4),
+                
+                # Decision thresholds
+                'uncertainty_low_gate': uncertainty_cal.get('uncertainty_low_gate', 0.2),
+                'uncertainty_medium_gate': uncertainty_cal.get('uncertainty_medium_gate', 0.6),
+                
+                # Algorithm parameters
+                'max_adjustment_per_cycle': uncertainty_cal.get('max_adjustment_per_cycle', 0.10),
+                'minimum_weight_threshold': uncertainty_cal.get('minimum_weight_threshold', 0.3),
+                
+                # Universal constraints
+                'engagement_gate': universal.engagement_gate,
+                'coherence_min': universal.coherence_min,
+            }
+        except:
+            return {
+                'uncertainty_baseline': 0.5,
+                'domain_knowledge_reduction': 0.2,
+                'info_confidence_scaling': 0.1,
+                'info_confidence_max': 0.3,
+                'complexity_penalty': 0.3,
+                'uncertainty_alternative_baseline': 0.4,
+                'uncertainty_low_gate': 0.2,
+                'uncertainty_medium_gate': 0.6,
+                'max_adjustment_per_cycle': 0.10,
+                'minimum_weight_threshold': 0.3,
+                'engagement_gate': 0.6,
+                'coherence_min': 0.5,
+            }
+    except Exception:
+        return {
+            'uncertainty_baseline': 0.5,
+            'domain_knowledge_reduction': 0.2,
+            'info_confidence_scaling': 0.1,
+            'info_confidence_max': 0.3,
+            'complexity_penalty': 0.3,
+            'uncertainty_alternative_baseline': 0.4,
+            'uncertainty_low_gate': 0.2,
+            'uncertainty_medium_gate': 0.6,
+            'max_adjustment_per_cycle': 0.10,
+            'minimum_weight_threshold': 0.3,
+            'engagement_gate': 0.6,
+            'coherence_min': 0.5,
+        }
+
 class UQVector(Enum):
     """Simplified 3-vector uncertainty framework"""
     KNOW = "know"        # Knowledge certainty - what we know vs don't know
@@ -44,10 +113,12 @@ class UVLProtocol:
     
     @staticmethod
     def color_for_uncertainty(uncertainty: float) -> str:
-        """Map uncertainty to UVL color"""
-        if uncertainty < 0.2:
+        """Map uncertainty to UVL color using profile-based thresholds"""
+        config = _get_uncertainty_profile_config()
+        
+        if uncertainty < config['uncertainty_low_gate']:
             return '🟢'  # Green - confident
-        elif uncertainty < 0.6:
+        elif uncertainty < config['uncertainty_medium_gate']:
             return '🟡'  # Yellow - moderate uncertainty
         else:
             return '🔴'  # Red - high uncertainty
@@ -103,10 +174,11 @@ class AdaptiveUncertaintyCalibration:
         self.response_count = 0
         self.predictions = {}  # Store predictions for feedback
         
-        # Safety bounds
-        self.MAX_ADJUSTMENT = 0.10  # 10% max change per cycle
-        self.MIN_WEIGHT = 0.3       # Never go below 30%
-        self.MAX_WEIGHT = 2.0       # Never exceed 200%
+        # Safety bounds from investigation profiles
+        config = _get_uncertainty_profile_config()
+        self.MAX_ADJUSTMENT = config['max_adjustment_per_cycle']  # Profile-based max change per cycle
+        self.MIN_WEIGHT = config['minimum_weight_threshold']      # Profile-based minimum weight threshold
+        self.MAX_WEIGHT = 2.0       # Keep fixed upper bound for system stability
         
         # Load existing calibration if available
         self._load_calibration_state()
@@ -200,21 +272,22 @@ class AdaptiveUncertaintyCalibration:
         available_info = context.get('available_info', [])
         domain = context.get('domain', 'general')
         
-        # Base uncertainty
-        uncertainty = 0.5
+        # Base uncertainty from investigation profile
+        config = _get_uncertainty_profile_config()
+        uncertainty = config['uncertainty_baseline']
         
         # Reduce uncertainty if we have domain knowledge
         if domain in ['python', 'programming', 'analysis']:
-            uncertainty -= 0.2
+            uncertainty -= config['domain_knowledge_reduction']
         
         # Reduce uncertainty if we have specific information
-        info_confidence = min(len(available_info) * 0.1, 0.3)
+        info_confidence = min(len(available_info) * config['info_confidence_scaling'], config['info_confidence_max'])
         uncertainty -= info_confidence
         
         # Increase uncertainty for complex/research tasks
         complex_indicators = ['research', 'novel', 'experimental', 'unknown']
         if any(word in task.lower() for word in complex_indicators):
-            uncertainty += 0.3
+            uncertainty += config['complexity_penalty']
         
         return max(0.0, min(1.0, uncertainty))
     
@@ -224,8 +297,9 @@ class AdaptiveUncertaintyCalibration:
         tools_available = context.get('tools_available', [])
         execution_history = context.get('execution_history', {})
         
-        # Base uncertainty
-        uncertainty = 0.4
+        # Base uncertainty from investigation profile  
+        config = _get_uncertainty_profile_config()
+        uncertainty = config['uncertainty_alternative_baseline']
         
         # Reduce uncertainty if we have relevant tools
         if tools_available:

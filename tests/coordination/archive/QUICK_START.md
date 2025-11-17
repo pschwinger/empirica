@@ -40,7 +40,7 @@ tmux new-session -s empirica-demo
 
 **Setup:**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Ensure credentials configured
@@ -67,7 +67,7 @@ python3 tests/coordination/test_coordinator.py
 
 **Commands:**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 
 # Run all tests

@@ -147,7 +147,7 @@ grep -n "max_investigation_rounds.*=.*[0-9]" empirica/core/metacognitive_cascade
 # Should only find the deprecated parameter definition
 
 # 5. Run unit tests
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 python3 -m pytest tests/unit/cascade/ -v
 ```
 

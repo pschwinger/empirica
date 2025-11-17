@@ -43,7 +43,7 @@ tmux new-session -s empirica-demo -n coordinator
 
 **Setup:**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 clear
 
@@ -67,7 +67,7 @@ Ctrl+b, %
 
 **Left Pane (Qwen):**
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 clear
 
@@ -84,7 +84,7 @@ echo "Status: Waiting for test assignments..."
 # Switch to right pane
 Ctrl+b, →
 
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 source .venv-empirica/bin/activate
 clear
 
@@ -102,7 +102,7 @@ echo "Status: Waiting for test assignments..."
 # Create another window
 Ctrl+b, c
 
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 clear
 
 echo "╔════════════════════════════════════════════════════════════╗"

@@ -17,7 +17,7 @@
 
 ### 2. Current State Verification ✅
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Verify git state
 git status  # Should be clean
@@ -53,7 +53,7 @@ grep -rn "print(" empirica/core/metacognitive_cascade/metacognitive_cascade.py |
 
 ### Command to Start Session 8
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 mini-agent --mcp-config ~/.mini-agent/config/mcp.json
 ```
 
@@ -135,7 +135,7 @@ Please read MINIMAX_SESSION8_FINAL_P2.md and execute the session. This is a simp
 
 ### Housekeeping (Same Day)
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Execute folder cleanup
 mkdir -p docs/archive/{session_notes,investigations,completed_work,test_results,phases,old_instructions}

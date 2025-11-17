@@ -12,6 +12,40 @@ from ..cli_utils import print_component_status, handle_cli_error, parse_json_saf
 logger = logging.getLogger(__name__)
 
 
+def _get_utility_profile_thresholds():
+    """Get utility command thresholds from investigation profiles"""
+    try:
+        from empirica.config.profile_loader import ProfileLoader
+        
+        loader = ProfileLoader()
+        universal = loader.universal_constraints
+        
+        try:
+            profile = loader.get_profile('balanced')
+            constraints = profile.constraints
+            
+            return {
+                'confidence_low': getattr(constraints, 'confidence_low_threshold', 0.5),
+                'confidence_high': getattr(constraints, 'confidence_high_threshold', 0.7),
+                'engagement_gate': universal.engagement_gate,
+                'coherence_min': universal.coherence_min,
+            }
+        except:
+            return {
+                'confidence_low': 0.5,
+                'confidence_high': 0.7,
+                'engagement_gate': 0.6,
+                'coherence_min': 0.5,
+            }
+    except Exception:
+        return {
+            'confidence_low': 0.5,
+            'confidence_high': 0.7,
+            'engagement_gate': 0.6,
+            'coherence_min': 0.5,
+        }
+
+
 def handle_feedback_command(args):
     """Handle feedback command"""
     try:
@@ -30,10 +64,11 @@ def handle_feedback_command(args):
             outcome['notes'] = args.notes
         
         # Process feedback via epistemic cascade
+        thresholds = _get_utility_profile_thresholds()
         feedback_result = run_epistemic_cascade(
             task=f"Process feedback for decision {args.decision_id}: {'success' if args.success else 'failure'}",
             context={'outcome': outcome, 'decision_id': args.decision_id},
-            confidence_threshold=0.5
+            confidence_threshold=thresholds['confidence_low']
         )
         
         
@@ -59,10 +94,11 @@ def handle_goal_analysis_command(args):
         context = parse_json_safely(getattr(args, 'context', None))
         
         # Use epistemic cascade for goal analysis
+        thresholds = _get_utility_profile_thresholds()
         result = run_epistemic_cascade(
             task=f"Goal analysis: {args.goal}",
             context=context or {},
-            confidence_threshold=0.7
+            confidence_threshold=thresholds['confidence_high']
         )
         
         print(f"📊 Goal Feasibility: {result.get('confidence', 0.0):.2f}")
@@ -88,11 +124,11 @@ def handle_goal_analysis_command(args):
 def handle_calibration_command(args):
     """Handle calibration command"""
     try:
-        from empirica.calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
+        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
         
         print(f"🎯 Running calibration analysis...")
         
-        analyzer = UncertaintyAnalyzer()
+        analyzer = AdaptiveUncertaintyCalibration()
         
         # Get calibration data
         if hasattr(args, 'data_file') and args.data_file:
@@ -121,11 +157,11 @@ def handle_calibration_command(args):
 def handle_uvl_command(args):
     """Handle UVL (Uncertainty Vector Learning) command"""
     try:
-        from empirica.calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
+        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
         
         print(f"🧠 Running UVL analysis...")
         
-        analyzer = UncertaintyAnalyzer()
+        analyzer = AdaptiveUncertaintyCalibration()
         
         # Parse context if provided
         context = parse_json_safely(getattr(args, 'context', None))

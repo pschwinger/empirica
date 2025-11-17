@@ -152,7 +152,7 @@ def handle_assess(self, args):
 
 ```bash
 # Test the extension standalone
-cd /home/yogapad/empirical-ai/semantic_self_aware_kit
+cd ~/empirica-parent/semantic_self_aware_kit
 python3 tmux_extension/empirica_tmux_simple.py
 
 # Check panes 1 and 2 for updates

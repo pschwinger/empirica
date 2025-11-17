@@ -84,7 +84,7 @@ from ..thresholds import ENGAGEMENT_THRESHOLD, CRITICAL_THRESHOLDS
 
 ### Verify Current State
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Check remaining hardcoded thresholds
 grep -n "self.*_critical = " empirica/core/canonical/reflex_frame.py
@@ -261,15 +261,15 @@ You mentioned earlier:
 ## 🔗 Quick Links
 
 **Code Locations:**
-- Thresholds: `/home/yogapad/empirical-ai/empirica/empirica/core/thresholds.py`
-- Reflex Frame: `/home/yogapad/empirical-ai/empirica/empirica/core/canonical/reflex_frame.py`
-- Session DB: `/home/yogapad/empirical-ai/empirica/empirica/data/session_database.py`
-- Reflex Logger: `/home/yogapad/empirical-ai/empirica/empirica/core/canonical/reflex_logger.py`
+- Thresholds: `/path/to/empirica/empirica/core/thresholds.py`
+- Reflex Frame: `/path/to/empirica/empirica/core/canonical/reflex_frame.py`
+- Session DB: `/path/to/empirica/empirica/data/session_database.py`
+- Reflex Logger: `/path/to/empirica/empirica/core/canonical/reflex_logger.py`
 
 **Documentation:**
-- Architecture: `/home/yogapad/empirical-ai/empirica/docs/reference/ARCHITECTURE_OVERVIEW.md`
-- Directory Structure: `/home/yogapad/empirical-ai/empirica/docs/reference/CANONICAL_DIRECTORY_STRUCTURE.md`
-- Skills Guide: `/home/yogapad/empirical-ai/empirica/docs/skills/SKILL.md`
+- Architecture: `/path/to/empirica/docs/reference/ARCHITECTURE_OVERVIEW.md`
+- Directory Structure: `/path/to/empirica/docs/reference/CANONICAL_DIRECTORY_STRUCTURE.md`
+- Skills Guide: `/path/to/empirica/docs/skills/SKILL.md`
 
 **Git:**
 - Recent commits: `git log --oneline -10`

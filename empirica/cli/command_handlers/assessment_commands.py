@@ -3,42 +3,92 @@ Assessment Commands - Self-awareness, metacognitive assessment, and evaluation
 """
 
 import json
+import time
 from ..cli_utils import print_component_status, handle_cli_error, format_uncertainty_output, parse_json_safely
+
+
+def _get_profile_thresholds():
+    """Get thresholds from investigation profiles instead of using hardcoded values"""
+    try:
+        from empirica.config.profile_loader import ProfileLoader
+        
+        loader = ProfileLoader()
+        # Use universal constraints as baseline
+        universal = loader.universal_constraints
+        
+        # Try to get balanced profile as default
+        try:
+            profile = loader.get_profile('balanced')
+            constraints = profile.constraints
+            
+            return {
+                'uncertainty_low': getattr(constraints, 'uncertainty_low_threshold', 0.3),
+                'uncertainty_high': getattr(constraints, 'uncertainty_high_threshold', 0.7), 
+                'confidence_low': getattr(constraints, 'confidence_low_threshold', 0.5),
+                'confidence_high': getattr(constraints, 'confidence_high_threshold', 0.7),
+                'engagement_gate': universal.engagement_gate,
+                'coherence_min': universal.coherence_min,
+            }
+        except:
+            # Use universal constraints if profile fails
+            return {
+                'uncertainty_low': 0.3,
+                'uncertainty_high': 0.7,
+                'confidence_low': 0.5, 
+                'confidence_high': 0.7,
+                'engagement_gate': universal.engagement_gate,
+                'coherence_min': universal.coherence_min,
+            }
+    except Exception:
+        # Final fallback with warning
+        print("⚠️ Could not load investigation profiles, using fallback thresholds")
+        return {
+            'uncertainty_low': 0.3,
+            'uncertainty_high': 0.7,
+            'confidence_low': 0.5, 
+            'confidence_high': 0.7,
+            'engagement_gate': 0.6,
+            'coherence_min': 0.5,
+        }
 
 
 def handle_assess_command(args):
     """Handle main assessment command"""
     try:
-        from empirica.calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
+        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
         
         print(f"🔍 Running uncertainty assessment: {args.query}")
         
-        analyzer = UncertaintyAnalyzer()
+        analyzer = AdaptiveUncertaintyCalibration()
         context = parse_json_safely(getattr(args, 'context', None))
         
         # Run comprehensive assessment
-        result = analyzer.analyze_uncertainty(
-            query=args.query,
-            context=context,
-            detailed=getattr(args, 'detailed', False)
-        )
+        decision_context = {
+            'task': args.query,
+            'context': context or {},
+            'detailed': getattr(args, 'detailed', False),
+            'timestamp': time.time()
+        }
+        result = analyzer.assess_uncertainty(decision_context)
         
         print(f"✅ Assessment complete")
-        print(f"   🎯 Overall confidence: {result.get('confidence', 0):.2f}")
-        print(f"   📊 Uncertainty level: {result.get('uncertainty_level', 'unknown')}")
-        print(f"   🧠 Vector count: {len(result.get('vectors', []))}")
+        print(f"   🎯 Overall confidence: {result.calibrated_confidence:.2f}")
+        print(f"   📊 Decision: {result.decision}")
+        print(f"   🧠 Vector count: {len(result.vectors)}")
+        print(f"   🎨 UVL Status: {result.uvl_color}")
         
         # Display uncertainty vectors
-        if result.get('vectors'):
-            print(format_uncertainty_output(
-                {v['name']: v['value'] for v in result['vectors']},
-                verbose=getattr(args, 'verbose', False)
-            ))
+        if result.vectors:
+            thresholds = _get_profile_thresholds()
+            print("🔍 Uncertainty vectors:")
+            for vector_name, uncertainty in result.vectors.items():
+                status = "✅" if uncertainty < thresholds['uncertainty_low'] else "⚠️" if uncertainty < thresholds['uncertainty_high'] else "❌"
+                print(f"   {status} {vector_name}: {uncertainty:.2f}")
         
         # Show recommendations if available
-        if result.get('recommendations'):
+        if hasattr(result, 'recommendations') and result.recommendations:
             print("💡 Recommendations:")
-            for rec in result['recommendations']:
+            for rec in result.recommendations:
                 print(f"   • {rec}")
         
     except Exception as e:
@@ -48,11 +98,11 @@ def handle_assess_command(args):
 def handle_self_awareness_command(args):
     """Handle self-awareness assessment command"""
     try:
-        from empirica.core.metacognition_12d_monitor import ComprehensiveSelfAwarenessAssessment
+        from empirica.core.metacognition_12d_monitor.twelve_vector_self_awareness import TwelveVectorSelfAwareness
         
         print("🧠 Running self-awareness assessment...")
         
-        evaluator = MetaCognitiveEvaluator()
+        evaluator = TwelveVectorSelfAwareness()
         
         # Get self-awareness metrics
         result = evaluator.assess_self_awareness(
@@ -67,9 +117,10 @@ def handle_self_awareness_command(args):
         
         # Show vector breakdown if requested
         if getattr(args, 'vectors', True) and result.get('vector_breakdown'):
+            thresholds = _get_profile_thresholds()
             print("🔍 Vector breakdown:")
             for vector, score in result['vector_breakdown'].items():
-                status = "✅" if score > 0.7 else "⚠️" if score > 0.5 else "❌"
+                status = "✅" if score > thresholds['confidence_high'] else "⚠️" if score > thresholds['confidence_low'] else "❌"
                 print(f"   {status} {vector}: {score:.2f}")
         
         # Show insights
@@ -85,17 +136,17 @@ def handle_self_awareness_command(args):
 def handle_metacognitive_command(args):
     """Handle metacognitive evaluation command"""
     try:
-        from empirica.core.metacognition_12d_monitor import ComprehensiveSelfAwarenessAssessment
+        from empirica.core.metacognition_12d_monitor.metacognition_12d_monitor import MetacognitionMonitor
         
         print(f"🤔 Running metacognitive evaluation: {args.task}")
         
-        evaluator = MetaCognitiveEvaluator()
+        evaluator = MetacognitionMonitor()
         context = parse_json_safely(getattr(args, 'context', None))
         
         # Run metacognitive evaluation
         result = evaluator.evaluate_metacognition(
             task=args.task,
-            context=context,
+            context=context or {},
             include_reasoning=getattr(args, 'reasoning', True)
         )
         

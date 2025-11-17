@@ -150,7 +150,7 @@
 
 ### Step 1: Create Archive Structure
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 mkdir -p docs/_archive/{development,fixes,phase_0,sessions,session-handoffs,experimental,vision,research,phase_reports,investigation_docs}
 ```
 

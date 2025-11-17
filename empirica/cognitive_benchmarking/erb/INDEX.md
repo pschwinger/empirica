@@ -1,6 +1,6 @@
 # Epistemic Reasoning Benchmark (ERB) - Complete Index
 
-**Location:** `/home/yogapad/empirical-ai/empirica/empirica/cognitive_benchmarking/erb/`
+**Location:** `/path/to/empirica/empirica/cognitive_benchmarking/erb/`
 **Date:** October 29, 2025
 **Status:** ✅ PRODUCTION READY - Comprehensive test suite ready for manual testing
 
@@ -166,7 +166,7 @@ python3 run_manual_test.py --all --mode without --output tests.txt
 
 ### ../README.md
 **Purpose:** Complete cognitive benchmarking documentation
-**Location:** `/home/yogapad/empirical-ai/empirica/empirica/cognitive_benchmarking/README.md`
+**Location:** `/path/to/empirica/empirica/cognitive_benchmarking/README.md`
 **Contains:**
 - System overview
 - ERB + traditional benchmark integration
@@ -178,7 +178,7 @@ python3 run_manual_test.py --all --mode without --output tests.txt
 
 ### ../SUMMARY.md
 **Purpose:** Complete summary of cognitive benchmarking work
-**Location:** `/home/yogapad/empirical-ai/empirica/empirica/cognitive_benchmarking/SUMMARY.md`
+**Location:** `/path/to/empirica/empirica/cognitive_benchmarking/SUMMARY.md`
 **Contains:**
 - What we built
 - Real results leaderboard
@@ -191,7 +191,7 @@ python3 run_manual_test.py --all --mode without --output tests.txt
 
 ### ../REAL_RESULTS_OCT_2025.md
 **Purpose:** Real benchmark results from automated testing
-**Location:** `/home/yogapad/empirical-ai/empirica/empirica/cognitive_benchmarking/REAL_RESULTS_OCT_2025.md`
+**Location:** `/path/to/empirica/empirica/cognitive_benchmarking/REAL_RESULTS_OCT_2025.md`
 **Contains:**
 - Leaderboard (Claude: 100%*, Gemini: 71.4%, phi3: 57.1%, etc.)
 - Category breakdowns

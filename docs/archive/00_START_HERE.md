@@ -23,7 +23,7 @@ Empirica is a **functional self-awareness framework** for AI agents. It measures
 ### Step 1: Install (2 minutes)
 ```bash
 # Clone repository
-git clone https://github.com/your-org/empirica.git
+git clone https://github.com/Nubaeon/empirica.git
 cd empirica
 
 # Install

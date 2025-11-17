@@ -235,7 +235,20 @@ def handle_decision_command(args):
 def handle_preflight_command(args):
     """Execute preflight epistemic assessment before task"""
     try:
+        # CRITICAL FIX: Add Sentinel routing to prevent hanging
+        if hasattr(args, 'sentinel_assess') and args.sentinel_assess:
+            print("🔮 SENTINEL ASSESSMENT ROUTING")
+            print("⚠️  Sentinel integration not yet implemented")
+            print("📍 For now, please use MCP tools directly:")
+            print("   • execute_preflight MCP tool")
+            print("   • submit_preflight_assessment MCP tool")
+            print("")
+            print("💡 Alternative: Use working MCP tools instead of hanging CLI")
+            return
+        
         print_header("🚀 Preflight Assessment")
+        print("⚠️  WARNING: This command may hang. Use --sentinel-assess flag for future Sentinel integration")
+        print()
         
         from empirica.core.canonical import CanonicalEpistemicAssessor
         from empirica.data.session_database import SessionDatabase
@@ -460,6 +473,16 @@ def handle_preflight_command(args):
 def handle_postflight_command(args):
     """Execute postflight epistemic reassessment after task completion"""
     try:
+        # CRITICAL FIX: Add Sentinel routing to prevent hanging
+        if hasattr(args, 'sentinel_assess') and args.sentinel_assess:
+            print("🔮 SENTINEL ASSESSMENT ROUTING")
+            print("⚠️  Sentinel integration not yet implemented")
+            print("📍 For now, please use MCP tools directly:")
+            print("   • execute_postflight MCP tool")
+            print("   • submit_postflight_assessment MCP tool")
+            print("")
+            print("💡 Alternative: Use working MCP tools instead of hanging CLI")
+            return
         print_header("🏁 Postflight Assessment")
         
         from empirica.core.canonical import CanonicalEpistemicAssessor
@@ -768,15 +791,43 @@ def handle_workflow_command(args):
 
 
 # Helper functions
+def _get_cascade_profile_thresholds():
+    """Get cascade-specific thresholds from investigation profiles"""
+    try:
+        from empirica.config.profile_loader import ProfileLoader
+        
+        loader = ProfileLoader()
+        universal = loader.universal_constraints
+        
+        try:
+            profile = loader.get_profile('balanced')
+            constraints = profile.constraints
+            
+            # Get display thresholds from nested structure
+            display_thresholds = getattr(constraints, 'display_thresholds', {})
+            
+            return {
+                'excellent_threshold': display_thresholds.get('score_excellent', 0.8),
+                'good_threshold': display_thresholds.get('score_good', 0.6),
+                'moderate_threshold': display_thresholds.get('score_moderate', 0.4),
+                'low_threshold': display_thresholds.get('score_basic', 0.2),
+            }
+        except:
+            return {'excellent_threshold': 0.8, 'good_threshold': 0.6, 'moderate_threshold': 0.4, 'low_threshold': 0.2}
+    except Exception:
+        return {'excellent_threshold': 0.8, 'good_threshold': 0.6, 'moderate_threshold': 0.4, 'low_threshold': 0.2}
+
 def _interpret_score(score, category):
-    """Interpret a vector score with human-friendly description"""
-    if score >= 0.8:
+    """Interpret a vector score with human-friendly description using profile-based thresholds"""
+    thresholds = _get_cascade_profile_thresholds()
+    
+    if score >= thresholds['excellent_threshold']:
         return "(excellent)"
-    elif score >= 0.6:
+    elif score >= thresholds['good_threshold']:
         return "(good)"
-    elif score >= 0.4:
+    elif score >= thresholds['moderate_threshold']:
         return "(moderate)"
-    elif score >= 0.2:
+    elif score >= thresholds['low_threshold']:
         return "(low)"
     else:
         return "(very low)"

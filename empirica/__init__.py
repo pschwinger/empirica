@@ -35,9 +35,12 @@ except ImportError:
 
 # Workflow imports (new enhanced cascade)
 try:
-    from empirica.workflow.preflight_assessor import PreflightAssessor
-    from empirica.workflow.postflight_assessor import PostflightAssessor
-    from empirica.workflow.check_phase_evaluator import CheckPhaseEvaluator
+    # Import canonical cascade components
+    try:
+        from empirica.core.metacognitive_cascade.metacognitive_cascade import CanonicalEpistemicCascade
+        CANONICAL_AVAILABLE = True
+    except ImportError:
+        CANONICAL_AVAILABLE = False
     from empirica.workflow.cascade_workflow_orchestrator import (
         CascadeWorkflowOrchestrator,
         WorkflowGuide

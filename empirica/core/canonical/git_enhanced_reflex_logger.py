@@ -241,7 +241,11 @@ class GitEnhancedReflexLogger(ReflexLogger):
     
     def _git_add_note(self, checkpoint: Dict[str, Any]) -> Optional[str]:
         """
-        Add checkpoint to git notes attached to HEAD commit.
+        Add checkpoint to git notes with session-specific namespace.
+        
+        Uses session-specific git notes refs to prevent agent collisions:
+        - empirica/session/<session_id> for individual sessions
+        - Multiple agents can have concurrent checkpoints
         
         Args:
             checkpoint: Checkpoint dictionary
@@ -254,9 +258,12 @@ class GitEnhancedReflexLogger(ReflexLogger):
             checkpoint_json = json.dumps(checkpoint)
             json.loads(checkpoint_json)  # Validate it's parseable
             
-            # Add note to HEAD commit
+            # Create session-specific notes ref for agent isolation
+            note_ref = f"empirica/session/{self.session_id}"
+            
+            # Add note to HEAD commit with session-specific namespace
             result = subprocess.run(
-                ["git", "notes", "add", "-f", "-m", checkpoint_json],
+                ["git", "notes", "--ref", note_ref, "add", "-f", "-m", checkpoint_json, "HEAD"],
                 capture_output=True,
                 timeout=5,
                 cwd=self.git_repo_path,
@@ -265,14 +272,14 @@ class GitEnhancedReflexLogger(ReflexLogger):
             
             if result.returncode != 0:
                 logger.warning(
-                    f"Failed to add git note: {result.stderr}. "
+                    f"Failed to add session-specific git note (ref={note_ref}): {result.stderr}. "
                     f"Fallback storage available."
                 )
                 return None
             
-            # Get note SHA
+            # Get note SHA from session-specific ref
             result = subprocess.run(
-                ["git", "notes", "list", "HEAD"],
+                ["git", "notes", "--ref", note_ref, "list", "HEAD"],
                 capture_output=True,
                 timeout=2,
                 cwd=self.git_repo_path,
@@ -280,7 +287,7 @@ class GitEnhancedReflexLogger(ReflexLogger):
             )
             
             note_sha = result.stdout.strip().split()[0] if result.stdout else None
-            logger.info(f"Git checkpoint added: {note_sha} (phase={checkpoint['phase']})")
+            logger.info(f"Session-specific git checkpoint added: {note_sha} (session={self.session_id}, phase={checkpoint['phase']})")
             
             return note_sha
             
@@ -314,7 +321,7 @@ class GitEnhancedReflexLogger(ReflexLogger):
     
     def _git_get_latest_note(self, phase: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
-        Retrieve latest checkpoint from git notes.
+        Retrieve latest checkpoint from session-specific git notes.
         
         Args:
             phase: Filter by phase (optional)
@@ -323,9 +330,12 @@ class GitEnhancedReflexLogger(ReflexLogger):
             Checkpoint dictionary or None
         """
         try:
-            # Get note from HEAD
+            # Create session-specific notes ref
+            note_ref = f"empirica/session/{self.session_id}"
+            
+            # Get note from HEAD using session-specific ref
             result = subprocess.run(
-                ["git", "notes", "show", "HEAD"],
+                ["git", "notes", "--ref", note_ref, "show", "HEAD"],
                 capture_output=True,
                 timeout=2,
                 cwd=self.git_repo_path,
@@ -333,6 +343,7 @@ class GitEnhancedReflexLogger(ReflexLogger):
             )
             
             if result.returncode != 0:
+                logger.debug(f"No session-specific git note found for session {self.session_id}")
                 return None
             
             # Parse JSON
@@ -342,15 +353,17 @@ class GitEnhancedReflexLogger(ReflexLogger):
             if phase and checkpoint.get("phase") != phase:
                 return None
             
-            # Validate session_id matches
+            # Session validation is implicit since we're reading from session-specific ref
+            # but we can still validate for extra safety
             if checkpoint.get("session_id") != self.session_id:
-                logger.debug("Checkpoint session_id mismatch, skipping")
+                logger.warning("Session ID mismatch in session-specific git note - this should not happen!")
                 return None
             
+            logger.debug(f"Retrieved session-specific checkpoint: phase={checkpoint.get('phase')}, session={self.session_id}")
             return checkpoint
             
         except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError) as e:
-            logger.debug(f"Failed to retrieve git note: {e}")
+            logger.debug(f"Failed to retrieve session-specific git note: {e}")
             return None
     
     def _load_checkpoint_from_sqlite(

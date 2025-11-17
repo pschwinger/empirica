@@ -40,7 +40,7 @@ Implement a comprehensive test suite for Empirica to validate it's ready for pro
 
 ### 1. Install Dependencies
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Install with all dev dependencies
 pip install -e ".[dev,mcp]"
@@ -479,7 +479,7 @@ pytest tests/unit/test_file.py::test_function -vv
 
 **Good luck! Remember: Focus on validating NO HEURISTICS and genuine self-assessment. Everything else is secondary.**
 
-**Questions?** Review the comprehensive test plan or check existing test examples in `/home/yogapad/empirical-ai/pydantic-ai/tests/` for inspiration.
+**Questions?** Review the comprehensive test plan or check existing test examples in `~/empirica-parent/pydantic-ai/tests/` for inspiration.
 
 ---
 

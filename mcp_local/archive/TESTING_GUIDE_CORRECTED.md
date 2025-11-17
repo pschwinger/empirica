@@ -34,7 +34,7 @@ def test_cascade_run_full():
     """Test complete metacognitive cascade"""
     import json
     import sys
-    sys.path.insert(0, '/home/yogapad/empirical-ai/semantic_self_aware_kit/semantic_self_aware_kit')
+    sys.path.insert(0, '~/empirica-parent/semantic_self_aware_kit/semantic_self_aware_kit')
     
     from metacognitive_cascade.metacognitive_cascade import SimpleCascade
     
@@ -58,7 +58,7 @@ test_cascade_run_full()
 def test_monitor_assess_12d():
     """Test 12-dimensional cognitive assessment"""
     import sys
-    sys.path.insert(0, '/home/yogapad/empirical-ai/semantic_self_aware_kit/semantic_self_aware_kit')
+    sys.path.insert(0, '~/empirica-parent/semantic_self_aware_kit/semantic_self_aware_kit')
     
     from metacognition_12d_monitor.twelve_vector_self_awareness import TwelveVectorSelfAwarenessMonitor
     
@@ -99,7 +99,7 @@ test_monitor_assess_12d()
 def test_calibration_assess():
     """Test adaptive uncertainty calibration"""
     import sys
-    sys.path.insert(0, '/home/yogapad/empirical-ai/semantic_self_aware_kit/semantic_self_aware_kit')
+    sys.path.insert(0, '~/empirica-parent/semantic_self_aware_kit/semantic_self_aware_kit')
     
     from adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import assess_uncertainty
     
@@ -176,7 +176,7 @@ For each working tool:
 #!/usr/bin/env python3
 """Quick validation of Empirica MCP core tools"""
 import sys
-sys.path.insert(0, '/home/yogapad/empirical-ai/semantic_self_aware_kit/semantic_self_aware_kit')
+sys.path.insert(0, '~/empirica-parent/semantic_self_aware_kit/semantic_self_aware_kit')
 
 print("🧪 EMPIRICA MCP CORE TOOLS TEST")
 print("=" * 50)

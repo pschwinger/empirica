@@ -43,7 +43,7 @@ Move these to `/deprecated/phase_handoffs/`:
 
 ### Implementation Plan:
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 
 # Create deprecated directory for handoffs
 mkdir -p deprecated/phase_handoffs
@@ -113,7 +113,7 @@ Update to reference new plugin architecture.
 ## 🎯 Final Structure
 
 ```
-/home/yogapad/empirical-ai/empirica/
+/path/to/empirica/
 ├── README.md                          # Main README
 ├── CURRENT_STATUS_v2.1.md             # Updated status
 ├── REMAINING_TASKS.md                 # Active tasks

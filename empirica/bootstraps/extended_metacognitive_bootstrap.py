@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 # Fix sys.path: Ensure empirica paths come BEFORE semantic_self_aware_kit
 # This prevents importing from old location
-empirica_root = Path(__file__).parent.parent.parent  # /home/yogapad/empirical-ai/empirica
+empirica_root = Path(__file__).parent.parent.parent  # /path/to/empirica
 empirica_paths = [
     str(empirica_root / 'empirica' / 'core'),
     str(empirica_root / 'empirica'),

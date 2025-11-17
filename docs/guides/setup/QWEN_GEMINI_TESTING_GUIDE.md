@@ -291,7 +291,7 @@ Create a test file:
 ```python
 # test_empirica_mcp_tools.py
 import sys
-sys.path.insert(0, '/home/yogapad/empirical-ai/semantic_self_aware_kit')
+sys.path.insert(0, '~/empirica-parent/semantic_self_aware_kit')
 
 from empirica_mcp_server import (
     tool_empirica_cascade_run_full,
@@ -324,7 +324,7 @@ if __name__ == "__main__":
 
 Run with:
 ```bash
-cd /home/yogapad/empirical-ai/semantic_self_aware_kit
+cd ~/empirica-parent/semantic_self_aware_kit
 python3 test_empirica_mcp_tools.py
 ```
 
@@ -333,7 +333,7 @@ python3 test_empirica_mcp_tools.py
 Test via MCP protocol:
 
 ```bash
-cd /home/yogapad/empirical-ai/semantic_self_aware_kit
+cd ~/empirica-parent/semantic_self_aware_kit
 
 # Test initialize
 echo '{"method":"initialize","id":1}' | python3 empirica_mcp_server.py --stdio

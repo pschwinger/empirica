@@ -739,7 +739,7 @@ Empirica's git integration provides:
 1. Run `pytest tests/integration/test_*git*.py` to verify setup
 2. Try `empirica checkpoint-create` in your repo
 3. Explore checkpoint history with `git log --show-notes`
-4. Read `/home/yogapad/empirical-ai/empirica/COPILOT_CLAUDE_NEXT_TASKS.md` for Phase 3 roadmap
+4. Read `/path/to/empirica/COPILOT_CLAUDE_NEXT_TASKS.md` for Phase 3 roadmap
 
 ---
 

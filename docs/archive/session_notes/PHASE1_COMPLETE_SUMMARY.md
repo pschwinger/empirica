@@ -230,7 +230,7 @@ empirica-resume_previous_session(
 ### Launch Dashboard  
 ```bash
 # Method 1: Direct launch (in TMUX)
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 .venv-empirica/bin/python3 empirica/dashboard/cascade_monitor.py
 
 # Method 2: Via spawner plugin

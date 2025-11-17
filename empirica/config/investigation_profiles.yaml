@@ -251,6 +251,33 @@ profiles:
       
       override_allowed: true
       
+    # Uncertainty calibration parameters (for core algorithm)
+    uncertainty_calibration:
+      uncertainty_baseline: 0.5
+      uncertainty_alternative_baseline: 0.4
+      domain_knowledge_reduction: 0.2
+      info_confidence_scaling: 0.1
+      info_confidence_max: 0.3
+      complexity_penalty: 0.3
+      uncertainty_low_gate: 0.2
+      uncertainty_medium_gate: 0.6
+      max_adjustment_per_cycle: 0.10
+      minimum_weight_threshold: 0.3
+      
+    # Display and assessment thresholds
+    display_thresholds:
+      display_high_threshold: 0.7
+      display_medium_threshold: 0.5
+      score_excellent: 0.8
+      score_good: 0.6
+      score_moderate: 0.4
+      score_basic: 0.2
+      confidence_low_threshold: 0.5
+      confidence_high_threshold: 0.7
+      diff_significance_threshold: 0.15
+      default_vector_score: 0.5
+      test_confidence_threshold: 0.5
+      
     tuning:
       confidence_weight: 1.0
       foundation_weight: 1.0

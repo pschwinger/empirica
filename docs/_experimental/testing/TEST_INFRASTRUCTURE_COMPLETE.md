@@ -78,7 +78,7 @@
 
 ### 1. Install Dependencies
 ```bash
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 pip install -e ".[dev,mcp]"
 ```
 
@@ -285,7 +285,7 @@ make help                 # Show all commands
 - `README.md` - Main readme
 
 ### Code Examples:
-- `/home/yogapad/empirical-ai/pydantic-ai/tests/` - Pydantic AI test examples
+- `~/empirica-parent/pydantic-ai/tests/` - Pydantic AI test examples
 - `tests/conftest.py` - Fixtures available
 - `tests/integrity/test_no_heuristics.py` - Integrity test example
 

@@ -2080,7 +2080,7 @@ Compare to your PREFLIGHT assessment - what changed?"""
                         "phase": measurement.phase,
                         "method": measurement.method,
                         "tokens": measurement.tokens,
-                        "timestamp": measurement.timestamp.isoformat(),
+                        "timestamp": measurement.timestamp,  # Already a string from .isoformat()
                         "content_type": measurement.content_type
                     },
                     "message": f"Measured {measurement.tokens} tokens for {phase}/{method}"
@@ -2202,7 +2202,7 @@ Compare to your PREFLIGHT assessment - what changed?"""
         
         # Bayesian Guardian
         elif name == "query_bayesian_beliefs":
-            from empirica.calibration.adaptive_uncertainty_calibration.bayesian_belief_tracker import BayesianBeliefTracker
+            from empirica.calibration.adaptive_uncertainty_calibration.bayesian_belief_tracker import BayesianBeliefTracker, EmpricaJSONEncoder
             
             session_id = arguments.get("session_id")
             context_key = arguments.get("context_key")
@@ -2219,7 +2219,7 @@ Compare to your PREFLIGHT assessment - what changed?"""
                     "context_key": context_key,
                     "belief_state": belief_state,
                     "discrepancies": discrepancies
-                }, indent=2))]
+                }, indent=2, cls=EmpricaJSONEncoder))]
             else:
                 all_beliefs = tracker.get_all_beliefs()
                 
@@ -2228,7 +2228,7 @@ Compare to your PREFLIGHT assessment - what changed?"""
                     "session_id": session_id,
                     "all_beliefs": all_beliefs,
                     "note": "Bayesian Guardian tracks evidence-based beliefs vs intuitive assessments"
-                }, indent=2))]
+                }, indent=2, cls=EmpricaJSONEncoder))]
         
         # Drift Monitor
         elif name == "check_drift_monitor":

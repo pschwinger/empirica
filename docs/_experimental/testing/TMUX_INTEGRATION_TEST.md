@@ -266,7 +266,7 @@ fi
 
 # Launch dashboard in right pane
 echo "   Launching dashboard in pane 1..."
-tmux send-keys -t "${TMUX_SESSION}:0.1" "cd /home/yogapad/empirical-ai/empirica" Enter
+tmux send-keys -t "${TMUX_SESSION}:0.1" "cd /path/to/empirica" Enter
 tmux send-keys -t "${TMUX_SESSION}:0.1" "python3 empirica/dashboard/snapshot_monitor.py" Enter
 
 sleep 2
@@ -403,7 +403,7 @@ tmux split-window -v -t empirica:0.2    # Split bottom into 2
 # Pane 3: Monitor 3 (lower right)
 
 # Launch snapshot dashboard in pane 1
-tmux send-keys -t empirica:0.1 "cd /home/yogapad/empirical-ai/empirica" Enter
+tmux send-keys -t empirica:0.1 "cd /path/to/empirica" Enter
 tmux send-keys -t empirica:0.1 "python3 empirica/dashboard/snapshot_monitor.py" Enter
 
 echo "✅ 4-pane layout created"
@@ -526,7 +526,7 @@ which tmux
 python3 docs/testing/test_tmux_integration.py
 
 # 3. Run manual dashboard test
-cd /home/yogapad/empirical-ai/empirica
+cd /path/to/empirica
 bash docs/testing/test_dashboard_launch.sh
 
 # 4. Run real-time test
