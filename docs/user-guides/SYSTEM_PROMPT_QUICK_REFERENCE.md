@@ -78,12 +78,12 @@ Ask: `"What workflow phases do you follow?"`
 - state, change, completion, impact
 - uncertainty
 
-**MCP Tools (21+):**
+**MCP Tools (21 total via v2 CLI wrapper):**
 - `execute_preflight`, `submit_preflight_assessment`
 - `query_goal_orchestrator`, `generate_goals`
 - `query_bayesian_beliefs`, `check_drift_monitor`
 - `create_git_checkpoint`, `load_git_checkpoint`
-- And more...
+- And 15 more (routes to Empirica CLI for reliability)
 
 ---
 

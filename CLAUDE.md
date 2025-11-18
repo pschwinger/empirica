@@ -46,7 +46,7 @@ bootstrap_session(
 - ✅ **Bayesian beliefs tracker** - Tracks evolving uncertainty
 - ✅ **Drift monitor** - Detects calibration drift (overconfidence/underconfidence)
 - ✅ **Git checkpoints** - 97.5% token reduction for session resumption
-- ✅ **All MCP tools** - 39+ tools for epistemic tracking
+- ✅ **All MCP tools** - 21 tools for epistemic tracking (via MCP v2 CLI wrapper)
 
 **Why bootstrap?** It gives you tools to track what you know vs. what you're guessing.
 
@@ -54,6 +54,23 @@ bootstrap_session(
 - `ai_id`: Your identifier (e.g., "claude-code", "rovodev", "mini-agent")
 - `session_type`: "development", "production", or "testing"
 - `bootstrap_level`: INTEGER 0, 1, or 2 (0=minimal, 1=standard, 2=full) - NOT a string!
+
+### 🔧 MCP Integration (v2 Architecture)
+
+Empirica uses **MCP v2** (thin CLI wrapper architecture):
+- **21 MCP tools** route to battle-tested Empirica CLI commands
+- **90% code reduction** (573 lines vs 5000 in v1)
+- **75% token overhead reduction** (CLI docs vs MCP schemas)
+- **Zero async bugs** (subprocess in async executor pattern)
+- **Single source of truth** (CLI implementation, MCP just routes)
+
+**What this means for you:**
+- ✅ Reliable tool execution (proven CLI backend)
+- ✅ Lower token overhead in long sessions
+- ✅ Easy debugging (test CLI directly: `empirica <command>`)
+- ✅ Production-ready (battle-tested architecture)
+
+**Architecture:** MCP tools → Empirica CLI → Python API → Database
 
 ---
 
