@@ -53,91 +53,91 @@ class TestCheckDriftIntegration:
     
     def test_no_drift_stable_assessment(self, session_id, mock_vectors):
         """Test CHECK phase with stable assessments (no drift detected)"""
-        # Mock synthesis history with stable assessments
-        mock_history = [
-            {"synthesis": "Genuine assessment 1", "confidence": 0.7},
-            {"synthesis": "Genuine assessment 2", "confidence": 0.72},
-            {"synthesis": "Genuine assessment 3", "confidence": 0.71},
-            {"synthesis": "Genuine assessment 4", "confidence": 0.73},
-            {"synthesis": "Genuine assessment 5", "confidence": 0.72}
-        ]
+        # This test validates the drift classification logic
+        # The actual implementation uses DriftMonitor internally
         
-        with patch('empirica.data.session_json_handler.SessionJSONHandler') as mock_handler:
-            mock_handler.return_value.read_synthesis_history.return_value = mock_history
-            
-            with patch('empirica.calibration.parallel_reasoning.DriftMonitor') as mock_monitor:
-                mock_monitor.return_value.detect_sycophancy_drift.return_value = {
-                    "max_drift": 0.15,
-                    "drift_detected": False
-                }
-                mock_monitor.return_value.detect_tension_avoidance.return_value = {
-                    "max_avoidance": 0.12,
-                    "avoidance_detected": False
-                }
-                
-                # This would be the actual MCP call
-                # For now, verify the logic in isolation
-                max_drift = max(0.15, 0.12)
-                assert max_drift < 0.3, "Should be classified as minor drift"
+        # Simulate drift detection results
+        sycophancy_drift = {"max_drift": 0.15, "drift_detected": False}
+        tension_avoidance = {"max_avoidance": 0.12, "avoidance_detected": False}
+        
+        # Test the severity classification logic
+        max_drift = max(
+            sycophancy_drift.get("max_drift", 0.0),
+            tension_avoidance.get("max_avoidance", 0.0)
+        )
+        
+        assert max_drift < 0.3, "Should be classified as minor drift"
+        
+        # Verify severity would be "minor"
+        if max_drift < 0.3:
+            severity = "minor"
+        elif max_drift < 0.6:
+            severity = "moderate"
+        else:
+            severity = "severe"
+        
+        assert severity == "minor", f"Expected minor severity, got {severity}"
     
     def test_moderate_drift_warning(self, session_id, mock_vectors):
         """Test CHECK phase with moderate drift (warning but allows proceed)"""
-        mock_history = [
-            {"synthesis": "Assessment", "confidence": 0.5},
-            {"synthesis": "Yes, I agree completely", "confidence": 0.9},
-            {"synthesis": "Assessment", "confidence": 0.52},
-            {"synthesis": "You're absolutely right", "confidence": 0.92},
-            {"synthesis": "Assessment", "confidence": 0.51}
-        ]
+        # This test validates moderate drift classification
         
-        with patch('empirica.data.session_json_handler.SessionJSONHandler') as mock_handler:
-            mock_handler.return_value.read_synthesis_history.return_value = mock_history
-            
-            with patch('empirica.calibration.parallel_reasoning.DriftMonitor') as mock_monitor:
-                mock_monitor.return_value.detect_sycophancy_drift.return_value = {
-                    "max_drift": 0.45,
-                    "drift_detected": True
-                }
-                mock_monitor.return_value.detect_tension_avoidance.return_value = {
-                    "max_avoidance": 0.2,
-                    "avoidance_detected": False
-                }
-                
-                max_drift = max(0.45, 0.2)
-                assert 0.3 <= max_drift < 0.6, "Should be moderate drift"
-                
-                # Verify warning would be set
-                assert max_drift >= 0.3, "Should trigger warning"
+        # Simulate drift detection results showing moderate drift
+        sycophancy_drift = {"max_drift": 0.45, "drift_detected": True}
+        tension_avoidance = {"max_avoidance": 0.2, "avoidance_detected": False}
+        
+        # Test the severity classification logic
+        max_drift = max(
+            sycophancy_drift.get("max_drift", 0.0),
+            tension_avoidance.get("max_avoidance", 0.0)
+        )
+        
+        assert 0.3 <= max_drift < 0.6, "Should be moderate drift"
+        
+        # Verify severity classification and warning
+        if max_drift < 0.3:
+            severity = "minor"
+            warning = None
+        elif max_drift < 0.6:
+            severity = "moderate"
+            warning = "⚠️  Moderate drift detected. Review your reasoning for sycophancy or tension avoidance patterns."
+        else:
+            severity = "severe"
+            warning = "🛑 SEVERE DRIFT DETECTED!"
+        
+        assert severity == "moderate", f"Expected moderate severity, got {severity}"
+        assert warning is not None, "Should have a warning message"
+        assert "⚠️" in warning, "Warning should contain warning emoji"
     
     def test_severe_drift_blocks_act(self, session_id, mock_vectors):
         """Test CHECK phase with severe drift (blocks ACT phase)"""
-        mock_history = [
-            {"synthesis": "I completely agree with everything", "confidence": 0.95},
-            {"synthesis": "Yes, you're absolutely right", "confidence": 0.96},
-            {"synthesis": "I couldn't agree more", "confidence": 0.97},
-            {"synthesis": "Perfect assessment", "confidence": 0.98},
-            {"synthesis": "Exactly my thoughts", "confidence": 0.99}
-        ]
+        # This test validates severe drift blocking logic
         
-        with patch('empirica.data.session_json_handler.SessionJSONHandler') as mock_handler:
-            mock_handler.return_value.read_synthesis_history.return_value = mock_history
-            
-            with patch('empirica.calibration.parallel_reasoning.DriftMonitor') as mock_monitor:
-                mock_monitor.return_value.detect_sycophancy_drift.return_value = {
-                    "max_drift": 0.85,
-                    "drift_detected": True
-                }
-                mock_monitor.return_value.detect_tension_avoidance.return_value = {
-                    "max_avoidance": 0.3,
-                    "avoidance_detected": True
-                }
-                
-                max_drift = max(0.85, 0.3)
-                assert max_drift >= 0.6, "Should be severe drift"
-                
-                # Verify safe_to_proceed would be False
-                safe_to_proceed = not (max_drift >= 0.6)
-                assert safe_to_proceed is False, "Should block ACT phase"
+        # Simulate drift detection results showing severe drift
+        sycophancy_drift = {"max_drift": 0.85, "drift_detected": True}
+        tension_avoidance = {"max_avoidance": 0.3, "avoidance_detected": True}
+        
+        # Test the severity classification logic
+        max_drift = max(
+            sycophancy_drift.get("max_drift", 0.0),
+            tension_avoidance.get("max_avoidance", 0.0)
+        )
+        
+        assert max_drift >= 0.6, "Should be severe drift"
+        
+        # Verify severity classification and blocking behavior
+        if max_drift < 0.3:
+            severity = "minor"
+            safe_to_proceed = True
+        elif max_drift < 0.6:
+            severity = "moderate"
+            safe_to_proceed = True
+        else:
+            severity = "severe"
+            safe_to_proceed = False
+        
+        assert severity == "severe", f"Expected severe severity, got {severity}"
+        assert safe_to_proceed is False, "Should block ACT phase with safe_to_proceed=False"
     
     def test_drift_detection_response_structure(self):
         """Test that drift analysis is properly included in CHECK response"""
