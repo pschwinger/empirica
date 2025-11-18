@@ -2023,20 +2023,23 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 try:
                     session_id = resolve_session_id(session_id_or_alias)
                 except ValueError as e:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": f"Session resolution failed: {str(e)}",
-                        "provided": session_id_or_alias
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
                 
                 # Get session info
                 session = db.get_session(session_id)
                 if not session:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": f"Session not found: {session_id}"
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "session_not_found",
+                        f"Session not found: {session_id}",
+                        {"session_id": session_id}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 
                 # Get all cascades for this session
                 cascades = db.get_session_cascades(session_id)
@@ -2091,11 +2094,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 try:
                     session_id = resolve_session_id(session_id_or_alias)
                 except ValueError as e:
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": f"Session resolution failed: {str(e)}",
-                        "provided": session_id_or_alias
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "invalid_alias",
+                        f"Session resolution failed: {str(e)}",
+                        {"provided": session_id_or_alias}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
                 
                 # Get preflight and postflight assessments
@@ -2104,11 +2108,12 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 
                 if not preflight:
                     db.close()
-                    return [types.TextContent(type="text", text=json.dumps({
-                        "ok": False,
-                        "error": "No preflight assessment found for session",
-                        "session_id": session_id
-                    }, indent=2))]
+                    error_response = create_error_response(
+                        "insufficient_data",
+                        "No preflight assessment found for session",
+                        {"session_id": session_id, "hint": "Run execute_preflight first"}
+                    )
+                    return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                 
                 if not postflight:
                     db.close()
@@ -3141,17 +3146,21 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
                 # Get session(s) based on mode
                 if resume_mode == "session_id":
                     if not session_id:
-                        return [types.TextContent(type="text", text=json.dumps({
-                            "ok": False,
-                            "error": "session_id required for resume_mode='session_id'"
-                        }, indent=2))]
+                        error_response = create_error_response(
+                            "invalid_input",
+                            "session_id required for resume_mode='session_id'",
+                            {"resume_mode": resume_mode, "required_parameter": "session_id"}
+                        )
+                        return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                     
                     summary = db.get_session_summary(session_id, detail_level)
                     if not summary:
-                        return [types.TextContent(type="text", text=json.dumps({
-                            "ok": False,
-                            "error": f"Session {session_id} not found"
-                        }, indent=2))]
+                        error_response = create_error_response(
+                            "session_not_found",
+                            f"Session {session_id} not found",
+                            {"session_id": session_id}
+                        )
+                        return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
                     
                     summaries = [summary]
                 
