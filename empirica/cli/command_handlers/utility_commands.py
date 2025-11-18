@@ -140,15 +140,30 @@ def handle_calibration_command(args):
         
         result = analyzer.analyze_calibration(calibration_data)
         
-        print(f"✅ Calibration analysis complete")
-        print(f"   📊 Overall calibration score: {result.get('calibration_score', 0):.2f}")
-        print(f"   🎯 Accuracy: {result.get('accuracy', 0):.2f}")
-        print(f"   📈 Trend: {result.get('trend', 'stable')}")
+        # Prepare result for output
+        output_result = {
+            "ok": True,
+            "message": "Calibration analysis completed",
+            "calibration_score": result.get('calibration_score', 0),
+            "accuracy": result.get('accuracy', 0),
+            "trend": result.get('trend', 'stable'),
+            "detailed_metrics": result.get('detailed_metrics', {}),
+            "timestamp": "2024-01-01T12:00:00Z"
+        }
         
-        if getattr(args, 'verbose', False):
-            print("🔍 Detailed calibration metrics:")
-            for metric, value in result.get('detailed_metrics', {}).items():
-                print(f"   • {metric}: {value}")
+        # Output based on format
+        if hasattr(args, 'output') and args.output == 'json':
+            print(json.dumps(output_result, indent=2))
+        else:
+            print(f"✅ Calibration analysis complete")
+            print(f"   📊 Overall calibration score: {result.get('calibration_score', 0):.2f}")
+            print(f"   🎯 Accuracy: {result.get('accuracy', 0):.2f}")
+            print(f"   📈 Trend: {result.get('trend', 'stable')}")
+            
+            if getattr(args, 'verbose', False):
+                print("🔍 Detailed calibration metrics:")
+                for metric, value in result.get('detailed_metrics', {}).items():
+                    print(f"   • {metric}: {value}")
         
     except Exception as e:
         handle_cli_error(e, "Calibration", getattr(args, 'verbose', False))

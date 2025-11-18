@@ -211,7 +211,8 @@ def _add_cascade_parsers(subparsers):
     preflight_parser.add_argument('--session-id', help='Optional session ID (auto-generated if not provided)')
     preflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
     preflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
-    preflight_parser.add_argument('--json', action='store_true', help='Output as JSON')
+    preflight_parser.add_argument('--json', '--output', dest='output', action='store_const', const='json', help='Output as JSON (also accepts --output json)')
+    preflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     preflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value')
     preflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value')
     preflight_parser.add_argument('--verbose', action='store_true', help='Show detailed assessment')
@@ -223,7 +224,8 @@ def _add_cascade_parsers(subparsers):
     postflight_parser.add_argument('--summary', help='Task completion summary')
     postflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
     postflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
-    postflight_parser.add_argument('--json', action='store_true', help='Output as JSON')
+    postflight_parser.add_argument('--json', '--output', dest='output', action='store_const', const='json', help='Output as JSON (also accepts --output json)')
+    postflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     postflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value')
     postflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value')
     postflight_parser.add_argument('--verbose', action='store_true', help='Show detailed delta analysis')
@@ -234,6 +236,40 @@ def _add_cascade_parsers(subparsers):
     workflow_parser.add_argument('prompt', help='Task description')
     workflow_parser.add_argument('--auto', action='store_true', help='Skip manual pause between steps')
     workflow_parser.add_argument('--verbose', action='store_true', help='Show detailed workflow steps')
+
+    # NEW: MCP v2 Workflow Commands (Critical Priority)
+    
+    # Preflight submit command
+    preflight_submit_parser = subparsers.add_parser('preflight-submit', help='Submit preflight assessment results')
+    preflight_submit_parser.add_argument('--session-id', required=True, help='Session ID')
+    preflight_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
+    preflight_submit_parser.add_argument('--reasoning', help='Reasoning for assessment scores')
+    preflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Check command
+    check_parser = subparsers.add_parser('check', help='Execute epistemic check assessment')
+    check_parser.add_argument('--session-id', required=True, help='Session ID')
+    check_parser.add_argument('--findings', required=True, help='Investigation findings as JSON array')
+    check_parser.add_argument('--unknowns', required=True, help='Remaining unknowns as JSON array')
+    check_parser.add_argument('--confidence', type=float, required=True, help='Confidence score (0.0-1.0)')
+    check_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    check_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
+    
+    # Check submit command
+    check_submit_parser = subparsers.add_parser('check-submit', help='Submit check assessment results')
+    check_submit_parser.add_argument('--session-id', required=True, help='Session ID')
+    check_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
+    check_submit_parser.add_argument('--decision', required=True, choices=['proceed', 'investigate', 'proceed_with_caution'], help='Decision made')
+    check_submit_parser.add_argument('--reasoning', help='Reasoning for decision')
+    check_submit_parser.add_argument('--cycle', type=int, help='Investigation cycle number')
+    check_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Postflight submit command
+    postflight_submit_parser = subparsers.add_parser('postflight-submit', help='Submit postflight assessment results')
+    postflight_submit_parser.add_argument('--session-id', required=True, help='Session ID')
+    postflight_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
+    postflight_submit_parser.add_argument('--changes', help='Description of what changed from preflight')
+    postflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
 
 def _add_investigation_parsers(subparsers):
@@ -304,6 +340,7 @@ def _add_utility_parsers(subparsers):
     # Calibration command
     calibration_parser = subparsers.add_parser('calibration', help='Run calibration analysis')
     calibration_parser.add_argument('--data-file', help='Calibration data file')
+    calibration_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     calibration_parser.add_argument('--verbose', action='store_true', help='Show detailed metrics')
     
     # UVL command
@@ -399,10 +436,17 @@ def _add_checkpoint_parsers(subparsers):
     checkpoint_load_parser.add_argument('--max-age', type=int, default=24, help='Max age in hours (default: 24)')
     checkpoint_load_parser.add_argument('--phase', help='Filter by specific phase (optional)')
     checkpoint_load_parser.add_argument(
-        '--format',
-        choices=['json', 'table'],
+        '--output',
+        choices=['table', 'json'],
         default='table',
-        help='Output format'
+        help='Output format (also accepts --output json)'
+    )
+    # Add backward compatibility with --format
+    checkpoint_load_parser.add_argument(
+        '--format',
+        dest='output',
+        choices=['json', 'table'],
+        help='Output format (deprecated, use --output)'
     )
     
     # Checkpoint list command
@@ -421,6 +465,7 @@ def _add_checkpoint_parsers(subparsers):
     )
     checkpoint_diff_parser.add_argument('--session-id', required=True, help='Session ID')
     checkpoint_diff_parser.add_argument('--threshold', type=float, default=0.15, help='Significance threshold')
+    checkpoint_diff_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Efficiency report command
     efficiency_report_parser = subparsers.add_parser(
@@ -435,6 +480,53 @@ def _add_checkpoint_parsers(subparsers):
         help='Report format'
     )
     efficiency_report_parser.add_argument('--output', '-o', help='Save to file (optional)')
+
+    # NEW: Goal Management Commands (MCP v2 Integration)
+    
+    # Goals create command
+    goals_create_parser = subparsers.add_parser('goals-create', help='Create new goal')
+    goals_create_parser.add_argument('--session-id', required=True, help='Session ID')
+    goals_create_parser.add_argument('--objective', required=True, help='Goal objective text')
+    goals_create_parser.add_argument('--scope', choices=['task_specific', 'session_scoped', 'project_wide'], default='task_specific', help='Goal scope')
+    goals_create_parser.add_argument('--success-criteria', help='Success criteria as JSON array')
+    goals_create_parser.add_argument('--estimated-complexity', type=float, help='Complexity estimate (0.0-1.0)')
+    goals_create_parser.add_argument('--constraints', help='Constraints as JSON object')
+    goals_create_parser.add_argument('--metadata', help='Metadata as JSON object')
+    goals_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Goals add-subtask command
+    goals_add_subtask_parser = subparsers.add_parser('goals-add-subtask', help='Add subtask to existing goal')
+    goals_add_subtask_parser.add_argument('--goal-id', required=True, help='Goal UUID')
+    goals_add_subtask_parser.add_argument('--description', required=True, help='Subtask description')
+    goals_add_subtask_parser.add_argument('--importance', choices=['critical', 'high', 'medium', 'low'], default='medium', help='Epistemic importance')
+    goals_add_subtask_parser.add_argument('--dependencies', help='Dependencies as JSON array')
+    goals_add_subtask_parser.add_argument('--estimated-tokens', type=int, help='Estimated token usage')
+    goals_add_subtask_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Goals complete-subtask command
+    goals_complete_subtask_parser = subparsers.add_parser('goals-complete-subtask', help='Mark subtask as complete')
+    goals_complete_subtask_parser.add_argument('--task-id', required=True, help='Subtask UUID')
+    goals_complete_subtask_parser.add_argument('--evidence', help='Completion evidence (commit hash, file path, etc.)')
+    goals_complete_subtask_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Goals progress command
+    goals_progress_parser = subparsers.add_parser('goals-progress', help='Get goal completion progress')
+    goals_progress_parser.add_argument('--goal-id', required=True, help='Goal UUID')
+    goals_progress_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Goals list command
+    goals_list_parser = subparsers.add_parser('goals-list', help='List goals')
+    goals_list_parser.add_argument('--session-id', help='Filter by session ID')
+    goals_list_parser.add_argument('--scope', choices=['task_specific', 'session_scoped', 'project_wide'], help='Filter by scope')
+    goals_list_parser.add_argument('--completed', action='store_true', help='Filter by completion status')
+    goals_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Sessions resume command
+    sessions_resume_parser = subparsers.add_parser('sessions-resume', help='Resume previous sessions')
+    sessions_resume_parser.add_argument('--ai-id', help='Filter by AI ID')
+    sessions_resume_parser.add_argument('--count', type=int, default=1, help='Number of sessions to retrieve')
+    sessions_resume_parser.add_argument('--detail-level', choices=['summary', 'detailed', 'full'], default='summary', help='Detail level')
+    sessions_resume_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
 
 def _add_profile_parsers(subparsers):
@@ -531,6 +623,12 @@ def main(args=None):
             'postflight': handle_postflight_command,
             'workflow': handle_workflow_command,
             
+            # NEW: MCP v2 Workflow Commands (Critical Priority)
+            'preflight-submit': handle_preflight_submit_command,
+            'check': handle_check_command,
+            'check-submit': handle_check_submit_command,
+            'postflight-submit': handle_postflight_submit_command,
+            
             # Decision commands
             'decision': handle_decision_command,
             'decision-batch': handle_decision_batch_command,
@@ -571,6 +669,14 @@ def main(args=None):
             'sessions-list': handle_sessions_list_command,
             'sessions-show': handle_sessions_show_command,
             'sessions-export': handle_sessions_export_command,
+            
+            # NEW: Goal Management Commands (MCP v2 Integration)
+            'goals-create': handle_goals_create_command,
+            'goals-add-subtask': handle_goals_add_subtask_command,
+            'goals-complete-subtask': handle_goals_complete_subtask_command,
+            'goals-progress': handle_goals_progress_command,
+            'goals-list': handle_goals_list_command,
+            'sessions-resume': handle_sessions_resume_command,
             
             # Checkpoint commands (Phase 2)
             'checkpoint-create': handle_checkpoint_create_command,

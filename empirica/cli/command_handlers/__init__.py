@@ -17,6 +17,20 @@ from .cascade_commands import (
     handle_postflight_command,
     handle_workflow_command
 )
+from .workflow_commands import (
+    handle_preflight_submit_command,
+    handle_check_command,
+    handle_check_submit_command,
+    handle_postflight_submit_command
+)
+from .goal_commands import (
+    handle_goals_create_command,
+    handle_goals_add_subtask_command,
+    handle_goals_complete_subtask_command,
+    handle_goals_progress_command,
+    handle_goals_list_command,
+    handle_sessions_resume_command
+)
 from .decision_commands import handle_decision_command, handle_decision_batch_command
 from .config_commands import (
     handle_config_command,
@@ -69,6 +83,20 @@ __all__ = [
     'handle_preflight_command',
     'handle_postflight_command',
     'handle_workflow_command',
+    
+    # NEW: MCP v2 Workflow Commands (Critical Priority)
+    'handle_preflight_submit_command',
+    'handle_check_command',
+    'handle_check_submit_command',
+    'handle_postflight_submit_command',
+    
+    # NEW: Goal Management Commands (MCP v2 Integration)
+    'handle_goals_create_command',
+    'handle_goals_add_subtask_command',
+    'handle_goals_complete_subtask_command',
+    'handle_goals_progress_command',
+    'handle_goals_list_command',
+    'handle_sessions_resume_command',
     
     # Decision commands
     'handle_decision_command',

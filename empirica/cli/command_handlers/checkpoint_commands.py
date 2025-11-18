@@ -191,7 +191,12 @@ def handle_checkpoint_load_command(args):
             return
         
         # Display checkpoint
-        if format_type == 'json':
+        # Handle both --output and --format for backward compatibility
+        output_format = getattr(args, 'output', 'table')
+        if hasattr(args, 'format') and args.format and output_format == 'table':
+            output_format = args.format
+            
+        if output_format == 'json':
             print(json.dumps(checkpoint, indent=2))
         else:
             # Table format
@@ -301,6 +306,7 @@ def handle_checkpoint_diff_command(args):
         session_id = args.session_id
         thresholds = _get_checkpoint_profile_thresholds()
         threshold = args.threshold if hasattr(args, 'threshold') else thresholds['diff_threshold']
+        output_format = getattr(args, 'output', 'default')
         
         git_logger = GitEnhancedReflexLogger(
             session_id=session_id,
@@ -315,6 +321,19 @@ def handle_checkpoint_diff_command(args):
             print(f"   Create a checkpoint first with: empirica checkpoint-create")
             return
         
+        # Prepare result for output
+        result_data = {
+            "checkpoint": last_checkpoint,
+            "vectors": last_checkpoint.get('vectors', {}),
+            "metadata": last_checkpoint.get('metadata', {})
+        }
+        
+        # Output based on format
+        if output_format == 'json':
+            print(json.dumps(result_data, indent=2))
+            return
+        
+        # Table format (original behavior)
         print(f"Checkpoint: {last_checkpoint['phase']} (round {last_checkpoint['round']})")
         print(f"Created: {last_checkpoint['timestamp']}\n")
         
