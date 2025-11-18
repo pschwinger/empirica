@@ -3295,11 +3295,12 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
                 
             except Exception as e:
                 import traceback
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": f"Failed to load session: {str(e)}",
-                    "traceback": traceback.format_exc()
-                }, indent=2))]
+                error_response = create_error_response(
+                    "database_error",
+                    f"Failed to load session: {str(e)}",
+                    {"traceback": traceback.format_exc(), "tool": "resume_previous_session"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             finally:
                 db.close()
         
@@ -3347,17 +3348,19 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
                 return [types.TextContent(type="text", text=json.dumps(output, indent=2))]
                 
             except subprocess.TimeoutExpired:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": "Command timed out after 30 seconds",
-                    "command": " ".join(cmd)
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    "Command timed out after 30 seconds",
+                    {"command": " ".join(cmd), "timeout": "30s", "hint": "Try a simpler command or increase timeout"}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
             except Exception as e:
-                return [types.TextContent(type="text", text=json.dumps({
-                    "ok": False,
-                    "error": f"Failed to execute CLI command: {str(e)}",
-                    "command": " ".join(cmd)
-                }, indent=2))]
+                error_response = create_error_response(
+                    "component_unavailable",
+                    f"Failed to execute CLI command: {str(e)}",
+                    {"command": " ".join(cmd), "error_details": str(e)}
+                )
+                return [types.TextContent(type="text", text=json.dumps(error_response, indent=2))]
         
         # Modality Switching Tools (optional - only if enabled)
         elif ENABLE_MODALITY_SWITCHER and name == "modality_route_query":
