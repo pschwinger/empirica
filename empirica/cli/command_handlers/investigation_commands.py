@@ -42,25 +42,41 @@ def _get_profile_thresholds():
 
 
 def handle_investigate_command(args):
-    """Handle investigation command for analyzing files, directories, or concepts"""
+    """Handle investigation command (consolidates investigate + analyze)"""
     try:
+        # Check if this is a comprehensive analysis (replaces old 'analyze' command)
+        investigation_type = getattr(args, 'type', 'auto')
+        if investigation_type == 'comprehensive':
+            # Redirect to comprehensive analysis
+            return handle_analyze_command(args)
+
         from empirica.components.code_intelligence_analyzer import CodeIntelligenceAnalyzer
         from empirica.components.workspace_awareness import WorkspaceNavigator
-        
+
         target = args.target
         print(f"🔍 Investigating: {target}")
-        
+
         # Determine investigation type
-        if os.path.exists(target):
-            if os.path.isfile(target):
-                result = _investigate_file(target, getattr(args, 'verbose', False))
-            elif os.path.isdir(target):
-                result = _investigate_directory(target, getattr(args, 'verbose', False))
+        if investigation_type == 'auto':
+            # Auto-detect based on target
+            if os.path.exists(target):
+                if os.path.isfile(target):
+                    result = _investigate_file(target, getattr(args, 'verbose', False))
+                elif os.path.isdir(target):
+                    result = _investigate_directory(target, getattr(args, 'verbose', False))
+                else:
+                    result = {"error": "Target exists but is neither file nor directory"}
             else:
-                result = {"error": "Target exists but is neither file nor directory"}
-        else:
-            # Treat as concept investigation
+                # Treat as concept investigation
+                result = _investigate_concept(target, getattr(args, 'context', None), getattr(args, 'verbose', False))
+        elif investigation_type == 'file':
+            result = _investigate_file(target, getattr(args, 'verbose', False))
+        elif investigation_type == 'directory':
+            result = _investigate_directory(target, getattr(args, 'verbose', False))
+        elif investigation_type == 'concept':
             result = _investigate_concept(target, getattr(args, 'context', None), getattr(args, 'verbose', False))
+        else:
+            result = {"error": f"Unknown investigation type: {investigation_type}"}
         
         # Display results
         print(f"✅ Investigation complete")
@@ -93,11 +109,13 @@ def handle_investigate_command(args):
 
 
 def handle_analyze_command(args):
-    """Handle general analysis command"""
+    """Handle comprehensive analysis (called from investigate --type=comprehensive)"""
     try:
         from empirica.components.empirical_performance_analyzer import EmpiricalPerformanceAnalyzer
-        
-        print(f"📊 Analyzing: {args.subject}")
+
+        # Support both 'subject' (old analyze) and 'target' (new investigate)
+        subject = getattr(args, 'subject', None) or getattr(args, 'target', 'unknown')
+        print(f"📊 Analyzing: {subject}")
         
         analyzer = EmpiricalPerformanceAnalyzer()
         context = parse_json_safely(getattr(args, 'context', None))

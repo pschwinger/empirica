@@ -12,6 +12,24 @@ from empirica.plugins.modality_switcher.config_loader import ConfigLoader, get_c
 from ..cli_utils import handle_cli_error
 
 
+def handle_config_command(args):
+    """Unified config handler (consolidates all 5 config commands)"""
+    # Route based on flags and arguments
+    if getattr(args, 'init', False):
+        return handle_config_init_command(args)
+    elif getattr(args, 'validate', False):
+        return handle_config_validate_command(args)
+    elif args.key and args.value:
+        # Set: config KEY VALUE
+        return handle_config_set_command(args)
+    elif args.key:
+        # Get: config KEY
+        return handle_config_get_command(args)
+    else:
+        # Show: config (no args)
+        return handle_config_show_command(args)
+
+
 def handle_config_init_command(args):
     """
     Initialize Empirica configuration.

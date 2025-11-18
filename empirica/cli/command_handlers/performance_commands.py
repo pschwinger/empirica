@@ -113,12 +113,17 @@ def handle_benchmark_command(args):
 
 
 def handle_performance_command(args):
-    """Handle performance analysis command"""
+    """Handle performance command (consolidates performance + benchmark)"""
     try:
+        # Check if --benchmark flag is set (replaces old 'benchmark' command)
+        if getattr(args, 'benchmark', False):
+            # Redirect to benchmark
+            return handle_benchmark_command(args)
+
         from empirica.components.empirical_performance_analyzer import EmpiricalPerformanceAnalyzer
-        
+
         print("⚡ Running performance analysis...")
-        
+
         analyzer = EmpiricalPerformanceAnalyzer()
         
         # Configure analysis

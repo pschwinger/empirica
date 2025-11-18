@@ -43,8 +43,13 @@ def _get_bootstrap_profile_thresholds():
 
 
 def handle_bootstrap_command(args):
-    """Handle main bootstrap command"""
+    """Handle main bootstrap command (consolidates bootstrap, bootstrap-system, onboard)"""
     try:
+        # Check if --onboard flag is set (replaces old 'onboard' command)
+        if getattr(args, 'onboard', False):
+            # Redirect to onboarding wizard
+            return handle_onboard_command(args)
+
         # Extract all arguments including new profile parameters
         bootstrap_level = getattr(args, 'level', 'standard')
         verbose = getattr(args, 'verbose', False)
@@ -52,7 +57,7 @@ def handle_bootstrap_command(args):
         ai_model = getattr(args, 'ai_model', None)
         domain = getattr(args, 'domain', None)
         test_mode = getattr(args, 'test', False)
-        
+
         # Call MCP server bootstrap_session tool
         logger.info(f"Starting bootstrap with level: {bootstrap_level}, profile: {profile}")
         print("🚀 Bootstrapping Empirica semantic framework...")

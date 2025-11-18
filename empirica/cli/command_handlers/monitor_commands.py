@@ -147,15 +147,24 @@ class UsageMonitor:
 
 def handle_monitor_command(args):
     """
-    Display real-time monitoring dashboard.
-    
+    Unified monitor handler (consolidates all 4 monitor commands).
+
     Shows current usage statistics with optional live updates.
     """
+    # Route based on flags
+    if getattr(args, 'export', None):
+        return handle_monitor_export_command(args)
+    elif getattr(args, 'reset', False):
+        return handle_monitor_reset_command(args)
+    elif getattr(args, 'cost', False):
+        return handle_monitor_cost_command(args)
+
+    # Default: show dashboard
     try:
         logger.info("Displaying monitoring dashboard")
         print("\n📊 Empirica Usage Monitor")
         print("=" * 70)
-        
+
         monitor = UsageMonitor()
         stats = monitor.get_stats()
         
@@ -259,7 +268,7 @@ def handle_monitor_export_command(args):
         stats = monitor.get_stats()
         
         output_format = getattr(args, 'format', 'json')
-        output_file = args.output
+        output_file = getattr(args, 'output', None) or getattr(args, 'export', None)
         
         if output_format == 'json':
             # Export as JSON

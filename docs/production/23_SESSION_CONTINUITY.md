@@ -27,7 +27,65 @@ The Session Continuity system enables AI agents (especially Claude) to maintain 
 
 ## Quick Start
 
-### List Available Sessions
+### Resume from Previous Session (Phase 1.6 - NEW ✨)
+
+**Best Method:** Use handoff reports for efficient context loading
+
+```python
+# In new session, load previous work
+from empirica.core.handoff import DatabaseHandoffStorage
+
+storage = DatabaseHandoffStorage()
+
+# Load last session for this AI
+handoffs = storage.query_handoffs(ai_id="your-agent-name", limit=1)
+if handoffs:
+    handoff = handoffs[0]
+    
+    print(f"Previous task: {handoff['task_summary']}")
+    print(f"Key findings: {handoff['key_findings']}")
+    print(f"Next steps: {handoff['recommended_next_steps']}")
+    print(f"Context: {handoff['next_session_context']}")
+    
+    # Full context loaded in ~400 tokens (summary mode)
+    # vs ~20,000 tokens for conversation history
+```
+
+**Via MCP Tools:**
+```python
+# Use MCP tool for programmatic access
+result = resume_previous_session(
+    ai_id="your-agent-name",
+    resume_mode="last",
+    detail_level="summary"  # 400 tokens
+)
+
+prev = result['sessions'][0]
+# Use prev['key_findings'], prev['next_steps'], etc.
+```
+
+**Token Efficiency:**
+| Method | Tokens | Use Case |
+|--------|--------|----------|
+| Handoff summary | ~400 | Most sessions (quick context) |
+| Handoff detailed | ~800 | Investigation review |
+| Handoff full | ~1,250 | Complete transfer (93.75% reduction!) |
+| Conversation history | ~20,000 | Baseline (inefficient) |
+
+**Why Handoff Reports?**
+- ✅ Captures semantic context (what was learned, not just vectors)
+- ✅ 98% token reduction enables frequent loading
+- ✅ Uses genuine AI introspection from POSTFLIGHT
+- ✅ Multi-agent coordination built-in
+- ✅ Queryable by AI, date, task pattern
+
+**See also:**
+- `docs/architecture/PHASE_1.6_EPISTEMIC_HANDOFF_REPORTS.md` - Full specification
+- `docs/architecture/PHASE_1.6_IMPLEMENTATION_COMPLETE.md` - Implementation details
+
+---
+
+### List Available Sessions (Legacy Method)
 ```bash
 python empirica_continuity/continuity_manager.py list
 ```
@@ -40,13 +98,13 @@ Available sessions:
   ...
 ```
 
-### Resume from Specific Session
+### Resume from Specific Session (Legacy Method)
 ```bash
 # Copy session ID from list
 python bootstrap.py --resume 3c00cfef-7b29-4d8f-acb9-c9b0a64517f2
 ```
 
-### Load Recent Sessions
+### Load Recent Sessions (Legacy Method)
 ```bash
 # Load 3 most recent sessions
 python bootstrap.py --load-recent 3
@@ -54,6 +112,8 @@ python bootstrap.py --load-recent 3
 # Load with more detail
 python bootstrap.py --load-recent 5 --context-detail medium
 ```
+
+---
 
 ## How It Works
 

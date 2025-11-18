@@ -87,14 +87,24 @@ def handle_sessions_list_command(args):
 def handle_sessions_show_command(args):
     """Show detailed session information including epistemic vectors"""
     try:
-        print_header(f"📊 Session Details: {args.session_id[:8]}")
-        
         from empirica.data.session_database import SessionDatabase
-        
+        from empirica.utils.session_resolver import resolve_session_id
+
+        # Resolve session alias to UUID
+        try:
+            session_id = resolve_session_id(args.session_id)
+        except ValueError as e:
+            print(f"\n❌ {str(e)}")
+            print(f"💡 Provided: {args.session_id}")
+            print(f"💡 List sessions with: empirica sessions-list")
+            return
+
+        print_header(f"📊 Session Details: {session_id[:8]}")
+
         db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
-        
-        # Get session summary
-        summary = db.get_session_summary(args.session_id, detail_level="detailed")
+
+        # Get session summary (use resolved session_id)
+        summary = db.get_session_summary(session_id, detail_level="detailed")
         
         if not summary:
             logger.warning(f"Session not found: {args.session_id}")
@@ -216,14 +226,23 @@ def handle_sessions_show_command(args):
 def handle_sessions_export_command(args):
     """Export session data to JSON file"""
     try:
-        print_header(f"📦 Exporting Session: {args.session_id[:8]}")
-        
         from empirica.data.session_database import SessionDatabase
-        
+        from empirica.utils.session_resolver import resolve_session_id
+
+        # Resolve session alias to UUID
+        try:
+            session_id = resolve_session_id(args.session_id)
+        except ValueError as e:
+            print(f"\n❌ {str(e)}")
+            print(f"💡 Provided: {args.session_id}")
+            return
+
+        print_header(f"📦 Exporting Session: {session_id[:8]}")
+
         db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
-        
-        # Get full session summary
-        summary = db.get_session_summary(args.session_id, detail_level="full")
+
+        # Get full session summary (use resolved session_id)
+        summary = db.get_session_summary(session_id, detail_level="full")
         
         if not summary:
             logger.warning(f"Session not found for export: {args.session_id}")

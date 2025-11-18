@@ -171,29 +171,40 @@ class OptimalMetacognitiveBootstrap:
         print("   ✅ Calibration system loaded (KNOW-DO-CONTEXT)")
         print("   🔄 Empirical feedback loop: ACTIVE")
         
-        # 3. Load canonical goal orchestrator (configuration-based)
-        print("\n3️⃣ Loading canonical goal orchestrator...")
+        # 3. Load canonical goal orchestrator WITH bridge to new architecture
+        print("\n3️⃣ Loading goal orchestrator with structured goal integration...")
         try:
-            from empirica.core.canonical.canonical_goal_orchestrator import (
-                CanonicalGoalOrchestrator,
-                create_goal_orchestrator
+            from empirica.core.canonical.goal_orchestrator_bridge import (
+                create_orchestrator_with_bridge
             )
             
-            # Create orchestrator with llm_callback if provided
+            # Create orchestrator WITH bridge to new goal architecture
+            # This allows LLM-generated goals to be saved as structured goals
+            bridge = create_orchestrator_with_bridge(
+                llm_callback=self.llm_callback,
+                use_placeholder=(self.llm_callback is None)
+            )
+            
             if self.llm_callback:
-                self.components['canonical_goal_orchestrator'] = create_goal_orchestrator(
-                    llm_callback=self.llm_callback,
-                    use_placeholder=False
-                )
-                print("   ✅ Canonical goal orchestrator loaded (AI reasoning mode)")
+                print("   ✅ Goal orchestrator loaded (AI reasoning mode)")
                 print("   🧠 Self-referential goal generation: ACTIVE")
             else:
-                self.components['canonical_goal_orchestrator'] = create_goal_orchestrator(use_placeholder=True)
-                print("   ✅ Canonical goal orchestrator loaded (threshold-based mode)")
+                print("   ✅ Goal orchestrator loaded (threshold-based mode)")
+            
+            print("   🔗 Goal Architecture bridge: ACTIVE")
+            print("   📊 Structured goal tracking: ENABLED")
+            
+            # Store components
+            self.components['canonical_goal_orchestrator'] = bridge.orchestrator  # Legacy access
+            self.components['goal_orchestrator_bridge'] = bridge  # New bridge
             
             # Legacy aliases for backward compatibility
             self.components['orchestrate'] = self.components['canonical_goal_orchestrator'].orchestrate_goals
             self.components['goal_orchestrator'] = self.components['canonical_goal_orchestrator']
+            
+            # NEW: Expose orchestrate_and_save (saves to structured architecture)
+            self.components['orchestrate_and_save'] = bridge.orchestrate_and_save
+            
             print("   🎯 ENGAGEMENT-driven autonomy: ACTIVE")
         except Exception as e:
             print(f"   ⚠️ Canonical goal orchestrator failed: {e}")

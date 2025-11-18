@@ -65,10 +65,10 @@ Examples:
     
     # Monitor commands
     _add_monitor_parsers(subparsers)
-    
-    # MCP commands
-    _add_mcp_parsers(subparsers)
-    
+
+    # MCP commands - REMOVED (no longer needed)
+    # _add_mcp_parsers(subparsers)
+
     # Session commands
     _add_session_parsers(subparsers)
     
@@ -83,35 +83,24 @@ Examples:
 
 def _add_bootstrap_parsers(subparsers):
     """Add bootstrap command parsers"""
-    # Main bootstrap command
+    # Main bootstrap command (consolidates bootstrap, bootstrap-system, onboard)
     bootstrap_parser = subparsers.add_parser('bootstrap', help='Bootstrap the Empirica framework')
-    bootstrap_parser.add_argument('--level', 
-                                choices=['0', '1', '2', '3', '4', 'minimal', 'standard', 'extended', 'complete'], 
-                                default='standard', 
-                                help='Bootstrap level (0-4 or minimal/standard/extended/complete)')
+    bootstrap_parser.add_argument('--level',
+                                choices=['0', '1', '2', '3', '4', 'minimal', 'standard', 'extended', 'complete'],
+                                default='standard',
+                                help='Bootstrap level (0-4 or minimal/standard/extended/complete). Use "extended" for advanced system bootstrap.')
+    bootstrap_parser.add_argument('--onboard', action='store_true', help='Run interactive onboarding wizard (intro to Empirica for new users)')
     bootstrap_parser.add_argument('--test', action='store_true', help='Run tests after bootstrap')
     bootstrap_parser.add_argument('--verbose', action='store_true', help='Show detailed bootstrap info')
     # Profile-related arguments
     bootstrap_parser.add_argument('--profile', help='Optional profile for session configuration')
     bootstrap_parser.add_argument('--ai-model', help='Optional AI model specification')
     bootstrap_parser.add_argument('--domain', help='Optional domain context')
-    
-    # System bootstrap command
-    system_parser = subparsers.add_parser('bootstrap-system', help='Advanced system bootstrap')
-    system_parser.add_argument('--level',
-                              choices=['0', '1', '2', '3', '4', 'minimal', 'standard', 'extended', 'complete'],
-                              default='2',
-                              help='Extended bootstrap level (0-4 or minimal/standard/extended/complete)')
-    system_parser.add_argument('--test', action='store_true', help='Run system tests')
-    system_parser.add_argument('--verbose', action='store_true', help='Show detailed system info')
-    system_parser.add_argument('--profile', help='Optional profile for session configuration')
-    system_parser.add_argument('--ai-model', help='Optional AI model specification')
-    system_parser.add_argument('--domain', help='Optional domain context')
-    
-    # Onboarding wizard command
-    onboard_parser = subparsers.add_parser('onboard', help='Interactive onboarding wizard for learning Empirica')
-    onboard_parser.add_argument('--ai-id', default='cli_user', help='AI identifier for session tracking')
-    onboard_parser.add_argument('--verbose', action='store_true', help='Show detailed wizard steps')
+    bootstrap_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier for session tracking (used with --onboard)')
+
+    # REMOVED: bootstrap-system and onboard commands - now consolidated into bootstrap
+    # Use: bootstrap --level=extended (instead of bootstrap-system)
+    # Use: bootstrap --onboard (instead of onboard)
 
 
 def _add_assessment_parsers(subparsers):
@@ -249,34 +238,33 @@ def _add_cascade_parsers(subparsers):
 
 def _add_investigation_parsers(subparsers):
     """Add investigation command parsers"""
-    # Main investigate command
+    # Main investigate command (consolidates investigate + analyze)
     investigate_parser = subparsers.add_parser('investigate', help='Investigate file/directory/concept')
     investigate_parser.add_argument('target', help='Target to investigate')
+    investigate_parser.add_argument('--type', default='auto',
+                                   choices=['auto', 'file', 'directory', 'concept', 'comprehensive'],
+                                   help='Investigation type. Use "comprehensive" for deep analysis (replaces analyze command)')
     investigate_parser.add_argument('--context', help='JSON context data')
+    investigate_parser.add_argument('--detailed', action='store_true', help='Show detailed investigation')
     investigate_parser.add_argument('--verbose', action='store_true', help='Show detailed investigation')
-    
-    # General analyze command
-    analyze_parser = subparsers.add_parser('analyze', help='Analyze subject comprehensively')
-    analyze_parser.add_argument('subject', help='Subject to analyze')
-    analyze_parser.add_argument('--type', default='general', help='Analysis type')
-    analyze_parser.add_argument('--context', help='JSON context data')
-    analyze_parser.add_argument('--detailed', action='store_true', help='Show detailed breakdown')
+
+    # REMOVED: analyze command - use investigate --type=comprehensive instead
 
 
 def _add_performance_parsers(subparsers):
     """Add performance command parsers"""
-    # Benchmark command
-    benchmark_parser = subparsers.add_parser('benchmark', help='Run performance benchmark')
-    benchmark_parser.add_argument('--type', default='comprehensive', help='Benchmark type')
-    benchmark_parser.add_argument('--iterations', type=int, default=10, help='Number of iterations')
-    benchmark_parser.add_argument('--memory', action='store_true', default=True, help='Include memory analysis')
-    benchmark_parser.add_argument('--verbose', action='store_true', help='Show detailed results')
-    
-    # Performance analysis command
-    performance_parser = subparsers.add_parser('performance', help='Analyze performance')
+    # Performance command (consolidates performance + benchmark)
+    performance_parser = subparsers.add_parser('performance', help='Analyze performance or run benchmarks')
+    performance_parser.add_argument('--benchmark', action='store_true', help='Run performance benchmarks (replaces benchmark command)')
     performance_parser.add_argument('--target', default='system', help='Performance analysis target')
+    performance_parser.add_argument('--type', default='comprehensive', help='Benchmark/analysis type')
+    performance_parser.add_argument('--iterations', type=int, default=10, help='Number of iterations (for benchmarks)')
+    performance_parser.add_argument('--memory', action='store_true', default=True, help='Include memory analysis')
     performance_parser.add_argument('--context', help='JSON context data')
     performance_parser.add_argument('--detailed', action='store_true', help='Show detailed metrics')
+    performance_parser.add_argument('--verbose', action='store_true', help='Show detailed results')
+
+    # REMOVED: benchmark command - use performance --benchmark instead
 
 
 def _add_component_parsers(subparsers):
@@ -327,79 +315,44 @@ def _add_utility_parsers(subparsers):
 
 def _add_config_parsers(subparsers):
     """Add configuration command parsers"""
-    # Config init command
-    config_init_parser = subparsers.add_parser('config-init', help='Initialize Empirica configuration')
-    config_init_parser.add_argument('--force', action='store_true', help='Overwrite existing config')
-    
-    # Config show command
-    config_show_parser = subparsers.add_parser('config-show', help='Show current configuration')
-    config_show_parser.add_argument('--section', help='Show specific section (e.g., routing, adapters)')
-    config_show_parser.add_argument('--format', choices=['yaml', 'json'], default='yaml', help='Output format')
-    
-    # Config validate command
-    config_validate_parser = subparsers.add_parser('config-validate', help='Validate configuration')
-    config_validate_parser.add_argument('--verbose', action='store_true', help='Show detailed validation')
-    
-    # Config get command
-    config_get_parser = subparsers.add_parser('config-get', help='Get configuration value')
-    config_get_parser.add_argument('key', help='Configuration key (dot notation, e.g., routing.default_strategy)')
-    
-    # Config set command
-    config_set_parser = subparsers.add_parser('config-set', help='Set configuration value')
-    config_set_parser.add_argument('key', help='Configuration key (dot notation)')
-    config_set_parser.add_argument('value', help='Value to set')
+    # Unified config command (consolidates config-init, config-show, config-validate, config-get, config-set)
+    config_parser = subparsers.add_parser('config', help='Configuration management')
+    config_parser.add_argument('key', nargs='?', help='Configuration key (dot notation, e.g., routing.default_strategy)')
+    config_parser.add_argument('value', nargs='?', help='Value to set (if key provided)')
+    config_parser.add_argument('--init', action='store_true', help='Initialize configuration (replaces config-init)')
+    config_parser.add_argument('--validate', action='store_true', help='Validate configuration (replaces config-validate)')
+    config_parser.add_argument('--section', help='Show specific section (e.g., routing, adapters)')
+    config_parser.add_argument('--format', choices=['yaml', 'json'], default='yaml', help='Output format')
+    config_parser.add_argument('--force', action='store_true', help='Overwrite existing config (with --init)')
+    config_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+
+    # REMOVED: config-init, config-show, config-validate, config-get, config-set
+    # Use: config --init, config (no args), config --validate, config KEY, config KEY VALUE
 
 
 def _add_monitor_parsers(subparsers):
     """Add monitoring command parsers"""
-    # Monitor command
-    monitor_parser = subparsers.add_parser('monitor', help='Display usage monitoring dashboard')
+    # Unified monitor command (consolidates monitor, monitor-export, monitor-reset, monitor-cost)
+    monitor_parser = subparsers.add_parser('monitor', help='Monitoring dashboard and statistics')
+    monitor_parser.add_argument('--export', metavar='FILE', help='Export data to file (replaces monitor-export)')
+    monitor_parser.add_argument('--reset', action='store_true', help='Reset statistics (replaces monitor-reset)')
+    monitor_parser.add_argument('--cost', action='store_true', help='Show cost analysis (replaces monitor-cost)')
     monitor_parser.add_argument('--history', action='store_true', help='Show recent request history')
     monitor_parser.add_argument('--health', action='store_true', help='Include adapter health checks')
+    monitor_parser.add_argument('--project', action='store_true', help='Show cost projections (with --cost)')
+    monitor_parser.add_argument('--format', choices=['json', 'csv'], default='json', help='Export format (with --export)')
+    monitor_parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation (with --reset)')
     monitor_parser.add_argument('--verbose', action='store_true', help='Show detailed stats')
-    
-    # Monitor export command
-    monitor_export_parser = subparsers.add_parser('monitor-export', help='Export monitoring data')
-    monitor_export_parser.add_argument('output', help='Output file path')
-    monitor_export_parser.add_argument('--format', choices=['json', 'csv'], default='json', help='Export format')
-    
-    # Monitor reset command
-    monitor_reset_parser = subparsers.add_parser('monitor-reset', help='Reset monitoring statistics')
-    monitor_reset_parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation')
-    
-    # Monitor cost command
-    monitor_cost_parser = subparsers.add_parser('monitor-cost', help='Display cost analysis')
-    monitor_cost_parser.add_argument('--project', action='store_true', help='Show cost projections')
+
+    # REMOVED: monitor-export, monitor-reset, monitor-cost
+    # Use: monitor --export FILE, monitor --reset, monitor --cost
 
 
 def _add_mcp_parsers(subparsers):
-    """Add MCP server command parsers"""
-    # MCP start command
-    mcp_start_parser = subparsers.add_parser('mcp-start', help='Start MCP server')
-    mcp_start_parser.add_argument('--verbose', action='store_true', help='Show detailed startup info')
-    
-    # MCP stop command
-    mcp_stop_parser = subparsers.add_parser('mcp-stop', help='Stop MCP server')
-    mcp_stop_parser.add_argument('--verbose', action='store_true', help='Show detailed shutdown info')
-    
-    # MCP status command
-    mcp_status_parser = subparsers.add_parser('mcp-status', help='Check MCP server status')
-    mcp_status_parser.add_argument('--verbose', action='store_true', help='Show detailed process info')
-    
-    # MCP test command
-    mcp_test_parser = subparsers.add_parser('mcp-test', help='Test MCP server connection')
-    mcp_test_parser.add_argument('--verbose', action='store_true', help='Show detailed test results')
-    
-    # MCP list-tools command
-    mcp_list_tools_parser = subparsers.add_parser('mcp-list-tools', help='List available MCP tools')
-    mcp_list_tools_parser.add_argument('--show-all', action='store_true', help='Show all tools including disabled ones')
-    mcp_list_tools_parser.add_argument('--verbose', action='store_true', help='Show usage examples')
-    
-    # MCP call command
-    mcp_call_parser = subparsers.add_parser('mcp-call', help='Call MCP tool directly (for testing)')
-    mcp_call_parser.add_argument('tool_name', help='MCP tool name to call')
-    mcp_call_parser.add_argument('--arguments', help='JSON arguments for the tool')
-    mcp_call_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+    """Add MCP server command parsers - REMOVED: MCP server lifecycle managed by IDE/CLI"""
+    # All MCP server commands (mcp-start, mcp-stop, mcp-status, mcp-test, mcp-list-tools, mcp-call)
+    # removed as they are redundant - IDE/CLI manages MCP server lifecycle
+    pass
 
 
 def _add_session_parsers(subparsers):
@@ -411,12 +364,12 @@ def _add_session_parsers(subparsers):
     
     # Sessions show command
     sessions_show_parser = subparsers.add_parser('sessions-show', help='Show detailed session info')
-    sessions_show_parser.add_argument('session_id', help='Session ID to show')
+    sessions_show_parser.add_argument('session_id', help='Session ID or alias (latest, latest:active, latest:<ai_id>, latest:active:<ai_id>)')
     sessions_show_parser.add_argument('--verbose', action='store_true', help='Show all vectors and cascades')
-    
+
     # Sessions export command
     sessions_export_parser = subparsers.add_parser('sessions-export', help='Export session to JSON')
-    sessions_export_parser.add_argument('session_id', help='Session ID to export')
+    sessions_export_parser.add_argument('session_id', help='Session ID or alias (latest, latest:active, latest:<ai_id>)')
     sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')
 
 
@@ -564,11 +517,9 @@ def main(args=None):
     try:
         # Route to appropriate command handler
         command_map = {
-            # Bootstrap commands
-            'bootstrap': handle_bootstrap_command,
-            'bootstrap-system': handle_bootstrap_system_command,
-            'onboard': handle_onboard_command,
-            
+            # Bootstrap commands (consolidated: bootstrap-system and onboard removed)
+            'bootstrap': handle_bootstrap_command,  # Now handles --level=extended and --onboard
+
             # Assessment commands
             'assess': handle_assess_command,
             'self-awareness': handle_self_awareness_command,
@@ -584,14 +535,12 @@ def main(args=None):
             'decision': handle_decision_command,
             'decision-batch': handle_decision_batch_command,
             
-            # Investigation commands
-            'investigate': handle_investigate_command,
-            'analyze': handle_analyze_command,
-            
-            # Performance commands
-            'benchmark': handle_benchmark_command,
-            'performance': handle_performance_command,
-            
+            # Investigation commands (consolidated: analyze removed)
+            'investigate': handle_investigate_command,  # Now handles --type=comprehensive
+
+            # Performance commands (consolidated: benchmark removed)
+            'performance': handle_performance_command,  # Now handles --benchmark
+
             # Component commands
             'list': handle_list_command,
             'explain': handle_explain_command,
@@ -603,33 +552,21 @@ def main(args=None):
             'calibration': handle_calibration_command,
             'uvl': handle_uvl_command,
             
-            # Config commands
-            'config-init': handle_config_init_command,
-            'config-show': handle_config_show_command,
-            'config-validate': handle_config_validate_command,
-            'config-get': handle_config_get_command,
-            'config-set': handle_config_set_command,
-            
+            # Config commands (consolidated: 5 commands → 1)
+            'config': handle_config_command,  # Handles --init, --validate, KEY, KEY VALUE
+
             # Profile commands
             'profile-list': handle_profile_list_command,
             'profile-show': handle_profile_show_command,
             'profile-create': handle_profile_create_command,
             'profile-set-default': handle_profile_set_default_command,
             
-            # Monitor commands
-            'monitor': handle_monitor_command,
-            'monitor-export': handle_monitor_export_command,
-            'monitor-reset': handle_monitor_reset_command,
-            'monitor-cost': handle_monitor_cost_command,
-            
-            # MCP commands
-            'mcp-start': handle_mcp_start_command,
-            'mcp-stop': handle_mcp_stop_command,
-            'mcp-status': handle_mcp_status_command,
-            'mcp-test': handle_mcp_test_command,
-            'mcp-list-tools': handle_mcp_list_tools_command,
-            'mcp-call': handle_mcp_call_command,
-            
+            # Monitor commands (consolidated: 4 commands → 1)
+            'monitor': handle_monitor_command,  # Handles --export, --reset, --cost
+
+            # MCP commands - REMOVED (IDE/CLI manages MCP lifecycle)
+            # mcp-start, mcp-stop, mcp-status, mcp-test, mcp-list-tools, mcp-call all removed
+
             # Session commands
             'sessions-list': handle_sessions_list_command,
             'sessions-show': handle_sessions_show_command,

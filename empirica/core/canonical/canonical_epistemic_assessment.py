@@ -106,7 +106,7 @@ class CanonicalEpistemicAssessor:
             if isinstance(result, dict) and 'meta_prompt' in result:
                 # Execute meta_prompt with LLM, get response
                 llm_response = await llm.complete(result['meta_prompt'])
-                assessment = assessor.parse_llm_response(llm_response, result['assessment_id'], task, context)
+                assessment = assessor.parse_llm_response(llm_response, result['assessment_id'], task, context, profile)
             else:
                 assessment = result
 
@@ -588,7 +588,8 @@ Respond with a structured JSON object in this EXACT format:
         llm_response: Union[str, Dict[str, Any]],
         assessment_id: str,
         task: str,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        profile: Optional['InvestigationProfile'] = None
     ) -> EpistemicAssessment:
         """
         Parse LLM's self-assessment response into EpistemicAssessment
@@ -598,6 +599,7 @@ Respond with a structured JSON object in this EXACT format:
             assessment_id: Assessment identifier
             task: Original task
             context: Original context
+            profile: Investigation profile for action determination
 
         Returns:
             EpistemicAssessment: Structured canonical assessment

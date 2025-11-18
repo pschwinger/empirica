@@ -34,6 +34,120 @@ Empirica includes 11 production-ready enterprise components located in `/empiric
 
 ---
 
+## Phase 1.6: Handoff Report Tools (NEW ✨)
+
+Efficient context transfer for multi-agent coordination (98% token reduction).
+
+### `generate_handoff_report`
+
+**Purpose:** Create compressed session summary during POSTFLIGHT
+
+**Inputs:**
+- `session_id` - Session UUID
+- `task_summary` - What was accomplished (2-3 sentences)
+- `key_findings` - What was learned (3-5 bullet points)
+- `remaining_unknowns` - What's still unclear
+- `next_session_context` - Critical context for next session
+- `artifacts_created` - Files/commits produced (optional)
+
+**Outputs:**
+- `report_id` - Git note SHA
+- `storage_location` - Git notes reference
+- `token_count` - Estimated tokens (~238-400 typical)
+- `markdown` - Full markdown report
+
+**Token Efficiency:** ~238-400 tokens (98.8% reduction vs 20,000 baseline)
+
+**Example:**
+```python
+generate_handoff_report(
+    session_id=session_id,
+    task_summary="Implemented Phase 1.6 Handoff Reports",
+    key_findings=[
+        "Created report generator with hybrid calibration",
+        "Implemented dual storage (git + database)",
+        "Added 3 new MCP tools"
+    ],
+    remaining_unknowns=["Long-term scalability with 100+ sessions"],
+    next_session_context="Phase 1.6 complete. Ready for documentation updates.",
+    artifacts_created=["report_generator.py", "storage.py"]
+)
+```
+
+---
+
+### `resume_previous_session`
+
+**Purpose:** Load previous session handoff for efficient context resumption
+
+**Inputs:**
+- `ai_id` - AI agent identifier (default: "claude")
+- `resume_mode` - How to select sessions: "last", "last_n", "session_id"
+- `session_id` - For session_id mode (optional)
+- `count` - For last_n mode (1-5, default: 1)
+- `detail_level` - "summary" (~400), "detailed" (~800), "full" (~1,250 tokens)
+
+**Outputs:**
+- `sessions` - List of session summaries
+- `total_sessions` - Count
+- `token_estimate` - Total tokens used
+- `detail_level` - Level used
+
+**Token Efficiency:**
+| Detail Level | Tokens | Content |
+|--------------|--------|---------|
+| summary | ~400 | Key findings, next steps, deltas |
+| detailed | ~800 | + investigation tools, artifacts |
+| full | ~1,250 | + complete markdown report |
+
+**Example:**
+```python
+# Load last session (summary mode)
+handoff = resume_previous_session(ai_id="copilot-claude", resume_mode="last")
+
+prev = handoff['sessions'][0]
+print(f"Previous task: {prev['task']}")
+print(f"Key findings: {prev['key_findings']}")
+print(f"Next steps: {prev['next_steps']}")
+print(f"Epistemic growth: KNOW +{prev['epistemic_deltas']['know']:.2f}")
+```
+
+---
+
+### `query_handoff_reports`
+
+**Purpose:** Query handoff reports for multi-agent coordination
+
+**Inputs:**
+- `ai_id` - Filter by AI agent (optional)
+- `since` - ISO timestamp or relative date (optional)
+- `task_pattern` - Regex pattern for task matching (optional)
+- `limit` - Max results (default: 10)
+
+**Outputs:**
+- `reports` - List of matching reports
+- `total_found` - Count
+
+**Use Cases:**
+- "What did Minimax work on last week?"
+- "Show recent testing sessions"
+- "What have all agents learned about git integration?"
+
+**Example:**
+```python
+# Query by AI and date
+reports = query_handoff_reports(
+    ai_id="minimax",
+    since="2025-11-01",
+    limit=5
+)
+
+for r in reports['reports']:
+    print(f"{r['ai_id']}: {r['task']} (growth: {r['epistemic_growth']:+.2f})")
+```
+
+---
+
 ## 1. Code Intelligence Analyzer
 
 **Location:** `/empirica/components/code_intelligence_analyzer/`

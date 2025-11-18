@@ -19,7 +19,8 @@ from .cascade_commands import (
 )
 from .decision_commands import handle_decision_command, handle_decision_batch_command
 from .config_commands import (
-    handle_config_init_command, handle_config_show_command, 
+    handle_config_command,
+    handle_config_init_command, handle_config_show_command,
     handle_config_validate_command, handle_config_get_command, handle_config_set_command
 )
 from .mcp_commands import (
@@ -74,6 +75,7 @@ __all__ = [
     'handle_decision_batch_command',
     
     # Config commands
+    'handle_config_command',
     'handle_config_init_command',
     'handle_config_show_command',
     'handle_config_validate_command',

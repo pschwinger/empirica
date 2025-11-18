@@ -1,6 +1,6 @@
 ---
 name: empirica-epistemic-framework
-description: Empirica epistemic self-assessment framework for AI agents. Use when you need to assess your knowledge state, track learning, measure calibration, or ensure genuine metacognitive reasoning. Provides 12-vector epistemic assessment (KNOW, DO, CONTEXT, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, ENGAGEMENT, UNCERTAINTY). Use for preflight assessment before tasks, postflight validation after completion, or continuous epistemic tracking during complex work.
+description: Empirica epistemic self-assessment framework for AI agents. Use when you need to assess your knowledge state, track learning, measure calibration, or ensure genuine metacognitive reasoning. Provides 12-vector epistemic assessment (KNOW, DO, CONTEXT, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, ENGAGEMENT, UNCERTAINTY). Use for preflight assessment before tasks, postflight validation after completion, continuous epistemic tracking during complex work, or session handoff reports for multi-session/multi-agent coordination (98% token reduction).
 ---
 
 # Empirica: Functional Self-Awareness Framework for AI Agents
@@ -412,7 +412,117 @@ empirica onboard --ai-id claude
 - Immediate feedback on calibration
 - Export learning session for review
 
-### Workflow 4: Cognitive Benchmarking (Advanced)
+### Workflow 4: Session Handoff (Multi-Session & Multi-Agent)
+
+**Use when:** Working across multiple sessions or coordinating with other AI agents
+
+**Purpose:** Resume work efficiently with 98% token reduction vs full conversation history
+
+#### End of Session: Generate Handoff
+```python
+from empirica.core.handoff import EpistemicHandoffReportGenerator
+
+generator = EpistemicHandoffReportGenerator()
+
+# After completing POSTFLIGHT
+report = generator.generate_handoff_report(
+    session_id=session_id,
+    task_summary="What you accomplished (2-3 sentences)",
+    key_findings=[
+        "Key discovery or learning 1",
+        "Key discovery or learning 2",
+        "Key discovery or learning 3"
+    ],
+    remaining_unknowns=[
+        "What you're still uncertain about",
+        "What needs more investigation"
+    ],
+    next_session_context="Critical context for next session or agent",
+    artifacts_created=["file1.py", "file2.py"]  # Optional
+)
+
+# Automatically stored in:
+# - Git notes (distributed, version-controlled)
+# - Database (fast queries, multi-agent coordination)
+```
+
+#### Start of Next Session: Resume from Handoff
+```python
+from empirica.core.handoff import DatabaseHandoffStorage
+
+storage = DatabaseHandoffStorage()
+
+# Load your last session
+handoffs = storage.query_handoffs(ai_id="your-agent-name", limit=1)
+if handoffs:
+    prev = handoffs[0]
+    
+    print(f"Previous task: {prev['task_summary']}")
+    print(f"Key findings: {prev['key_findings']}")
+    print(f"Remaining unknowns: {prev['remaining_unknowns']}")
+    print(f"Next steps: {prev['recommended_next_steps']}")
+    print(f"Context: {prev['next_session_context']}")
+    
+    # Epistemic growth from last session
+    deltas = prev['epistemic_deltas']
+    print(f"KNOW: +{deltas.get('know', 0):.2f}")
+    print(f"UNCERTAINTY: {deltas.get('uncertainty', 0):+.2f}")
+```
+
+#### Via MCP Tools (If Available)
+```python
+# Generate handoff
+generate_handoff_report(
+    session_id=session_id,
+    task_summary="...",
+    key_findings=[...],
+    remaining_unknowns=[...],
+    next_session_context="..."
+)
+
+# Resume from handoff
+result = resume_previous_session(
+    ai_id="your-agent-name",
+    resume_mode="last",
+    detail_level="summary"  # ~400 tokens
+)
+```
+
+#### Multi-Agent Coordination
+```python
+# Query what other agents worked on
+reports = storage.query_handoffs(
+    ai_id="minimax",
+    since="2025-11-01",
+    task_pattern="testing",
+    limit=5
+)
+
+for r in reports:
+    print(f"{r['ai_id']}: {r['task_summary']}")
+    print(f"  Growth: KNOW +{r['epistemic_deltas'].get('know', 0):.2f}")
+```
+
+**Token Efficiency:**
+| Detail Level | Tokens | Use Case |
+|--------------|--------|----------|
+| summary | ~400 | Quick context (most sessions) |
+| detailed | ~800 | Investigation review |
+| full | ~1,250 | Complete transfer (93.75% reduction!) |
+| conversation history | ~20,000 | Baseline (inefficient) |
+
+**Why This Matters:**
+- ✅ Resume exactly where you left off (multi-session work)
+- ✅ Coordinate with other AI agents efficiently
+- ✅ 98% token reduction enables frequent context loading
+- ✅ Uses your genuine POSTFLIGHT introspection (not heuristics)
+- ✅ Queryable by AI, date, task pattern
+
+**See also:** `docs/production/23_SESSION_CONTINUITY.md`, `docs/production/06_CASCADE_FLOW.md`
+
+---
+
+### Workflow 5: Cognitive Benchmarking (Advanced)
 
 **Use when:** Measuring epistemic reasoning capabilities
 

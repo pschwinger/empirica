@@ -283,9 +283,76 @@ Each phase logs a Reflex Frame:
 
 ---
 
+## Phase 6: POSTFLIGHT (Generate Handoff Report)
+
+**Purpose:** Create compressed session summary for multi-agent coordination
+
+**What Happens:**
+1. Complete POSTFLIGHT epistemic assessment (vectors + calibration)
+2. Generate handoff report capturing:
+   - What was learned (key findings)
+   - What gaps were filled (epistemic growth)
+   - What's still unknown (remaining uncertainties)
+   - Context for next session
+   - Recommended next steps
+
+**Output:**
+```python
+{
+    'session_id': 'abc123...',
+    'report_id': 'git-sha...',
+    'token_count': 238,  # ~98% reduction vs full history
+    'markdown': '# Epistemic Handoff Report...',
+    'storage_location': 'git:refs/notes/empirica/handoff/abc123'
+}
+```
+
+**Duration:** < 5 seconds
+
+**Token Efficiency:** ~238-400 tokens (compressed) vs ~20,000 (full conversation)
+
+**MCP Tools:**
+- `generate_handoff_report` - Create handoff during POSTFLIGHT
+- `resume_previous_session` - Load handoff in next session
+- `query_handoff_reports` - Query by AI/date for coordination
+
+**Example:**
+```python
+from empirica.core.handoff import EpistemicHandoffReportGenerator
+
+generator = EpistemicHandoffReportGenerator()
+
+report = generator.generate_handoff_report(
+    session_id=session_id,
+    task_summary="What you accomplished",
+    key_findings=["Finding 1", "Finding 2", "Finding 3"],
+    remaining_unknowns=["Unknown 1", "Unknown 2"],
+    next_session_context="Critical context for next AI",
+    artifacts_created=["file1.py", "file2.py"]
+)
+
+# Automatically stored in git notes + database
+# Next AI loads with: resume_previous_session(ai_id="agent-name")
+```
+
+**Why This Matters:**
+- **Multi-session work:** Resume exactly where you left off
+- **Multi-agent coordination:** Pass context between AIs efficiently
+- **Token efficiency:** 98% reduction enables frequent context loading
+- **Genuine calibration:** Uses your actual POSTFLIGHT introspection
+
+**Integration:**
+- Complements git checkpoints (Phase 1.5) with semantic context
+- Stored in dual locations: git notes (distributed) + database (queryable)
+- Available via 3 new MCP tools in Empirica server
+
+---
+
 ## Next Steps
 
 - **Investigation Details:** [07_INVESTIGATION_SYSTEM.md](07_INVESTIGATION_SYSTEM.md)
+- **Session Continuity:** [23_SESSION_CONTINUITY.md](23_SESSION_CONTINUITY.md)
+- **Tool Catalog:** [20_TOOL_CATALOG.md](20_TOOL_CATALOG.md)
 - **API Usage:** [13_PYTHON_API.md](13_PYTHON_API.md)
 - **Troubleshooting:** [21_TROUBLESHOOTING.md](21_TROUBLESHOOTING.md)
 

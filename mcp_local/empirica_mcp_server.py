@@ -41,6 +41,9 @@ from mcp import types
 # Feature flags
 ENABLE_MODALITY_SWITCHER = os.environ.get('EMPIRICA_ENABLE_MODALITY_SWITCHER', 'false').lower() == 'true'
 
+# Import session resolver for alias support
+from empirica.utils.session_resolver import resolve_session_id
+
 # Create MCP server instance
 app = Server("empirica")
 
@@ -352,7 +355,7 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "session_id": {"type": "string", "description": "Session UUID or alias ('latest', 'latest:active', 'latest:<ai_id>', 'latest:active:<ai_id>')"},
                     "max_age_hours": {"type": "integer", "description": "Maximum age of checkpoint in hours (default: 24)", "default": 24},
                     "phase": {"type": "string", "description": "Optional: filter by specific phase"}
                 },
@@ -409,7 +412,8 @@ async def list_tools() -> list[types.Tool]:
                 "type": "object",
                 "properties": {
                     "ai_id": {"type": "string", "description": "AI identifier (optional)"},
-                    "session_type": {"type": "string", "enum": ["development", "production", "testing"], "default": "development"},
+                    "session_type": {"type": "string", "description": "Free-form session context label (e.g., 'development', 'research', 'teaching', 'production', 'interactive'). Used for session tracking and bootstrap_level inference.", "default": "development"},
+                    "bootstrap_level": {"type": "integer", "description": "Optional explicit bootstrap level (0=minimal, 1=standard, 2=full). If not provided, inferred from session_type.", "enum": [0, 1, 2]},
                     "profile": {"type": "string", "description": "Optional profile for session configuration"},
                     "ai_model": {"type": "string", "description": "Optional AI model specification"},
                     "domain": {"type": "string", "description": "Optional domain context"}
@@ -526,7 +530,7 @@ async def list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="generate_goals",
-            description="Generate goals for an AI agent using the canonical goal orchestrator. Uses LLM reasoning based on conversation context and epistemic state. Essential for autonomous agents (like minimax) that need structured goals.",
+            description="Generate goals for an AI agent using the canonical goal orchestrator (legacy). Uses LLM reasoning based on conversation context and epistemic state.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -537,6 +541,160 @@ async def list_tools() -> list[types.Tool]:
                 "required": ["session_id", "conversation_context"]
             }
         ),
+        
+        # NEW: Structured Goal Architecture Tools
+        types.Tool(
+            name="create_goal",
+            description="Create a structured goal with success criteria and metadata (new architecture)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID for associating goal"},
+                    "objective": {"type": "string", "description": "Clear, actionable goal statement"},
+                    "success_criteria": {"type": "array", "description": "List of success criteria dicts with 'description' and 'validation_method'", "items": {"type": "object"}},
+                    "scope": {"type": "string", "enum": ["task_specific", "session_scoped", "project_wide"], "default": "task_specific"},
+                    "estimated_complexity": {"type": "number", "description": "Optional complexity estimate (0.0-1.0)"},
+                    "constraints": {"type": "object", "description": "Optional constraints from investigation profile"},
+                    "metadata": {"type": "object", "description": "Optional metadata (tags, context, etc.)"}
+                },
+                "required": ["objective", "success_criteria"]
+            }
+        ),
+        types.Tool(
+            name="add_subtask",
+            description="Add a subtask to an existing goal (new architecture)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "goal_id": {"type": "string", "description": "Goal UUID to add subtask to"},
+                    "description": {"type": "string", "description": "What to do"},
+                    "epistemic_importance": {"type": "string", "enum": ["critical", "high", "medium", "low"], "default": "medium"},
+                    "estimated_tokens": {"type": "integer", "description": "Optional token estimate"},
+                    "dependencies": {"type": "array", "description": "Optional list of subtask IDs this depends on", "items": {"type": "string"}}
+                },
+                "required": ["goal_id", "description"]
+            }
+        ),
+        types.Tool(
+            name="complete_subtask",
+            description="Mark a subtask as complete with optional evidence (new architecture)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "subtask_id": {"type": "string", "description": "SubTask UUID"},
+                    "evidence": {"type": "string", "description": "Optional completion evidence (commit hash, file path, etc.)"}
+                },
+                "required": ["subtask_id"]
+            }
+        ),
+        types.Tool(
+            name="get_goal_progress",
+            description="Get completion status and progress for a goal (new architecture)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "goal_id": {"type": "string", "description": "Goal UUID"}
+                },
+                "required": ["goal_id"]
+            }
+        ),
+        types.Tool(
+            name="list_goals",
+            description="List goals with optional filters (new architecture)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Filter by session UUID"},
+                    "is_completed": {"type": "boolean", "description": "Filter by completion status"},
+                    "scope": {"type": "string", "enum": ["task_specific", "session_scoped", "project_wide"], "description": "Filter by scope"}
+                }
+            }
+        ),
+        
+        # NEW: Git Progress Query Tools (Phase 2)
+        types.Tool(
+            name="query_git_progress",
+            description="Query git notes for goal progress (lead AI coordination)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "goal_id": {"type": "string", "description": "Goal UUID to query"},
+                    "max_commits": {"type": "integer", "description": "Maximum commits to retrieve", "default": 100}
+                },
+                "required": ["goal_id"]
+            }
+        ),
+        types.Tool(
+            name="get_team_progress",
+            description="Get progress across multiple goals (multi-agent coordination)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "goal_ids": {"type": "array", "items": {"type": "string"}, "description": "List of goal UUIDs"}
+                },
+                "required": ["goal_ids"]
+            }
+        ),
+        types.Tool(
+            name="get_unified_timeline",
+            description="Get unified timeline combining tasks + epistemic state + commits",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "goal_id": {"type": "string", "description": "Goal UUID"}
+                },
+                "required": ["session_id", "goal_id"]
+            }
+        ),
+        
+        # NEW: Phase 1.6 - Epistemic Handoff Reports
+        types.Tool(
+            name="generate_handoff_report",
+            description="Generate epistemic handoff report for session resumption. Creates compressed (~1,250 token) summary capturing what was learned, gaps filled, and recommended next steps. Use during POSTFLIGHT to enable efficient context transfer.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "task_summary": {"type": "string", "description": "What was accomplished (2-3 sentences)"},
+                    "key_findings": {"type": "array", "items": {"type": "string"}, "description": "What was learned (3-5 bullet points)"},
+                    "remaining_unknowns": {"type": "array", "items": {"type": "string"}, "description": "What's still unclear"},
+                    "next_session_context": {"type": "string", "description": "Critical context for next session"},
+                    "artifacts_created": {"type": "array", "items": {"type": "string"}, "description": "Files/commits produced (optional)"}
+                },
+                "required": ["session_id", "task_summary", "key_findings", "remaining_unknowns", "next_session_context"]
+            }
+        ),
+        types.Tool(
+            name="resume_previous_session",
+            description="Load previous session handoff report(s) for efficient context resumption. Returns epistemic deltas, key findings, and recommended next steps in ~1,250 tokens (93.75% reduction vs full history). Use at session start.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "ai_id": {"type": "string", "description": "AI agent identifier (default: 'claude')"},
+                    "resume_mode": {"type": "string", "enum": ["last", "last_n", "session_id"], "description": "How to select session(s) (default: 'last')"},
+                    "session_id": {"type": "string", "description": "For session_id mode: specific session to load"},
+                    "count": {"type": "integer", "description": "For last_n mode: how many recent sessions (1-5)", "default": 1, "minimum": 1, "maximum": 5},
+                    "detail_level": {"type": "string", "enum": ["summary", "detailed", "full"], "description": "summary=~400 tokens, detailed=~800 tokens, full=~1,250 tokens", "default": "summary"}
+                },
+                "required": []
+            }
+        ),
+        types.Tool(
+            name="query_handoff_reports",
+            description="Query handoff reports by AI, date, or task pattern. Enables multi-agent coordination: 'What did Minimax work on last week?' or 'Show recent testing sessions'.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "ai_id": {"type": "string", "description": "Filter by AI agent (e.g., 'minimax', 'claude-code')"},
+                    "since": {"type": "string", "description": "ISO timestamp or relative (e.g., '2025-11-01', '7 days ago')"},
+                    "task_pattern": {"type": "string", "description": "Regex pattern to match task summaries"},
+                    "limit": {"type": "integer", "description": "Max results (default: 10)", "default": 10}
+                },
+                "required": []
+            }
+        ),
+        
         types.Tool(
             name="create_cascade",
             description="Create a new cascade (task) for the current session. Use this to add new tasks without running full PREFLIGHT. The cascade will be tracked by goal orchestrator.",
@@ -1713,8 +1871,18 @@ Compare to your PREFLIGHT assessment - what changed?"""
         elif name == "get_epistemic_state":
             try:
                 from empirica.data.session_database import SessionDatabase
-                
-                session_id = arguments.get("session_id")
+
+                session_id_or_alias = arguments.get("session_id")
+
+                # Resolve session alias to UUID
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    return [types.TextContent(type="text", text=json.dumps({
+                        "ok": False,
+                        "error": f"Session resolution failed: {str(e)}",
+                        "provided": session_id_or_alias
+                    }, indent=2))]
                 db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
                 
                 # Get session info
@@ -1771,8 +1939,18 @@ Compare to your PREFLIGHT assessment - what changed?"""
         elif name == "get_calibration_report":
             try:
                 from empirica.data.session_database import SessionDatabase
-                
-                session_id = arguments.get("session_id")
+
+                session_id_or_alias = arguments.get("session_id")
+
+                # Resolve session alias to UUID
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    return [types.TextContent(type="text", text=json.dumps({
+                        "ok": False,
+                        "error": f"Session resolution failed: {str(e)}",
+                        "provided": session_id_or_alias
+                    }, indent=2))]
                 db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
                 
                 # Get preflight and postflight assessments
@@ -1901,8 +2079,18 @@ Compare to your PREFLIGHT assessment - what changed?"""
         elif name == "get_session_summary":
             try:
                 from empirica.data.session_database import SessionDatabase
-                
-                session_id = arguments.get("session_id")
+
+                session_id_or_alias = arguments.get("session_id")
+
+                # Resolve session alias to UUID
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    return [types.TextContent(type="text", text=json.dumps({
+                        "ok": False,
+                        "error": f"Session resolution failed: {str(e)}",
+                        "provided": session_id_or_alias
+                    }, indent=2))]
                 db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
                 
                 summary = db.get_session_summary(session_id, detail_level='summary')
@@ -1973,10 +2161,20 @@ Compare to your PREFLIGHT assessment - what changed?"""
         elif name == "load_git_checkpoint":
             try:
                 from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
-                
-                session_id = arguments.get("session_id")
+
+                session_id_or_alias = arguments.get("session_id")
                 max_age_hours = arguments.get("max_age_hours", 24)
                 phase = arguments.get("phase")
+
+                # Resolve session alias to UUID
+                try:
+                    session_id = resolve_session_id(session_id_or_alias)
+                except ValueError as e:
+                    return [types.TextContent(type="text", text=json.dumps({
+                        "ok": False,
+                        "error": f"Session resolution failed: {str(e)}",
+                        "provided": session_id_or_alias
+                    }, indent=2))]
                 
                 git_logger = GitEnhancedReflexLogger(
                     session_id=session_id,
@@ -2141,17 +2339,32 @@ Compare to your PREFLIGHT assessment - what changed?"""
             from empirica.data.session_database import SessionDatabase
 
             ai_id = arguments.get("ai_id", "empirica_agent")
-            session_type = arguments.get("session_type", "development")
+            session_type = arguments.get("session_type", "development")  # Free-form label
             profile = arguments.get("profile")
             ai_model = arguments.get("ai_model")
             domain = arguments.get("domain")
+            bootstrap_level_arg = arguments.get("bootstrap_level")  # Explicit override
 
-            # Bootstrap components
-            config = bootstrap_metacognition(ai_id, level=session_type)
+            # Smart level inference: explicit override OR contextual hints OR default
+            if bootstrap_level_arg is not None:
+                # User/AI explicitly chose level (0-2)
+                bootstrap_level = bootstrap_level_arg
+            else:
+                # Infer from session_type contextually (these are suggestions, not restrictions)
+                level_hints = {
+                    # Minimal/fast contexts
+                    "minimal": 0, "quick": 0, "fast": 0, "lightweight": 0,
+                    # Standard contexts (most common)
+                    "standard": 1, "development": 1, "interactive": 1, "exploration": 1,
+                    "debugging": 1, "teaching": 1, "learning": 1, "workflow": 1,
+                    # Full contexts (complex/production)
+                    "full": 2, "production": 2, "testing": 2, "research": 2,
+                    "comprehensive": 2, "enterprise": 2
+                }
+                bootstrap_level = level_hints.get(session_type.lower(), 1)  # Default to standard
 
-            # Map session_type to bootstrap_level
-            level_map = {"development": 1, "testing": 2, "production": 3}
-            bootstrap_level = level_map.get(session_type, 1)
+            # Bootstrap components with inferred/explicit level
+            config = bootstrap_metacognition(ai_id, level=bootstrap_level)
             component_count = len(config) if isinstance(config, dict) else 0
 
             # Create session record in database
@@ -2427,6 +2640,268 @@ Compare to your PREFLIGHT assessment - what changed?"""
                 "task": task,
                 "status": "created",
                 "message": f"Cascade created successfully. Run execute_preflight with this cascade_id to begin workflow, or query_goal_orchestrator to view all cascades."
+            }, indent=2))]
+        
+        # NEW: Structured Goal Architecture Handlers
+        elif name == "create_goal":
+            from empirica.core.goals.types import Goal, SuccessCriterion, GoalScope
+            from empirica.core.goals.repository import GoalRepository
+            from empirica.core.goals.validation import validate_mcp_goal_input, ValidationError
+            import uuid
+            
+            # Validate input first
+            try:
+                validate_mcp_goal_input(arguments)
+            except ValidationError as e:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": f"Input validation failed: {str(e)}"
+                }))]
+            
+            session_id = arguments.get("session_id")
+            objective = arguments.get("objective")
+            success_criteria_data = arguments.get("success_criteria", [])
+            scope_str = arguments.get("scope", "task_specific")
+            estimated_complexity = arguments.get("estimated_complexity")
+            constraints = arguments.get("constraints", {})
+            metadata = arguments.get("metadata", {})
+            
+            # Convert success criteria dicts to SuccessCriterion objects
+            success_criteria = []
+            for sc_data in success_criteria_data:
+                sc = SuccessCriterion(
+                    id=str(uuid.uuid4()),
+                    description=sc_data.get("description", ""),
+                    validation_method=sc_data.get("validation_method", "completion"),
+                    threshold=sc_data.get("threshold"),
+                    is_required=sc_data.get("is_required", True)
+                )
+                success_criteria.append(sc)
+            
+            # Create goal
+            goal = Goal.create(
+                objective=objective,
+                success_criteria=success_criteria,
+                scope=GoalScope(scope_str),
+                estimated_complexity=estimated_complexity,
+                constraints=constraints,
+                metadata=metadata
+            )
+            
+            # Save to database
+            repo = GoalRepository()
+            success = repo.save_goal(goal, session_id)
+            repo.close()
+            
+            if success:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "goal_id": goal.id,
+                    "objective": goal.objective,
+                    "scope": goal.scope.value,
+                    "success_criteria_count": len(goal.success_criteria),
+                    "message": "Goal created successfully. Use add_subtask to break it down into actionable tasks."
+                }, indent=2))]
+            else:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": "Failed to save goal to database"
+                }))]
+        
+        elif name == "add_subtask":
+            from empirica.core.tasks.types import SubTask, EpistemicImportance
+            from empirica.core.tasks.repository import TaskRepository
+            from empirica.core.goals.validation import validate_mcp_subtask_input, ValidationError
+            
+            # Validate input first
+            try:
+                validate_mcp_subtask_input(arguments)
+            except ValidationError as e:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": f"Input validation failed: {str(e)}"
+                }))]
+            
+            goal_id = arguments.get("goal_id")
+            description = arguments.get("description")
+            epistemic_importance_str = arguments.get("epistemic_importance", "medium")
+            estimated_tokens = arguments.get("estimated_tokens")
+            dependencies = arguments.get("dependencies", [])
+            
+            # Create subtask
+            subtask = SubTask.create(
+                goal_id=goal_id,
+                description=description,
+                epistemic_importance=EpistemicImportance(epistemic_importance_str),
+                estimated_tokens=estimated_tokens,
+                dependencies=dependencies
+            )
+            
+            # Save to database
+            repo = TaskRepository()
+            success = repo.save_subtask(subtask)
+            repo.close()
+            
+            if success:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "subtask_id": subtask.id,
+                    "goal_id": goal_id,
+                    "description": description,
+                    "epistemic_importance": epistemic_importance_str,
+                    "status": "pending",
+                    "message": "Subtask created successfully. Use complete_subtask when done."
+                }, indent=2))]
+            else:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": "Failed to save subtask to database"
+                }))]
+        
+        elif name == "complete_subtask":
+            from empirica.core.completion.tracker import CompletionTracker
+            
+            subtask_id = arguments.get("subtask_id")
+            evidence = arguments.get("evidence")
+            
+            # Mark complete
+            tracker = CompletionTracker()
+            success = tracker.record_subtask_completion(subtask_id, evidence)
+            
+            if success:
+                # Get updated progress for the goal
+                from empirica.core.tasks.repository import TaskRepository
+                task_repo = TaskRepository()
+                subtask = task_repo.get_subtask(subtask_id)
+                task_repo.close()
+                
+                if subtask:
+                    progress = tracker.track_progress(subtask.goal_id)
+                    tracker.close()
+                    
+                    return [types.TextContent(type="text", text=json.dumps({
+                        "ok": True,
+                        "subtask_id": subtask_id,
+                        "goal_id": subtask.goal_id,
+                        "goal_progress": f"{progress.completion_percentage:.1%}",
+                        "completed_count": len(progress.completed_subtasks),
+                        "remaining_count": len(progress.remaining_subtasks),
+                        "message": "Subtask marked complete. Use get_goal_progress for full status."
+                    }, indent=2))]
+            
+            tracker.close()
+            return [types.TextContent(type="text", text=json.dumps({
+                "ok": False,
+                "error": "Failed to mark subtask as complete"
+            }))]
+        
+        elif name == "get_goal_progress":
+            from empirica.core.completion.tracker import CompletionTracker
+            
+            goal_id = arguments.get("goal_id")
+            
+            tracker = CompletionTracker()
+            progress = tracker.track_progress(goal_id)
+            tracker.close()
+            
+            return [types.TextContent(type="text", text=json.dumps({
+                "ok": True,
+                "goal_id": goal_id,
+                "completion_percentage": progress.completion_percentage,
+                "completed_subtasks": progress.completed_subtasks,
+                "remaining_subtasks": progress.remaining_subtasks,
+                "blocked_subtasks": progress.blocked_subtasks,
+                "estimated_remaining_tokens": progress.estimated_remaining_tokens,
+                "actual_tokens_used": progress.actual_tokens_used,
+                "completion_evidence": progress.completion_evidence
+            }, indent=2))]
+        
+        elif name == "list_goals":
+            from empirica.core.goals.repository import GoalRepository
+            from empirica.core.goals.types import GoalScope
+            
+            session_id = arguments.get("session_id")
+            is_completed = arguments.get("is_completed")
+            scope_str = arguments.get("scope")
+            
+            scope = GoalScope(scope_str) if scope_str else None
+            
+            repo = GoalRepository()
+            goals = repo.query_goals(
+                session_id=session_id,
+                is_completed=is_completed,
+                scope=scope
+            )
+            repo.close()
+            
+            goals_data = [
+                {
+                    "id": g.id,
+                    "objective": g.objective,
+                    "scope": g.scope.value,
+                    "is_completed": g.is_completed,
+                    "success_criteria_count": len(g.success_criteria),
+                    "created_timestamp": g.created_timestamp
+                }
+                for g in goals
+            ]
+            
+            return [types.TextContent(type="text", text=json.dumps({
+                "ok": True,
+                "goals": goals_data,
+                "total": len(goals),
+                "message": "Use get_goal_progress to see detailed progress for specific goals."
+            }, indent=2))]
+        
+        # NEW: Git Progress Query Handlers (Phase 2)
+        elif name == "query_git_progress":
+            from empirica.core.completion.git_query import GitProgressQuery
+            
+            goal_id = arguments.get("goal_id")
+            max_commits = arguments.get("max_commits", 100)
+            
+            query = GitProgressQuery()
+            timeline = query.get_goal_timeline(goal_id, max_commits)
+            
+            return [types.TextContent(type="text", text=json.dumps({
+                "ok": True,
+                "timeline": timeline,
+                "message": "Git timeline shows commits with task metadata from git notes."
+            }, indent=2))]
+        
+        elif name == "get_team_progress":
+            from empirica.core.completion.git_query import GitProgressQuery
+            
+            goal_ids = arguments.get("goal_ids", [])
+            
+            if not goal_ids:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": "goal_ids array is required"
+                }))]
+            
+            query = GitProgressQuery()
+            team_progress = query.get_team_progress(goal_ids)
+            
+            return [types.TextContent(type="text", text=json.dumps({
+                "ok": True,
+                "team_progress": team_progress,
+                "message": "Team progress aggregated across multiple goals."
+            }, indent=2))]
+        
+        elif name == "get_unified_timeline":
+            from empirica.core.completion.git_query import GitProgressQuery
+            
+            session_id = arguments.get("session_id")
+            goal_id = arguments.get("goal_id")
+            
+            query = GitProgressQuery()
+            timeline = query.get_unified_timeline(session_id, goal_id)
+            
+            return [types.TextContent(type="text", text=json.dumps({
+                "ok": True,
+                "unified_timeline": timeline,
+                "message": "Unified timeline combines tasks, commits, and epistemic state."
             }, indent=2))]
 
         elif name == "cli_help":
@@ -2791,6 +3266,221 @@ For spec: ENHANCED_CASCADE_WORKFLOW_SPEC.md
                 "estimated_latency": decision.estimated_latency,
                 "fallback_adapters": decision.fallback_adapters
             }, indent=2))]
+        
+        # ===== PHASE 1.6: EPISTEMIC HANDOFF REPORTS =====
+        
+        elif name == "generate_handoff_report":
+            from empirica.core.handoff import EpistemicHandoffReportGenerator, GitHandoffStorage, DatabaseHandoffStorage
+            
+            session_id = arguments.get("session_id")
+            task_summary = arguments.get("task_summary")
+            key_findings = arguments.get("key_findings", [])
+            remaining_unknowns = arguments.get("remaining_unknowns", [])
+            next_session_context = arguments.get("next_session_context")
+            artifacts_created = arguments.get("artifacts_created")
+            
+            try:
+                # Generate report
+                generator = EpistemicHandoffReportGenerator()
+                report = generator.generate_handoff_report(
+                    session_id=session_id,
+                    task_summary=task_summary,
+                    key_findings=key_findings,
+                    remaining_unknowns=remaining_unknowns,
+                    next_session_context=next_session_context,
+                    artifacts_created=artifacts_created
+                )
+                
+                # Store in both git and database
+                git_storage = GitHandoffStorage()
+                db_storage = DatabaseHandoffStorage()
+                
+                note_sha = git_storage.store_handoff(session_id, report)
+                db_storage.store_handoff(session_id, report)
+                
+                # Estimate token count (4 chars per token rough estimate)
+                token_count = len(report['compressed_json']) // 4
+                
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "session_id": session_id,
+                    "report_id": note_sha,
+                    "storage_location": f"git:refs/notes/empirica/handoff/{session_id}",
+                    "token_count": token_count,
+                    "markdown": report['markdown']
+                }, indent=2))]
+            
+            except Exception as e:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": str(e)
+                }, indent=2))]
+        
+        elif name == "resume_previous_session":
+            from empirica.core.handoff import GitHandoffStorage, DatabaseHandoffStorage
+            from empirica.data.session_database import SessionDatabase
+            
+            ai_id = arguments.get("ai_id", "claude")
+            resume_mode = arguments.get("resume_mode", "last")
+            session_id = arguments.get("session_id")
+            count = arguments.get("count", 1)
+            detail_level = arguments.get("detail_level", "summary")
+            
+            try:
+                db = SessionDatabase()
+                git_storage = GitHandoffStorage()
+                db_storage = DatabaseHandoffStorage()
+                
+                # Determine which session(s) to load
+                if resume_mode == "last":
+                    # Get most recent session for AI
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT session_id FROM sessions
+                        WHERE ai_id = ?
+                        ORDER BY start_time DESC
+                        LIMIT 1
+                    """, (ai_id,))
+                    
+                    row = cursor.fetchone()
+                    sessions = [{'session_id': row[0]}] if row else []
+                
+                elif resume_mode == "last_n":
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT session_id FROM sessions
+                        WHERE ai_id = ?
+                        ORDER BY start_time DESC
+                        LIMIT ?
+                    """, (ai_id, min(count, 5)))
+                    
+                    sessions = [{'session_id': row[0]} for row in cursor.fetchall()]
+                
+                elif resume_mode == "session_id":
+                    if not session_id:
+                        raise ValueError("session_id required for 'session_id' mode")
+                    sessions = [{'session_id': session_id}]
+                
+                else:
+                    raise ValueError(f"Invalid resume_mode: {resume_mode}")
+                
+                if not sessions:
+                    return [types.TextContent(type="text", text=json.dumps({
+                        "ok": False,
+                        "error": f"No sessions found for ai_id={ai_id}"
+                    }, indent=2))]
+                
+                # Load handoff reports
+                results = []
+                total_tokens = 0
+                
+                for session in sessions:
+                    sid = session['session_id']
+                    
+                    # Try git first, fallback to database
+                    handoff = git_storage.load_handoff(sid, format='json')
+                    if not handoff:
+                        db_handoff = db_storage.load_handoff(sid)
+                        if db_handoff:
+                            handoff = json.loads(db_handoff['compressed_json'])
+                    
+                    if not handoff:
+                        continue
+                    
+                    # Build response based on detail level
+                    result = {
+                        'session_id': handoff.get('s', sid),
+                        'ai_id': handoff.get('ai', ai_id),
+                        'timestamp': handoff.get('ts'),
+                        'task': handoff.get('task', ''),
+                        'epistemic_deltas': handoff.get('deltas', {}),
+                        'key_findings': handoff.get('findings', []),
+                        'remaining_unknowns': handoff.get('unknowns', []),
+                        'next_steps': handoff.get('recommend', []),
+                        'calibration_status': handoff.get('cal', 'unknown')
+                    }
+                    
+                    if detail_level in ['detailed', 'full']:
+                        result['investigation_tools'] = handoff.get('tools', [])
+                        result['artifacts_created'] = handoff.get('artifacts', [])
+                    
+                    if detail_level == 'full':
+                        # Load full markdown
+                        full = git_storage.load_handoff(sid, format='markdown')
+                        if full:
+                            result['full_markdown'] = full['markdown']
+                        else:
+                            db_handoff = db_storage.load_handoff(sid)
+                            if db_handoff:
+                                result['full_markdown'] = db_handoff['markdown']
+                    
+                    # Estimate tokens
+                    token_estimate = len(json.dumps(result)) // 4
+                    total_tokens += token_estimate
+                    
+                    results.append(result)
+                
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "sessions": results,
+                    "total_sessions": len(results),
+                    "token_estimate": total_tokens,
+                    "detail_level": detail_level
+                }, indent=2))]
+            
+            except Exception as e:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": str(e)
+                }, indent=2))]
+        
+        elif name == "query_handoff_reports":
+            from empirica.core.handoff import DatabaseHandoffStorage
+            import re
+            
+            ai_id = arguments.get("ai_id")
+            since = arguments.get("since")
+            task_pattern = arguments.get("task_pattern")
+            limit = arguments.get("limit", 10)
+            
+            try:
+                db_storage = DatabaseHandoffStorage()
+                
+                # Query database
+                reports = db_storage.query_handoffs(
+                    ai_id=ai_id,
+                    since=since,
+                    limit=limit
+                )
+                
+                # Filter by task pattern if provided
+                if task_pattern:
+                    pattern = re.compile(task_pattern, re.IGNORECASE)
+                    reports = [r for r in reports if pattern.search(r['task_summary'])]
+                
+                # Format results
+                results = []
+                for report in reports:
+                    results.append({
+                        'session_id': report['session_id'],
+                        'ai_id': report['ai_id'],
+                        'timestamp': report['timestamp'],
+                        'task': report['task_summary'],
+                        'key_findings': report['key_findings'],
+                        'epistemic_growth': report['overall_confidence_delta']
+                    })
+                
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": True,
+                    "reports": results,
+                    "total_found": len(results)
+                }, indent=2))]
+            
+            except Exception as e:
+                return [types.TextContent(type="text", text=json.dumps({
+                    "ok": False,
+                    "error": str(e)
+                }, indent=2))]
         
         else:
             return [types.TextContent(type="text", text=json.dumps({

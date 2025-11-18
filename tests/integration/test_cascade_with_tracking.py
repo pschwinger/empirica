@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'empirica'))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from empirica.auto_tracker import EmpericaTracker
-from empirica.workflow.cascade_workflow_orchestrator import CascadeWorkflowOrchestrator
+from empirica.cognitive_benchmarking.erb.cascade_workflow_orchestrator import CascadeWorkflowOrchestrator
 import time
 
 print("=" * 80)
