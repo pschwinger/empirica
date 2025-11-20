@@ -25,3 +25,18 @@ global-exclude *.pyo
 global-exclude .DS_Store
 global-exclude Thumbs.db
 global-exclude .git*
+
+# 🛑 RELEASE HYGIENE: Exclude internal dev docs
+prune docs/current_work
+prune docs/vision
+prune docs/metrics
+prune tests/coordination/archive
+prune mcp_local/archive
+
+# 🛑 Exclude logs and temp files
+global-exclude *.log
+global-exclude VALIDATION.log
+global-exclude *.tmp
+global-exclude tmp_*
+global-exclude *.swp
+global-exclude *.kate-swp

@@ -30,10 +30,25 @@ classifiers = [
 ]
 
 dependencies = [
+    # Core data validation and settings
     "pydantic>=2.0",
+    "pydantic-settings>=2.0",
     "sqlalchemy>=2.0",
+    
+    # Configuration and file handling
+    "pyyaml>=6.0",              # Required for config/profile loading
     "aiofiles>=23.0",
+    
+    # HTTP and networking
     "httpx>=0.24",
+    "requests>=2.31.0",         # Required for API adapters
+    
+    # MCP integration (critical for MCP server)
+    "mcp>=1.0.0",
+    
+    # Optional but commonly used
+    "anthropic>=0.39.0",        # Anthropic SDK for adapters
+    "tiktoken>=0.5.0",          # Token counting utilities
 ]
 
 [project.optional-dependencies]
