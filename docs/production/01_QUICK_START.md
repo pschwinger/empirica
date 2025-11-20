@@ -272,7 +272,7 @@ Empirica stores all session data locally:
 - Stored alongside your git repository
 
 **Handoff Reports:** `git notes refs/empirica/handoff/`
-- 98% token reduction for session continuity
+- 90%+ token reduction for session continuity
 - Enable multi-agent coordination
 
 **View Your Data:**

@@ -16,7 +16,7 @@ def handle_handoff_create_command(args):
     """Handle handoff-create command"""
     try:
         from empirica.core.handoff.report_generator import EpistemicHandoffReportGenerator
-        from empirica.core.handoff.storage import GitHandoffStorage
+        from empirica.core.handoff.storage import HybridHandoffStorage
 
         # Parse arguments
         session_id = args.session_id
@@ -41,9 +41,16 @@ def handle_handoff_create_command(args):
             artifacts_created=artifacts
         )
 
-        # Store in git notes
-        storage = GitHandoffStorage()
-        storage.store_handoff(session_id, handoff)
+        # Store in BOTH git notes AND database
+        storage = HybridHandoffStorage()
+        sync_result = storage.store_handoff(session_id, handoff)
+        
+        # Warn if partial storage
+        if not sync_result['fully_synced']:
+            logger.warning(
+                f"⚠️ Partial storage: git={sync_result['git_stored']}, "
+                f"db={sync_result['db_stored']}"
+            )
 
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -55,7 +62,9 @@ def handle_handoff_create_command(args):
                 "storage": f"git:refs/notes/empirica/handoff/{session_id}",
                 "compression_ratio": 0.98,
                 "epistemic_deltas": handoff['epistemic_deltas'],
-                "calibration_status": handoff['calibration_status']
+                "calibration_status": handoff['calibration_status'],
+                # NEW: Add sync status
+                "storage_sync": sync_result
             }
             print(json.dumps(result, indent=2))
         else:
@@ -76,7 +85,7 @@ def handle_handoff_create_command(args):
 def handle_handoff_query_command(args):
     """Handle handoff-query command"""
     try:
-        from empirica.core.handoff.storage import GitHandoffStorage
+        from empirica.core.handoff.storage import HybridHandoffStorage
 
         # Parse arguments
         ai_id = getattr(args, 'ai_id', None)
@@ -84,31 +93,21 @@ def handle_handoff_query_command(args):
         limit = getattr(args, 'limit', 5)
 
         # Query handoffs
-        storage = GitHandoffStorage()
-
+        storage = HybridHandoffStorage()
+        
         if session_id:
-            # Get specific session handoff
+            # Query by session ID (works from either storage)
             handoff = storage.load_handoff(session_id)
             if handoff:
-                # Expand compressed JSON to full format
-                handoffs = [_expand_compressed_handoff(handoff)]
+                handoffs = [handoff]
             else:
                 handoffs = []
+        elif ai_id:
+            # Query by AI ID (uses database index - FAST!)
+            handoffs = storage.query_handoffs(ai_id=ai_id, limit=limit)
         else:
-            # Get all handoffs and filter
-            all_session_ids = storage.list_handoffs()
-            handoffs = []
-            
-            for sid in all_session_ids[:limit * 2]:  # Get more to filter
-                h = storage.load_handoff(sid)
-                if h:
-                    expanded = _expand_compressed_handoff(h)
-                    # Filter by AI ID if provided
-                    if ai_id and expanded.get('ai_id') != ai_id:
-                        continue
-                    handoffs.append(expanded)
-                    if len(handoffs) >= limit:
-                        break
+            # Get recent handoffs (uses database - FAST!)
+            handoffs = storage.query_handoffs(limit=limit)
 
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -147,19 +146,5 @@ def handle_handoff_query_command(args):
         return None
 
 
-def _expand_compressed_handoff(compressed: Dict) -> Dict:
-    """Expand compressed handoff to full format for display"""
-    # Compressed format uses short keys (s, ai, ts, etc.)
-    # Expand to full format
-    return {
-        'session_id': compressed.get('s', 'unknown'),
-        'ai_id': compressed.get('ai', 'unknown'),
-        'timestamp': compressed.get('ts', ''),
-        'task_summary': compressed.get('task', ''),
-        'epistemic_deltas': compressed.get('deltas', {}),
-        'key_findings': compressed.get('findings', []),
-        'remaining_unknowns': compressed.get('unknowns', []),
-        'next_session_context': compressed.get('next', ''),
-        'calibration_status': compressed.get('cal', 'unknown'),
-        'compressed_json': str(compressed)
-    }
+# DELETE THIS - No longer needed!
+# Database returns expanded format already

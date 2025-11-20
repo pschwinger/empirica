@@ -122,12 +122,12 @@ async def list_tools() -> List[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "session_id": {"type": "string"},
-                    "findings": {"type": "array", "description": "Investigation findings"},
-                    "remaining_unknowns": {"type": "array"},
-                    "confidence_to_proceed": {"type": "number"}
+                    "session_id": {"type": "string", "description": "Session ID or alias"},
+                    "findings": {"type": "array", "items": {"type": "string"}, "description": "Investigation findings"},
+                    "remaining_unknowns": {"type": "array", "items": {"type": "string"}, "description": "Remaining unknowns (maps to --unknowns)"},
+                    "confidence_to_proceed": {"type": "number", "description": "Confidence score 0.0-1.0 (maps to --confidence)"}
                 },
-                "required": ["session_id"]
+                "required": ["session_id", "findings", "remaining_unknowns", "confidence_to_proceed"]
             }
         ),
 
@@ -324,6 +324,38 @@ async def list_tools() -> List[types.Tool]:
                 "required": ["session_id"]
             }
         ),
+
+        # ========== Handoff Reports (Route to CLI) ==========
+
+        types.Tool(
+            name="create_handoff_report",
+            description="Create epistemic handoff report for session continuity (98% token reduction)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID or alias"},
+                    "task_summary": {"type": "string", "description": "What was accomplished (2-3 sentences)"},
+                    "key_findings": {"type": "array", "items": {"type": "string"}, "description": "Key learnings from session"},
+                    "remaining_unknowns": {"type": "array", "items": {"type": "string"}, "description": "What's still unclear"},
+                    "next_session_context": {"type": "string", "description": "Critical context for next session"},
+                    "artifacts_created": {"type": "array", "items": {"type": "string"}, "description": "Files created"}
+                },
+                "required": ["session_id", "task_summary", "key_findings", "next_session_context"]
+            }
+        ),
+
+        types.Tool(
+            name="query_handoff_reports",
+            description="Query handoff reports by AI ID or session ID",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Specific session ID"},
+                    "ai_id": {"type": "string", "description": "Filter by AI ID"},
+                    "limit": {"type": "integer", "description": "Number of results (default: 5)"}
+                }
+            }
+        ),
     ]
 
     return tools
@@ -505,6 +537,10 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         # Checkpoints
         "create_git_checkpoint": ["checkpoint-create"],
         "load_git_checkpoint": ["checkpoint-load"],  # Note: Requires --session-id flag
+
+        # Handoff Reports
+        "create_handoff_report": ["handoff-create"],
+        "query_handoff_reports": ["handoff-query"],
     }
 
     # Map MCP argument names → CLI flag names (when they differ)
@@ -512,6 +548,8 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "session_type": "session-type",  # Not used by CLI - will be ignored
         "bootstrap_level": "level",  # MCP uses bootstrap_level, CLI uses level
         "task_id": "subtask-id",  # CLI uses subtask-id not task-id
+        "remaining_unknowns": "unknowns",  # MCP uses remaining_unknowns, CLI uses unknowns
+        "confidence_to_proceed": "confidence",  # MCP uses confidence_to_proceed, CLI uses confidence
     }
 
     cmd = [EMPIRICA_CLI] + tool_map.get(tool_name, [tool_name])
@@ -540,7 +578,8 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     json_supported = {
         "preflight-submit", "check", "check-submit", "postflight-submit",
         "goals-create", "goals-add-subtask", "goals-complete-subtask",
-        "goals-progress", "goals-list", "sessions-resume"
+        "goals-progress", "goals-list", "sessions-resume",
+        "handoff-create", "handoff-query"
     }
 
     cli_command = tool_map.get(tool_name, [tool_name])[0]
