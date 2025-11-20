@@ -1,2 +1,0 @@
-empirica
-mcp_local
