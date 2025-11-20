@@ -15,16 +15,16 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="empirica",
-    version="0.1.0",
-    author="Empirica Team",
+    version="1.0.0-beta",
+    author="Nubaeon",
     description="Genuine AI epistemic self-assessment framework - No heuristics, true metacognition",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/empirica/empirica",
+    url="https://github.com/Nubaeon/empirica",
     project_urls={
-        "Bug Tracker": "https://github.com/empirica/empirica/issues",
-        "Documentation": "https://github.com/empirica/empirica/tree/main/docs",
-        "Source Code": "https://github.com/empirica/empirica",
+        "Bug Tracker": "https://github.com/Nubaeon/empirica/issues",
+        "Documentation": "https://github.com/Nubaeon/empirica/tree/main/docs",
+        "Source Code": "https://github.com/Nubaeon/empirica",
     },
     packages=find_packages(exclude=["tests*", "_archive*", "_dev*", "claude-skills*"]),
     classifiers=[

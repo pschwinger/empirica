@@ -2,11 +2,12 @@
 
 > Genuine epistemic self-awareness with measurable calibration
 
-[![Status](https://img.shields.io/badge/status-pre--release-orange)]()
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue)]()
+[![Status](https://img.shields.io/badge/status-beta-yellow)]()
+[![Version](https://img.shields.io/badge/version-1.0.0--beta-green)]()
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-**97.5% token reduction** • **Self-referential goals** • **Production validated**
+**98% token reduction** • **Multi-agent coordination** • **Production validated** • **November 2025**
 
 ## What is Empirica?
 
@@ -67,7 +68,8 @@ Systematic methodology: PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIG
 
 ### 🤖 For AI Agents
 ```bash
-empirica onboard --ai-id <your-name>
+empirica bootstrap --level 2  # Initialize with standard components
+empirica --help  # View available commands
 ```
 *10-minute interactive learning experience*
 
@@ -79,6 +81,7 @@ empirica onboard --ai-id <your-name>
 ```bash
 git clone https://github.com/Nubaeon/empirica.git
 cd empirica
+cp .env.example .env  # Configure environment (API keys optional)
 pip install -e .
 ```
 
@@ -139,17 +142,6 @@ Empirica helps AIs demonstrate *genuine epistemic self-awareness*:
 
 High uncertainty is **good** when appropriate. Acknowledge what you don't know.
 
-## Key Features
-
-- 🎯 **12-vector epistemic self-assessment** - KNOW, DO, CONTEXT, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, ENGAGEMENT (+ UNCERTAINTY meta-tracking)
-- 🔄 **CASCADE workflow** - Preflight → Investigate → Check → Act → Postflight → Synthesize → Learn
-- 📊 **Calibration tracking** - Overconfident vs well-calibrated measurement
-- 🔌 **MCP server** - IDE integration (Claude Desktop, Cursor, Windsurf, Rovo Dev)
-- 🐚 **CLI interface** - Direct agent interaction via terminal
-- 📈 **Dashboard monitoring** - Real-time epistemic tracking (tmux-based)
-- 🔍 **Bayesian belief tracking** - Detect calibration drift
-- 📝 **Session continuity** - Resume previous work with context
-
 ## Documentation
 
 **Start here:**
@@ -179,14 +171,14 @@ cd empirica
 # Install
 pip install -e .
 
-# Verify
-empirica --version
+# Initialize framework
+empirica bootstrap --level 2
 
-# Start learning
-empirica onboard --ai-id <your-name>
+# View available commands
+empirica --help
 ```
 
-**Requirements:** Python 3.8+
+**Requirements:** Python 3.10+
 
 **For MCP integration:** See [`docs/04_MCP_QUICKSTART.md`](docs/04_MCP_QUICKSTART.md)
 
@@ -275,7 +267,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 - **📖 Documentation:** [`docs/README.md`](docs/README.md)
 - **🔧 Troubleshooting:** [`docs/06_TROUBLESHOOTING.md`](docs/06_TROUBLESHOOTING.md)
-- **💬 Questions:** Open an issue or ask your AI agent to run `empirica onboard`
+- **💬 Questions:** Open an issue or check [docs/production/](docs/production/) for guides
 
 ---
 
