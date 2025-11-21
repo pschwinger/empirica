@@ -418,7 +418,7 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
     # Return CLI output
     if result.returncode == 0:
         # Parse text output to JSON for commands that don't support --output json yet
-        output = parse_cli_output(tool_name, result.stdout, result.stderr)
+        output = parse_cli_output(tool_name, result.stdout, result.stderr, arguments)
         return [types.TextContent(type="text", text=output)]
     else:
         return [types.TextContent(
@@ -431,7 +431,7 @@ async def route_to_cli(tool_name: str, arguments: dict) -> List[types.TextConten
             }, indent=2)
         )]
 
-def parse_cli_output(tool_name: str, stdout: str, stderr: str) -> str:
+def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) -> str:
     """Parse CLI output and convert to JSON if needed"""
 
     # Check if output is already JSON
@@ -462,14 +462,18 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str) -> str:
 
         # Create session in database (bootstrap initializes framework but doesn't create session)
         # The MCP layer creates the session and returns its ID
+        # Extract ai_id and bootstrap_level from arguments
+        ai_id = arguments.get('ai_id', 'unknown')
+        bootstrap_level = arguments.get('bootstrap_level', level)
+        
         try:
             from empirica.data.session_database import SessionDatabase
             import uuid
             
             db = SessionDatabase()
             session_id = db.create_session(
-                ai_id=ai_id or 'unknown',
-                bootstrap_level=level or bootstrap_level,
+                ai_id=ai_id,
+                bootstrap_level=bootstrap_level,
                 components_loaded=components or 5
             )
             db.close()
@@ -480,7 +484,7 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str) -> str:
                 "session_id": session_id,
                 "ai_id": ai_id,
                 "components_loaded": components or 5,
-                "bootstrap_level": level or bootstrap_level,
+                "bootstrap_level": bootstrap_level,
                 "next_step": "Use this session_id with execute_preflight to begin a cascade"
             }
             
@@ -493,7 +497,7 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str) -> str:
                 "message": "Bootstrap completed but session creation failed",
                 "error": str(e),
                 "components_loaded": components,
-                "bootstrap_level": level,
+                "bootstrap_level": bootstrap_level,
                 "next_step": "Call execute_preflight (it will auto-create a session)",
                 "note": "Session will be auto-created by execute_preflight"
             }
