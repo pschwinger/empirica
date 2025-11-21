@@ -43,6 +43,7 @@ sqlite3 ./.empirica/sessions/sessions.db "SELECT COUNT(*) FROM sessions;"
 
 **MCP Tool (IDE agents):**
 ```python
+# Call the MCP tool bootstrap_session (not a Python import!)
 result = bootstrap_session(
     ai_id="test-agent-comprehensive",
     session_type="development",
@@ -218,10 +219,10 @@ empirica goals-add-subtask --goal-id <goal-id> --description "Test session-end"
 **Verify:**
 ```bash
 sqlite3 ./.empirica/sessions/sessions.db \
-  "SELECT COUNT(*) FROM tasks WHERE goal_id = '<goal-id>';"
+  "SELECT COUNT(*) FROM subtasks WHERE goal_id = '<goal-id>';"
 ```
 
-✅ **Pass Criteria:** 4 tasks created
+✅ **Pass Criteria:** 4 subtasks created
 
 ### Step 3.3: Log Investigation Findings
 
@@ -238,7 +239,7 @@ investigate_log(
     ],
     evidence={
         "database_verified": True,
-        "tables_checked": ["sessions", "goals", "tasks"],
+        "tables_checked": ["sessions", "goals", "subtasks"],
         "record_count": 4
     }
 )
@@ -249,7 +250,7 @@ investigate_log(
 empirica investigate-log \
   --session-id <session-id> \
   --findings '["Bootstrap works", "Goals work", "Tasks work", "Schema correct"]' \
-  --evidence '{"database_verified": true, "tables_checked": ["sessions", "goals", "tasks"]}'
+  --evidence '{"database_verified": true, "tables_checked": ["sessions", "goals", "subtasks"]}'
 ```
 
 **Verify:**
@@ -662,9 +663,9 @@ sqlite3 ./.empirica/sessions/sessions.db \
 sqlite3 ./.empirica/sessions/sessions.db \
   "SELECT id, objective FROM goals WHERE session_id = '<session-id>';"
 
-# 4. Tasks created and completed
+# 4. Subtasks created and completed
 sqlite3 ./.empirica/sessions/sessions.db \
-  "SELECT id, description, is_completed FROM tasks WHERE goal_id IN (SELECT id FROM goals WHERE session_id = '<session-id>');"
+  "SELECT id, description, is_completed FROM subtasks WHERE goal_id IN (SELECT id FROM goals WHERE session_id = '<session-id>');"
 
 # 5. Investigation log exists
 sqlite3 ./.empirica/sessions/sessions.db \
@@ -690,7 +691,7 @@ sqlite3 ./.empirica/sessions/sessions.db \
 - Session: 1 row ✅
 - Cascade: 1 row, all phases complete ✅
 - Goals: 1 row ✅
-- Tasks: 4 rows, all completed ✅
+- Subtasks: 4 rows, all completed ✅
 - Investigation log: Not empty ✅
 - Act log: Not empty ✅
 - Handoff: 1 row with 4+ findings ✅
@@ -704,7 +705,7 @@ sqlite3 ./.empirica/sessions/sessions.db \
 - [x] Bootstrap creates session
 - [x] PREFLIGHT saves assessment
 - [x] Goals created explicitly (not automatic)
-- [x] Tasks added and completed
+- [x] Subtasks added and completed
 - [x] Investigation tracked via investigate-log
 - [x] CHECK saves to both tables
 - [x] Actions tracked via act-log
