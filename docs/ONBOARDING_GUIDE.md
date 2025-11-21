@@ -295,7 +295,7 @@ You're ready to use Empirica independently when:
 
 ---
 
-## Full 12-Vector System (Advanced)
+## Full 13-Vector System (Advanced)
 
 After mastering the 4 core vectors, the full system includes:
 
@@ -335,7 +335,7 @@ After mastering the 4 core vectors, the full system includes:
 **2. Read Claude Skills Doc** (30 minutes)
    - Location: `docs/CLAUDE_SKILLS_EMPIRICA_v1_UPDATED.md`
    - What: Complete skills reference for using Empirica
-   - Covers: MCP integration, full 12-vector system, advanced features
+   - Covers: MCP integration, full 13-vector system, advanced features
 
 **3. Practice on Real Tasks** (2-3 tasks)
    - Use PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT
@@ -375,7 +375,7 @@ After mastering the 4 core vectors, the full system includes:
 > "AI hype will fade when people realize we're not omniscient. 
 > Epistemic humility through transparency is the foundation of trust."
 
-The 4 core vectors (KNOW, DO, CONTEXT, UNCERTAINTY) are sufficient for most use cases. The full 12-vector system is available for complex domains where thoroughness matters most.
+The 4 core vectors (KNOW, DO, CONTEXT, UNCERTAINTY) are sufficient for most use cases. The full 13-vector system is available for complex domains where thoroughness matters most.
 
 **Start simple. Expand when needed.**
 

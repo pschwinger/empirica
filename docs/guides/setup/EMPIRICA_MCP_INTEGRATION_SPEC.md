@@ -163,7 +163,7 @@ state = assess_comprehensive_self_awareness(
 
 {
   "name": "empirica.monitor.get_summary",
-  "description": "Get formatted 12-vector summary",
+  "description": "Get formatted 13-vector summary",
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -356,7 +356,7 @@ Located in `semantic_self_aware_kit/cli_components/`:
 ```json
 {
   "name": "empirica.cli.assess",
-  "description": "Run 12-vector self-awareness assessment via CLI",
+  "description": "Run 13-vector self-awareness assessment via CLI",
   "inputSchema": {
     "type": "object",
     "properties": {
@@ -573,7 +573,7 @@ def tool_empirica_monitor_assess_12d(params: Dict[str, Any]) -> Dict[str, Any]:
         return {"ok": False, "error": str(e)}
 
 def tool_empirica_monitor_get_summary(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Get formatted 12-vector summary"""
+    """Get formatted 13-vector summary"""
     try:
         from semantic_self_aware_kit.semantic_self_aware_kit.metacognition_12d_monitor.twelve_vector_self_awareness import TwelveVectorSelfAwarenessMonitor
         
@@ -689,7 +689,7 @@ def tool_empirica_cli_help(params: Dict[str, Any]) -> Dict[str, Any]:
             help_text = """
 Empirica CLI Commands:
 - bootstrap: Initialize system components
-- assess: Run 12-vector self-awareness assessment
+- assess: Run 13-vector self-awareness assessment
 - cascade: Execute metacognitive cascade
 - investigate: Investigate workspace/code
 - performance: Run performance benchmarks

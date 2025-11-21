@@ -11,7 +11,7 @@ Every Empirica cascade follows this flow:
 ```
 THINK → UNCERTAINTY → INVESTIGATE → CHECK → ACT
   ↓         ↓            ↓           ↓       ↓
-Meta-    12-vector    Fill gaps   Verify   Final
+Meta-    13-vector    Fill gaps   Verify   Final
 prompt   assessment   (optional)  ready   decision
 ```
 
@@ -44,7 +44,7 @@ prompt   assessment   (optional)  ready   decision
 
 ## Phase 2: UNCERTAINTY
 
-**Purpose:** Measure 12-vector epistemic state
+**Purpose:** Measure 13-vector epistemic state
 
 **What Happens:**
 1. AI receives assessment prompt

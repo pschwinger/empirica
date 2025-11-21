@@ -166,7 +166,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Basic canonical epistemic assessor
-- 12-vector system (11 vectors + ENGAGEMENT)
+- 13-vector system (12 vectors + ENGAGEMENT)
 - Simple cascade workflow
 - CLI foundation
 

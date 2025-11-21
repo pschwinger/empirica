@@ -62,7 +62,7 @@ A production-grade **epistemic reasoning system** that helps AIs measure and val
 
 ### 7. **Real-Time Dashboard**
 - Live tmux monitoring
-- **12-vector visualization** (plus explicit UNCERTAINTY tracking)
+- **13-vector visualization** (with explicit UNCERTAINTY tracking)
 - Phase tracking
 - Bayesian and drift status
 - Reflex frame streaming

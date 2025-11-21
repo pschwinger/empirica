@@ -1,6 +1,6 @@
 # 📊 Understanding the 12 Epistemic Vectors
 
-A complete guide to the 12-vector UVL system with explicit uncertainty tracking.
+A complete guide to the 13-vector UVL system with explicit uncertainty tracking.
 
 ---
 
@@ -386,7 +386,7 @@ Low IMPACT → Use user_clarification to understand constraints and acceptable i
 ## Meta-Epistemic Tracking: UNCERTAINTY ⭐
 
 ### UNCERTAINTY (Explicit Meta-Epistemic Awareness)
-**Type:** Meta-epistemic (explicit tracking, not implicit in the 12-vector system)
+**Type:** Meta-epistemic (explicit tracking, not implicit in the 13-vector system)
 **Range:** 0.0 - 1.0
 **Interpretation:** 0.0 = certain, 1.0 = highly uncertain
 
@@ -395,7 +395,7 @@ Explicit awareness of epistemic limitations - "what you don't know about what yo
 
 **Why it's different:**
 - **Not included in overall_confidence calculation** (meta-layer, not one of the 12 vectors)
-- Tracks uncertainty ABOUT the 12-vector assessment itself
+- Tracks uncertainty ABOUT the 13-vector assessment itself
 - Enables pre-flight/post-flight comparison
 - Validates investigation effectiveness
 
@@ -544,7 +544,7 @@ Overall: 0.78
 In the tmux dashboard, all 12 vectors are shown with visual bars:
 
 ```
-12-VECTOR EPISTEMIC STATE
+13-VECTOR EPISTEMIC STATE
 ═══════════════════════════════════════
 KNOW:        0.65 ████████░░ Domain knowledge
 DO:          0.75 ██████████░ Execution capability

@@ -10,7 +10,7 @@
 
 This guide shows you how to enable the **Empirica MCP Server** and **Empirica TMux MCP Server** in Claude Code, giving Claude access to:
 
-- 🧠 12-Vector Self-Awareness Assessment
+- 🧠 13-Vector Self-Awareness Assessment
 - 🔄 Metacognitive Cascade (THINK→UNCERTAINTY→INVESTIGATE→CHECK→ACT)
 - 📊 Adaptive Uncertainty Calibration with Bayesian Tracking
 - 🎯 Autonomous Goal Orchestration with Engagement Tracking
@@ -189,7 +189,7 @@ Claude should use the `monitor_assess_12d` tool from the Empirica MCP server.
   }
   ```
 
-- **`monitor_get_summary`** - Get formatted 12-vector summary
+- **`monitor_get_summary`** - Get formatted 13-vector summary
   ```json
   {
     "ai_id": "claude_code_agent"
@@ -323,7 +323,7 @@ The cascade identified high cyclomatic complexity and security concerns.
 ```
 [Uses monitor_assess_12d tool]
 
-🧠✨ 12-VECTOR SELF-AWARENESS STATE
+🧠✨ 13-VECTOR SELF-AWARENESS STATE
 
 📊 EPISTEMIC UNCERTAINTY:
 ├─ KNOW: 0.85 🟢 (High domain knowledge)

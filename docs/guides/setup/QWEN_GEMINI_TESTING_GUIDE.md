@@ -17,7 +17,7 @@ Claude added 10 new MCP tools for direct Empirica component integration:
 
 ### **12D Monitor Tools (3)**
 4. `empirica.monitor.assess_12d` - Complete 12-dimensional cognitive assessment
-5. `empirica.monitor.get_summary` - Get formatted 12-vector summary
+5. `empirica.monitor.get_summary` - Get formatted 13-vector summary
 6. `empirica.monitor.assess_engagement` - Assess engagement dimension
 
 ### **Uncertainty Calibration Tool (1)**
@@ -140,7 +140,7 @@ def test_monitor_assess_12d():
 
 ```python
 def test_monitor_get_summary():
-    """Test formatted 12-vector summary"""
+    """Test formatted 13-vector summary"""
     params = {
         "ai_id": "test_agent"
     }

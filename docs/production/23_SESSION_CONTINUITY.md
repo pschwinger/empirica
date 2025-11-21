@@ -124,7 +124,7 @@ Sessions are stored in SQLite database: `empirica/.empirica/sessions/sessions.db
 **Stored Data**:
 - Session metadata (AI ID, timestamps, bootstrap level)
 - Cascades (tasks, phase completions, confidence)
-- Epistemic assessments (12-vector assessments at each phase)
+- Epistemic assessments (13-vector assessments at each phase)
 - Divergence tracking (delegate/trustee tensions)
 - Drift monitoring (behavioral patterns)
 
@@ -163,7 +163,7 @@ CASCADES (1)
 
 **Full** (~5-10KB per session):
 - Everything in medium
-- All 12-vector assessments with rationales
+- All 13-vector assessments with rationales
 - Divergence details and resolutions
 - Complete epistemic trajectories
 
@@ -266,7 +266,7 @@ For each session, the AI sees:
 - Engagement gate status
 
 ### Epistemic Level (medium/full detail)
-- 12-vector assessments per phase:
+- 13-vector assessments per phase:
   - **Foundation**: know, do, context
   - **Comprehension**: clarity, coherence, signal, density
   - **Execution**: state, change, completion, impact
@@ -320,7 +320,7 @@ For each session, the AI sees:
 ## Future Phases
 
 ### Phase 2: Epistemic-Driven Loading (Planned)
-- Use 12-vector assessments to find similar cascades
+- Use 13-vector assessments to find similar cascades
 - Load based on meta-uncertainty (what AI is uncertain about)
 - Smart relevance scoring
 - "Load sessions where I had similar uncertainty patterns"

@@ -33,7 +33,7 @@ The system provides:
 - ✅ **Suggestive guidance** (not controlling)
 - ✅ **Universal extensibility** (plugin system)
 
-**⚠️ CRITICAL:** Empirica uses the **canonical 12-vector system** (`/empirica/core/canonical/`). The 12-vector system in `/empirica/core/metacognition_12d_monitor/` is legacy/research only. See [`ARCHITECTURE_MAP.md`](/docs/ARCHITECTURE_MAP.md) for clarification.
+**⚠️ CRITICAL:** Empirica uses the **canonical 13-vector system** (`/empirica/core/canonical/`). The 12-vector system in `/empirica/core/metacognition_12d_monitor/` is legacy/research only. See [`ARCHITECTURE_MAP.md`](/docs/ARCHITECTURE_MAP.md) for clarification.
 
 ### Key Achievements
 
@@ -45,7 +45,7 @@ The system provides:
 - Temporal separation via Reflex Frame logging
 
 **Technical:**
-- **12-vector epistemic assessment** (12 + explicit UNCERTAINTY)
+- **13-vector epistemic assessment** (12 operational vectors + explicit UNCERTAINTY + ENGAGEMENT gate)
 - ENGAGEMENT gate (≥0.60 required to proceed)
 - Canonical weights: 35/25/25/15
 - Enhanced Cascade Workflow: **PREFLIGHT** → Think → Plan → Investigate → Check → Act → **POSTFLIGHT** (7-phase)
@@ -320,7 +320,7 @@ THINK → UNCERTAINTY → INVESTIGATE → CHECK → ACT
   ↓         ↓            ↓           ↓       ↓
 Initial   Measure    Fill gaps   Verify   Execute
   ↓         ↓            ↓           ↓       ↓
-Assess    12-vector   Strategic   Bayesian Final
+Assess    13-vector   Strategic   Bayesian Final
 prompt    + tracking  guidance    + Drift  decision
 ```
 
@@ -332,7 +332,7 @@ prompt    + tracking  guidance    + Drift  decision
 
 #### **PHASE 2: UNCERTAINTY**
 - Measure epistemic state using `CanonicalEpistemicAssessor`
-- **12-vector assessment** (12 + explicit UNCERTAINTY)
+- **13-vector assessment** (12 operational vectors + explicit UNCERTAINTY)
 - Check ENGAGEMENT gate (≥0.60)
 - If gate fails: request clarification
 - If gate passes: identify knowledge gaps
@@ -760,7 +760,7 @@ Adaptive chain-of-thought state management:
 │              ✨ PHASE 1: PREFLIGHT ASSESSMENT ✨                  │
 │  Component: workflow/preflight_assessor.py                        │
 │  • PreflightAssessor.assess_preflight(task, context)              │
-│  • Genuine 12-vector baseline self-assessment                     │
+│  • Genuine 13-vector baseline self-assessment                     │
 │  • Captures INITIAL epistemic state (before any work)             │
 │  • Logged to: preflight_assessments table                         │
 │  • Auto-tracked: DB + JSON + Reflex Frame                         │
@@ -830,7 +830,7 @@ Adaptive chain-of-thought state management:
 │     ✨ PHASE 7: POSTFLIGHT ASSESSMENT ✨  │
 │  Component: workflow/postflight_assessor.py│
 │  • PostflightAssessor.assess_postflight()  │
-│  • Genuine 12-vector final self-assessment │
+│  • Genuine 13-vector final self-assessment │
 │  • Captures FINAL epistemic state          │
 │  • Logged to: postflight_assessments table │
 │  • Auto-tracked: DB + JSON + Reflex Frame  │

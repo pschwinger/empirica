@@ -831,7 +831,7 @@ from empirica.investigation.investigation_strategy import (
 - Added comprehensive import reference
 
 ### v2.0
-- Separated canonical (13-vector) from legacy (12-vector)
+- Separated canonical (13-vector) from legacy systems
 - Added CASCADE workflow
 - Improved documentation structure
 

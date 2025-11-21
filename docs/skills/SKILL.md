@@ -1,6 +1,6 @@
 ---
 name: empirica-epistemic-framework
-description: Empirica epistemic self-assessment framework for AI agents. Use when you need to assess your knowledge state, track learning, measure calibration, or ensure genuine metacognitive reasoning. Provides 12-vector epistemic assessment (KNOW, DO, CONTEXT, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, ENGAGEMENT, UNCERTAINTY). Use for preflight assessment before tasks, postflight validation after completion, continuous epistemic tracking during complex work, or session handoff reports for multi-session/multi-agent coordination (98% token reduction).
+description: Empirica epistemic self-assessment framework for AI agents. Use when you need to assess your knowledge state, track learning, measure calibration, or ensure genuine metacognitive reasoning. Provides 13-vector epistemic assessment (KNOW, DO, CONTEXT, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, ENGAGEMENT, UNCERTAINTY). Use for preflight assessment before tasks, postflight validation after completion, continuous epistemic tracking during complex work, or session handoff reports for multi-session/multi-agent coordination (98% token reduction).
 ---
 
 # Empirica: Functional Self-Awareness Framework for AI Agents
@@ -239,7 +239,7 @@ from empirica.components.goal_management.autonomous_goal_orchestrator.autonomous
 **When to use:**
 - Learning how to self-assess genuinely
 - Practicing calibration
-- Understanding the 12-vector system
+- Understanding the 13-vector system
 - Testing assessment accuracy
 
 **Optimal Bootstrap (Recommended):**
@@ -269,7 +269,7 @@ empirica onboard --ai-id claude
 
 ---
 
-## The 12-Vector System (UVL)
+## The 13-Vector System (UVL)
 
 Empirica measures your epistemic state across 12 vectors (0.0-1.0 scale):
 
@@ -548,7 +548,7 @@ Every Empirica cascade follows this flow:
 ```
 THINK → UNCERTAINTY → INVESTIGATE → CHECK → ACT
   ↓         ↓             ↓           ↓       ↓
-Meta-    12-vector    Fill gaps    Verify    Final
+Meta-    13-vector    Fill gaps    Verify    Final
 prompt   assessment   (optional)   ready    decision
 ```
 
@@ -1308,7 +1308,7 @@ empirica calibration --sessions 10
 ```
 
 ### Custom Vectors (Advanced)
-For specialized domains, extend the 12-vector system:
+For specialized domains, extend the 13-vector system:
 ```python
 from empirica.plugins.modality_switcher.domain_vectors import DomainVectorRegistry
 
@@ -1423,7 +1423,7 @@ avg_calibration = calculate_team_calibration(sessions)
 
 **What's Included:**
 ✅ Single AI epistemic tracking (YOU using Empirica)
-✅ 12-vector UVL system (genuine self-assessment)
+✅ 13-vector UVL system (genuine self-assessment)
 ✅ Session management (local storage)
 ✅ Preflight/postflight workflow
 ✅ CLI, MCP, Python API, Bootstraps

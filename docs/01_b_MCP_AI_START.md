@@ -6,7 +6,7 @@
 
 ## What You're Using
 
-You have access to **22 Empirica MCP tools** for epistemic self-awareness:
+You have access to **23 Empirica MCP tools** for epistemic self-awareness:
 
 **Core Workflow:**
 - `get_empirica_introduction` - Read this first!
@@ -23,10 +23,20 @@ You have access to **22 Empirica MCP tools** for epistemic self-awareness:
 - `get_session_summary` - Review session history
 - `get_calibration_report` - Check accuracy over time
 
-**Monitoring & Analysis:**
-- `query_bayesian_beliefs` - Belief state tracking
-- `check_drift_monitor` - Behavioral integrity check
-- `query_goal_orchestrator` - Task hierarchy analysis
+**Goal Management:**
+- `create_goal` - Create new structured goal
+- `add_subtask` - Add subtask to existing goal
+- `complete_subtask` - Mark subtask as complete
+- `get_goal_progress` - Get goal completion progress
+- `list_goals` - List goals for session
+
+**Checkpoint Management:**
+- `create_git_checkpoint` - Create compressed checkpoint in git notes
+- `load_git_checkpoint` - Load latest checkpoint from git notes
+
+**Handoff Reports:**
+- `create_handoff_report` - Create epistemic handoff report for session continuity
+- `query_handoff_reports` - Query handoff reports by AI ID or session ID
 
 **Guidance:**
 - `get_workflow_guidance` - Step-by-step instructions
@@ -213,7 +223,7 @@ Result: Transparent process, validated learning
 
 ---
 
-## Understanding the 12-Vector System
+## Understanding the 13-Vector System
 
 ### GATE: ENGAGEMENT (≥0.60 required)
 **Question:** Am I engaged enough with this task to proceed?

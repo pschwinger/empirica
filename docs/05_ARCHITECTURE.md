@@ -9,7 +9,7 @@
 Empirica is an **epistemic self-assessment framework** that measures and validates AI metacognitive reasoning through genuine self-assessment (NO HEURISTICS).
 
 **Core Components:**
-1. **12-Vector System (UVL)** - Production epistemic measurement
+1. **13-Vector System (UVL)** - Production epistemic measurement
 2. **Canonical Assessor** - Generates self-assessment prompts
 3. **Session Database** - Tracks epistemic growth over time
 4. **Reflex Logger** - Creates epistemic audit trail
@@ -17,7 +17,7 @@ Empirica is an **epistemic self-assessment framework** that measures and validat
 
 ---
 
-## The 12-Vector System (UVL)
+## The 13-Vector System (UVL)
 
 ### GATE: ENGAGEMENT (Threshold ≥ 0.60)
 **Collaborative intelligence vs command execution**
@@ -42,7 +42,7 @@ Empirica is an **epistemic self-assessment framework** that measures and validat
 ### META-EPISTEMIC (15% weight)
 - **UNCERTAINTY** - Explicit uncertainty about own assessment
 
-**Total:** 12 vectors (UVL - Universal Vector Language)
+**Total:** 13 vectors (UVL - Universal Vector Language)
 
 ---
 
@@ -254,7 +254,7 @@ Store results + Generate report
 
 ### ✅ Included in Phase 0:
 - Single AI epistemic tracking
-- 12-vector UVL system
+- 13-vector UVL system
 - Preflight → postflight workflow
 - Session management (local storage)
 - CLI, MCP, Bootstrap, API interfaces

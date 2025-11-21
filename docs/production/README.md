@@ -34,7 +34,7 @@ This folder contains comprehensive documentation for the production-ready Empiri
 
 4. **[`ARCHITECTURE_MAP.md`](/docs/ARCHITECTURE_MAP.md)** ⭐ **COMPONENT REFERENCE**
    - Visual map of all components and their locations
-   - Clarifies the canonical 13-vector system vs legacy 12-vector system
+   - Clarifies the canonical 13-vector system vs legacy system
    - Resolves common confusion points
    - Prevents duplicate folder creation during memory compression
 

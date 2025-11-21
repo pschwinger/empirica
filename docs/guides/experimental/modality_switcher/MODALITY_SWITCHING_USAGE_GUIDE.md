@@ -235,7 +235,7 @@ Your Empirica MCP server is configured at:
     ],
     "cwd": "~/empirica-parent",
     "tools": ["*"],
-    "description": "Empirica AI Self-Awareness - 12-vector metacognition and uncertainty assessment"
+    "description": "Empirica AI Self-Awareness - 13-vector metacognition and uncertainty assessment"
   }
 }
 ```

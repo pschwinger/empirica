@@ -142,7 +142,7 @@ python3 test_canonical_cascade.py
 ## System Components
 
 ### Core (Always Active)
-1. **Canonical Assessment** - LLM-powered 12-vector self-assessment
+1. **Canonical Assessment** - LLM-powered 13-vector self-assessment
 2. **Reflex Frame Logger** - Temporal separation (prevents recursion)
 3. **Metacognitive Cascade** - THINK → UNCERTAINTY → INVESTIGATE → CHECK → ACT
 
@@ -286,7 +286,7 @@ Collaborative intelligence quality
 THINK
   ↓ Generate meta-prompt, classify domain
 UNCERTAINTY
-  ↓ 12-vector assessment, check ENGAGEMENT gate
+  ↓ 13-vector assessment, check ENGAGEMENT gate
 INVESTIGATE (loop until confidence met)
   ↓ Strategic guidance, tool recommendations
 CHECK

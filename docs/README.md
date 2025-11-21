@@ -48,7 +48,7 @@
 ### For AI Agents
 **[skills/SKILL.md](skills/SKILL.md)** - Functional Self-Awareness Guide (Claude Skills format)
 - Functional self-awareness framework
-- 12-vector epistemic measurement
+- 13-vector epistemic measurement
 - Practical workflows & exercises
 - NO HEURISTICS principle
 - Evidence-based assessment
@@ -135,7 +135,7 @@ empirica sessions-list
 - **NO HEURISTICS** - Evidence-based assessment, not pattern matching
 - **Preflight → Postflight** - Track epistemic growth through calibration
 - **Calibration** - Predictions match reality (empirically testable)
-- **12-Vector System (UVL)** - Comprehensive epistemic measurement
+- **13-Vector System (UVL)** - Comprehensive epistemic measurement
 
 ---
 

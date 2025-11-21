@@ -194,7 +194,7 @@ CREATE TABLE cascades (
 
 ### Table 3: epistemic_assessments
 
-**Purpose:** Store complete 12-vector assessments
+**Purpose:** Store complete 13-vector assessments
 
 ```sql
 CREATE TABLE epistemic_assessments (
