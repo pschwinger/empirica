@@ -546,6 +546,15 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "create_handoff_report": ["handoff-create"],
         "query_handoff_reports": ["handoff-query"],
     }
+    
+    # Commands that take positional arguments (not flags)
+    # Format: command_name: (positional_arg_name, remaining_args_as_flags)
+    positional_args = {
+        "preflight": "prompt",           # preflight <prompt> [--session-id ...]
+        "postflight": "session_id",      # postflight <session_id> [--summary ...]
+        "sessions-show": "session_id",   # sessions-show <session_id>
+        "calibration": "session_id",     # calibration <session_id>
+    }
 
     # Map MCP argument names → CLI flag names (when they differ)
     arg_map = {
@@ -555,6 +564,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "remaining_unknowns": "unknowns",  # MCP uses remaining_unknowns, CLI uses unknowns
         "confidence_to_proceed": "confidence",  # MCP uses confidence_to_proceed, CLI uses confidence (for check command)
         "investigation_cycle": "cycle",  # MCP uses investigation_cycle, CLI uses cycle (for check-submit)
+        "task_summary": "summary",  # MCP uses task_summary, CLI uses summary
     }
     
     # Arguments to skip per command (not supported by CLI)
@@ -565,10 +575,20 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     cmd = [EMPIRICA_CLI] + tool_map.get(tool_name, [tool_name])
     
     cli_command = tool_map.get(tool_name, [tool_name])[0]
+    
+    # Handle positional argument first if command requires it
+    if cli_command in positional_args:
+        positional_key = positional_args[cli_command]
+        if positional_key in arguments:
+            cmd.append(str(arguments[positional_key]))
 
-    # Map arguments to CLI flags
+    # Map remaining arguments to CLI flags
     for key, value in arguments.items():
         if value is not None:
+            # Skip positional arg (already handled)
+            if cli_command in positional_args and key == positional_args[cli_command]:
+                continue
+                
             # Skip arguments not supported by CLI
             if key == "session_type":
                 continue
