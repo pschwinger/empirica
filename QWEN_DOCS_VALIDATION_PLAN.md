@@ -416,3 +416,32 @@ MINOR ISSUES (fix in 1.1):
 
 This is systematic, measurable, and will ensure docs are truly production-ready.
 
+
+---
+
+## 🚨 CRITICAL ISSUE ALREADY FOUND
+
+**Example of subtle inconsistency that pattern matching missed:**
+
+### docs/user-guides/COMPLETE_MCP_TOOL_REFERENCE.md
+
+**Status:** ❌ **OUTDATED** (Priority 1 - user-facing)
+
+**Issues:**
+- Documents 21 MCP tools, actual has 23
+- Missing 9 tools: add_subtask, cli_help, complete_subtask, create_git_checkpoint, create_handoff_report, get_goal_progress, list_goals, load_git_checkpoint, query_handoff_reports
+- Documents 7 removed tools: check_drift_monitor, create_cascade, get_investigation_profile, get_investigation_strategy, goals-list, log_investigation_finding, query_bayesian_beliefs
+
+**Root cause:** Architecture change moved most tools to CLI, kept only:
+- Bootstrap (non-async)
+- Goal management (direct DB ops)
+- CASCADE workflow (PREFLIGHT/CHECK/POSTFLIGHT)
+- Session continuity (handoffs, checkpoints)
+- Stateless helpers
+
+**Fix required:** Complete rewrite of tool list with correct 23 tools + explanation of CLI vs MCP split
+
+**Impact:** HIGH - Users will call non-existent tools and miss real ones
+
+This validates the need for Qwen's systematic validation! ✅
+
