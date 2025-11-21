@@ -16,8 +16,8 @@ This document provides comprehensive reference for all Empirica MCP tools, organ
 - Introduction: get_empirica_introduction
 
 ### Goal Management (3 tools)
-- query_goal_orchestrator
-- generate_goals
+- goals-list
+- create_goal
 - create_cascade
 
 ### Monitoring & Analysis (5 tools)
@@ -262,7 +262,7 @@ This document provides comprehensive reference for all Empirica MCP tools, organ
 
 ## 🎯 Goal Management Tools
 
-### 11. query_goal_orchestrator
+### 11. goals-list
 **Purpose:** View current goals, progress, task hierarchy  
 **When to use:** Check what goals exist, track progress  
 **Parameters:**
@@ -281,7 +281,7 @@ This document provides comprehensive reference for all Empirica MCP tools, organ
 
 ---
 
-### 12. generate_goals
+### 12. create_goal
 **Purpose:** Create structured goals from vague request  
 **When to use:** User gives high-level goal, need breakdown  
 **Parameters:**
@@ -310,7 +310,7 @@ This document provides comprehensive reference for all Empirica MCP tools, organ
 **Parameters:**
 - `session_id`: Current session
 - `task_description`: What to do
-- `goal_id`: Optional - Link to goal from generate_goals
+- `goal_id`: Optional - Link to goal from create_goal
 
 **Example:**
 ```json
@@ -519,11 +519,11 @@ This document provides comprehensive reference for all Empirica MCP tools, organ
 ### Pattern 2: Autonomous Agent with Goals
 ```
 1. bootstrap_session
-2. generate_goals (convert user request to structured goals)
+2. create_goal (convert user request to structured goals)
 3. For each goal:
    - execute_preflight
    - submit_preflight_assessment
-   - query_goal_orchestrator (check progress)
+   - goals-list (check progress)
    - execute_check
    - submit_check_assessment
    - [ACT]
@@ -566,7 +566,7 @@ This document provides comprehensive reference for all Empirica MCP tools, organ
 - **Core workflow:** Use execute/submit pattern for PREFLIGHT/CHECK/POSTFLIGHT
 - **Investigation:** Use strategy tools when uncertainty > 0.70
 - **Monitoring:** Use calibration_report periodically to improve self-awareness
-- **Goals:** Use generate_goals for vague requests, query_goal_orchestrator for tracking
+- **Goals:** Use create_goal for vague requests, goals-list for tracking
 
 ### Common Mistakes
 - ❌ Skipping PREFLIGHT (need baseline for calibration)

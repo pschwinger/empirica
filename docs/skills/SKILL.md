@@ -629,9 +629,10 @@ When ACT phase returns a decision, interpret and act accordingly:
 # Action interpretation:
 if action == 'proceed':
     # For COMPLEX tasks (density > 0.7):
-    # 1. Consider using goal orchestrator:
-    #    empirica generate_goals --session-id <id> --context "task description"
-    # 2. Goal orchestrator will decompose into sub-goals
+    # 1. Create goals explicitly when you identify work:
+    #    empirica goals-create --session-id <id> --objective "Fix auth bug"
+    # 2. Break into subtasks:
+    #    empirica goals-add-subtask --goal-id <goal-id> --description "Update middleware"
     # 3. Execute systematically with tracking
     #
     # For SIMPLE tasks (density ≤ 0.7):
@@ -651,32 +652,39 @@ elif action == 'reset':
     # Request task reformulation
 ```
 
-**Goal Orchestrator Integration:**
+**Goal Management (Explicit Control):**
 
-Available via MCP tools or CLI:
+You create goals explicitly when you identify work that needs tracking:
 
 ```bash
-# MCP Tool (in IDE):
-empirica-generate_goals session_id="<id>" conversation_context="Refactor auth module for OAuth2"
+# MCP Tool (in IDE): create_goal(session_id, objective, scope)
+# CLI: goals-create
+empirica goals-create --session-id <id> --objective "Refactor auth for OAuth2" --scope task_specific
 
-# CLI:
+# Add subtasks (explicit breakdown)
+empirica goals-add-subtask --goal-id <goal-id> --description "Update token validation"
+
+# Mark complete as you work
+empirica goals-complete-subtask --subtask-id <task-id> --evidence "Implemented and tested"
+
+# Optional: Analyze feasibility first
 empirica goal-analysis "Refactor auth module for OAuth2"
 ```
 
-**When to use goal orchestrator:**
+**When to create goals:**
 - ✅ Complex tasks (DENSITY > 0.7)
 - ✅ Multiple sub-components
-- ✅ Dependencies between steps
-- ✅ Need structured execution plan
+- ✅ Work that needs tracking
+- ✅ Need structured breakdown
 
-**When to skip goal orchestrator:**
+**When to skip goals:**
 - ❌ Simple, straightforward tasks
 - ❌ Single-step operations
-- ❌ Already have clear plan
+- ❌ Quick exploratory work
 
-**Goal orchestrator provides:**
-- Sub-goal decomposition
-- Dependency mapping
+**Goals provide (when you create them):**
+- Structured task breakdown (you define subtasks)
+- Progress tracking (you mark complete)
 - Execution order
 - Success criteria
 - Risk identification
@@ -753,13 +761,21 @@ issues = await monitor.scan_for_vulnerabilities(code_path)
 
 **Use when:** Security domain, high-risk tasks
 
-**7. Goal Orchestrator**
+**7. Goal Management (Explicit)**
 ```python
-from empirica.components.goal_management import AutonomousGoalOrchestrator
+# Create goals explicitly via MCP tools
+create_goal(
+    session_id=session_id,
+    objective="Refactor auth module",
+    scope="task_specific"
+)
 
-orchestrator = AutonomousGoalOrchestrator()
-plan = await orchestrator.decompose_goal(goal="refactor auth module")
-# Returns: Sub-goals, dependencies, execution order
+# Add subtasks
+add_subtask(goal_id=goal_id, description="Update middleware")
+add_subtask(goal_id=goal_id, description="Add OAuth2 support")
+
+# Mark complete as you work
+complete_subtask(subtask_id=task_id, evidence="Implemented and tested")
 ```
 
 **Use when:** Complex tasks needing decomposition

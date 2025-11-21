@@ -40,7 +40,7 @@ session_id = result["session_id"]
 ```
 
 **You now have access to:**
-- ✅ **Goal orchestrator** - Generates systematic investigation goals
+- ✅ **Goal management** - Create goals explicitly when you identify work
 - ✅ **Bayesian beliefs tracker** - Tracks evolving uncertainty
 - ✅ **Drift monitor** - Detects calibration drift (overconfidence/underconfidence)
 - ✅ **Git checkpoints** - 97.5% token reduction for session resumption
@@ -104,7 +104,7 @@ submit_preflight_assessment(
 
 ```python
 # Generate investigation goals using MCP tool
-goals_result = generate_goals(
+goals_result = create_goal(
     session_id=session_id,
     conversation_context="[Your task description]",
     use_epistemic_state=True  # Uses your PREFLIGHT vectors
@@ -340,6 +340,43 @@ print(f"   Next AI can load in ~5 seconds (vs 10 minutes)")
 
 ## 🛠️ QUICK REFERENCE
 
+### Database Schema Reference
+
+**Location:** `./.empirica/sessions/sessions.db`
+
+**Sessions table columns:**
+- `session_id` (TEXT PRIMARY KEY)
+- `ai_id` (TEXT)
+- `start_time` (TIMESTAMP) - Session start time
+- `end_time` (TIMESTAMP) - Session end time (NULL if active)
+- `bootstrap_level` (INTEGER)
+- `total_cascades` (INTEGER)
+
+**Cascades table columns:**
+- `cascade_id` (TEXT PRIMARY KEY)
+- `session_id` (TEXT)
+- `task` (TEXT)
+- `started_at` (TIMESTAMP) - Cascade start time
+- `completed_at` (TIMESTAMP) - Cascade end time
+- `final_confidence` (REAL)
+- `investigation_rounds` (INTEGER)
+
+**Query examples:**
+```bash
+# List recent sessions
+sqlite3 ./.empirica/sessions/sessions.db \
+  "SELECT session_id, ai_id, start_time, end_time 
+   FROM sessions 
+   ORDER BY start_time DESC LIMIT 5;"
+
+# Count cascades in a session
+sqlite3 ./.empirica/sessions/sessions.db \
+  "SELECT COUNT(*) FROM cascades 
+   WHERE session_id = '<session-id>';"
+```
+
+---
+
 ### Resuming Previous Work (After Memory Compression)
 
 **🎯 Use Session Aliases - No need to track UUIDs!**
@@ -395,10 +432,10 @@ print(f"UNCERTAINTY: {state['uncertainty']}")
 
 ### Using MCP Tools
 ```python
-# Query your own goal orchestrator
-from empirica.cli import query_goal_orchestrator
+# Query your own goal management
+from empirica.cli import goals-list
 
-goals = query_goal_orchestrator(session_id=session_id)
+goals = goals-list(session_id=session_id)
 print(f"Current goals: {goals}")
 
 # Query your Bayesian beliefs
@@ -442,7 +479,7 @@ print(f"Beliefs about {context_key}: {beliefs}")
 
 ### ❌ Don't: Rush through investigation
 **Why:** Systematic beats fast  
-**Do:** Use goal orchestrator, track beliefs, investigate thoroughly
+**Do:** Use goal management, track beliefs, investigate thoroughly
 
 ### ❌ Don't: Skip CHECK
 **Why:** You might not be ready (better to know now)  

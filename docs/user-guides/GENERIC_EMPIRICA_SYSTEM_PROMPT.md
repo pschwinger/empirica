@@ -36,7 +36,7 @@ session_id = components['session_id']
 print(f"✅ Empirica session: {session_id}")
 
 # You now have access to:
-# - Goal orchestrator (generates investigation goals)
+# - Goal management (generates investigation goals)
 # - Bayesian beliefs (tracks uncertainty)
 # - Drift monitor (checks calibration)
 # - Investigation strategies (systematic exploration)
@@ -111,10 +111,10 @@ submit_preflight_assessment(
 **Purpose:** Reduce uncertainty through systematic investigation.
 
 ```python
-# Use goal orchestrator to guide investigation
+# Use goal management to guide investigation
 orchestrator = components['canonical_goal_orchestrator']
 
-goals = orchestrator.generate_goals(
+goals = orchestrator.create_goal(
     conversation_context="[Your task description]",
     epistemic_assessment=result['assessment']
 )
@@ -316,10 +316,10 @@ print(f"UNCERTAINTY: {state['uncertainty']}")
 
 ### Using MCP Tools
 ```python
-# Query your own goal orchestrator
-from empirica.cli import query_goal_orchestrator
+# Query your own goal management
+from empirica.cli import goals-list
 
-goals = query_goal_orchestrator(session_id=session_id)
+goals = goals-list(session_id=session_id)
 print(f"Current goals: {goals}")
 
 # Query your Bayesian beliefs
@@ -363,7 +363,7 @@ print(f"Beliefs about {context_key}: {beliefs}")
 
 ### ❌ Don't: Rush through investigation
 **Why:** Systematic beats fast  
-**Do:** Use goal orchestrator, track beliefs, investigate thoroughly
+**Do:** Use goal management, track beliefs, investigate thoroughly
 
 ### ❌ Don't: Skip CHECK
 **Why:** You might not be ready (better to know now)  

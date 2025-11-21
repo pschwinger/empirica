@@ -549,16 +549,28 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "bootstrap_level": "level",  # MCP uses bootstrap_level, CLI uses level
         "task_id": "subtask-id",  # CLI uses subtask-id not task-id
         "remaining_unknowns": "unknowns",  # MCP uses remaining_unknowns, CLI uses unknowns
-        "confidence_to_proceed": "confidence",  # MCP uses confidence_to_proceed, CLI uses confidence
+        "confidence_to_proceed": "confidence",  # MCP uses confidence_to_proceed, CLI uses confidence (for check command)
+        "investigation_cycle": "cycle",  # MCP uses investigation_cycle, CLI uses cycle (for check-submit)
+    }
+    
+    # Arguments to skip per command (not supported by CLI)
+    skip_args = {
+        "check-submit": ["confidence_to_proceed"],  # check-submit doesn't use confidence_to_proceed
     }
 
     cmd = [EMPIRICA_CLI] + tool_map.get(tool_name, [tool_name])
+    
+    cli_command = tool_map.get(tool_name, [tool_name])[0]
 
     # Map arguments to CLI flags
     for key, value in arguments.items():
         if value is not None:
             # Skip arguments not supported by CLI
             if key == "session_type":
+                continue
+            
+            # Skip command-specific unsupported arguments
+            if cli_command in skip_args and key in skip_args[cli_command]:
                 continue
 
             # Map argument name to CLI flag name

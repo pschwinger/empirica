@@ -200,6 +200,55 @@ def handle_check_submit_command(args):
                 vectors=vectors
             )
             
+            # ALSO save findings to cascade.context_json for handoff generation
+            # This bridges check_phase_assessments table -> cascade for session-end extraction
+            try:
+                import uuid
+                from datetime import datetime
+                
+                cursor = db.conn.cursor()
+                
+                # Get active cascade or create one
+                cursor.execute("""
+                    SELECT cascade_id, context_json FROM cascades 
+                    WHERE session_id = ? AND completed_at IS NULL
+                    ORDER BY started_at DESC LIMIT 1
+                """, (session_id,))
+                
+                row = cursor.fetchone()
+                if row:
+                    cascade_id_actual, context_json_str = row
+                    context = json.loads(context_json_str) if context_json_str else {}
+                else:
+                    # Create new cascade
+                    cascade_id_actual = str(uuid.uuid4())
+                    context = {}
+                    cursor.execute("""
+                        INSERT INTO cascades (cascade_id, session_id, task, started_at)
+                        VALUES (?, ?, ?, ?)
+                    """, (cascade_id_actual, session_id, "CHECK phase", datetime.utcnow().isoformat()))
+                
+                # Update context with CHECK data from check_phase_assessments
+                context["check_findings"] = gaps  # Use gaps as findings
+                context["check_unknowns"] = next_targets  # Use next_targets as unknowns
+                context["check_confidence"] = confidence
+                context["check_decision"] = decision
+                context["check_cycle"] = cycle
+                context["check_timestamp"] = datetime.utcnow().isoformat()
+                
+                # Save to cascade
+                cursor.execute("""
+                    UPDATE cascades 
+                    SET context_json = ?, check_completed = 1
+                    WHERE cascade_id = ?
+                """, (json.dumps(context), cascade_id_actual))
+                
+                db.conn.commit()
+                
+            except Exception as e:
+                logger.debug(f"Could not update cascade context: {e}")
+                # Don't fail check-submit if cascade update fails
+            
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -210,6 +259,10 @@ def handle_check_submit_command(args):
                 "reasoning": reasoning,
                 "persisted": True
             }
+            
+            # Note: Goals are created explicitly by AI via MCP tools (create_goal, add_subtask)
+            # No automatic generation - AI has full control over when/how goals are created
+            
         except Exception as e:
             logger.error(f"Failed to save check assessment: {e}")
             result = {

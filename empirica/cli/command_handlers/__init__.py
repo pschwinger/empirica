@@ -12,10 +12,18 @@ from .bootstrap_commands import (
 )
 from .assessment_commands import handle_assess_command, handle_self_awareness_command, handle_metacognitive_command
 from .cascade_commands import (
-    handle_cascade_command,
+    handle_cascade_command_deprecated as handle_cascade_command,  # Deprecated: redirects to modality_commands
     handle_preflight_command,
     handle_postflight_command,
     handle_workflow_command
+)
+from .modality_commands import (
+    handle_modality_route_command,
+    handle_decision_command as handle_modality_decision_command
+)
+from .action_commands import (
+    handle_investigate_log_command,
+    handle_act_log_command
 )
 from .workflow_commands import (
     handle_preflight_submit_command,
@@ -42,7 +50,8 @@ from .mcp_commands import (
     handle_mcp_test_command, handle_mcp_list_tools_command, handle_mcp_call_command
 )
 from .session_commands import (
-    handle_sessions_list_command, handle_sessions_show_command, handle_sessions_export_command
+    handle_sessions_list_command, handle_sessions_show_command, handle_sessions_export_command,
+    handle_session_end_command
 )
 from .checkpoint_commands import (
     handle_checkpoint_create_command, handle_checkpoint_load_command,
@@ -83,10 +92,18 @@ __all__ = [
     'handle_metacognitive_command',
     
     # Cascade commands
-    'handle_cascade_command',
+    'handle_cascade_command',  # Deprecated: use handle_modality_route_command
     'handle_preflight_command',
     'handle_postflight_command',
     'handle_workflow_command',
+    
+    # Modality commands (EXPERIMENTAL)
+    'handle_modality_route_command',
+    'handle_modality_decision_command',
+    
+    # Action commands (INVESTIGATE and ACT phase tracking)
+    'handle_investigate_log_command',
+    'handle_act_log_command',
     
     # NEW: MCP v2 Workflow Commands (Critical Priority)
     'handle_preflight_submit_command',
@@ -171,4 +188,7 @@ __all__ = [
     # User interface commands (for human users)
     'handle_ask_command',
     'handle_chat_command',
+    
+    # Session-end command
+    'handle_session_end_command',
 ]

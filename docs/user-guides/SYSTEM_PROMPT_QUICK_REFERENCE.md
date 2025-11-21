@@ -80,7 +80,7 @@ Ask: `"What workflow phases do you follow?"`
 
 **MCP Tools (21 total via v2 CLI wrapper):**
 - `execute_preflight`, `submit_preflight_assessment`
-- `query_goal_orchestrator`, `generate_goals`
+- `goals-list`, `create_goal`
 - `query_bayesian_beliefs`, `check_drift_monitor`
 - `create_git_checkpoint`, `load_git_checkpoint`
 - And 15 more (routes to Empirica CLI for reliability)
@@ -105,7 +105,7 @@ Agent:
 >    - UNCERTAINTY: 0.8 (need investigation)
 >
 > 3. INVESTIGATE: Exploring codebase...
->    [Uses goal orchestrator, tracks beliefs]
+>    [Uses goal management, tracks beliefs]
 >
 > 4. CHECK: Confidence to proceed: 0.85
 >

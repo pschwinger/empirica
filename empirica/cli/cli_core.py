@@ -72,6 +72,9 @@ Examples:
     # Session commands
     _add_session_parsers(subparsers)
     
+    # Action commands (INVESTIGATE and ACT tracking)
+    _add_action_parsers(subparsers)
+    
     # Checkpoint commands (Phase 2)
     _add_checkpoint_parsers(subparsers)
     
@@ -410,6 +413,42 @@ def _add_session_parsers(subparsers):
     sessions_export_parser = subparsers.add_parser('sessions-export', help='Export session to JSON')
     sessions_export_parser.add_argument('session_id', help='Session ID or alias (latest, latest:active, latest:<ai_id>)')
     sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')
+    
+    # Session end command
+    session_end_parser = subparsers.add_parser('session-end', help='End session and create handoff report')
+    session_end_parser.add_argument('--session-id', required=True, help='Session ID to end')
+    session_end_parser.add_argument('--commit', action='store_true', help='Create git commit with session summary')
+    session_end_parser.add_argument('--manual', action='store_true', help='Manual mode - provide all data explicitly')
+    session_end_parser.add_argument('--summary', help='Task summary (optional override)')
+    session_end_parser.add_argument('--findings', help='JSON array of key findings (optional)')
+    session_end_parser.add_argument('--unknowns', help='JSON array of remaining unknowns (optional)')
+    session_end_parser.add_argument('--context', help='Next session context (optional)')
+    session_end_parser.add_argument('--artifacts', help='JSON array of artifacts created (optional)')
+
+
+def _add_action_parsers(subparsers):
+    """Add action logging command parsers for INVESTIGATE and ACT phases"""
+    # investigate-log command
+    investigate_log_parser = subparsers.add_parser('investigate-log', 
+        help='Log investigation findings during INVESTIGATE phase')
+    investigate_log_parser.add_argument('--session-id', required=True, help='Session ID')
+    investigate_log_parser.add_argument('--findings', required=True, 
+        help='JSON array of findings discovered')
+    investigate_log_parser.add_argument('--evidence', 
+        help='JSON object with evidence (file paths, line numbers, etc.)')
+    investigate_log_parser.add_argument('--verbose', action='store_true', help='Verbose output')
+    
+    # act-log command
+    act_log_parser = subparsers.add_parser('act-log', 
+        help='Log actions taken during ACT phase')
+    act_log_parser.add_argument('--session-id', required=True, help='Session ID')
+    act_log_parser.add_argument('--actions', required=True, 
+        help='JSON array of actions taken')
+    act_log_parser.add_argument('--artifacts', 
+        help='JSON array of files modified/created')
+    act_log_parser.add_argument('--goal-id', 
+        help='Goal UUID being worked on')
+    act_log_parser.add_argument('--verbose', action='store_true', help='Verbose output')
 
 
 def _add_checkpoint_parsers(subparsers):
@@ -656,9 +695,12 @@ def main(args=None):
             'check-submit': handle_check_submit_command,
             'postflight-submit': handle_postflight_submit_command,
             
-            # Decision commands
+            # Decision commands (from decision_commands.py)
             'decision': handle_decision_command,
             'decision-batch': handle_decision_batch_command,
+            
+            # Modality commands (EXPERIMENTAL)
+            'modality-route': handle_modality_route_command,
             
             # Investigation commands (consolidated: analyze removed)
             'investigate': handle_investigate_command,  # Now handles --type=comprehensive
@@ -696,6 +738,11 @@ def main(args=None):
             'sessions-list': handle_sessions_list_command,
             'sessions-show': handle_sessions_show_command,
             'sessions-export': handle_sessions_export_command,
+            'session-end': handle_session_end_command,
+            
+            # Action commands (INVESTIGATE and ACT phase tracking)
+            'investigate-log': handle_investigate_log_command,
+            'act-log': handle_act_log_command,
             
             # NEW: Goal Management Commands (MCP v2 Integration)
             'goals-create': handle_goals_create_command,

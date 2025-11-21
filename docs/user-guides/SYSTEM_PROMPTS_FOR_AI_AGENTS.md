@@ -297,8 +297,8 @@ When git-enhanced reflex logger is enabled (check with your administrator):
 - `get_workflow_guidance`
 
 **Goals (if using orchestrator):**
-- `query_goal_orchestrator`
-- `generate_goals`
+- `goals-list`
+- `create_goal`
 
 ## Self-Improvement Loop
 

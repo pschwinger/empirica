@@ -40,7 +40,7 @@ session_id = result["session_id"]
 ```
 
 **You now have access to:**
-- ✅ **Goal orchestrator** - Generates systematic investigation goals
+- ✅ **Goal management** - Create goals explicitly when you identify work
 - ✅ **Bayesian beliefs tracker** - Tracks evolving uncertainty
 - ✅ **Drift monitor** - Detects calibration drift (overconfidence/underconfidence)
 - ✅ **Git checkpoints** - 97.5% token reduction for session resumption
@@ -104,7 +104,7 @@ submit_preflight_assessment(
 
 ```python
 # Generate investigation goals using MCP tool
-goals_result = generate_goals(
+goals_result = create_goal(
     session_id=session_id,
     conversation_context="[Your task description]",
     use_epistemic_state=True  # Uses your PREFLIGHT vectors
@@ -395,10 +395,10 @@ print(f"UNCERTAINTY: {state['uncertainty']}")
 
 ### Using MCP Tools
 ```python
-# Query your own goal orchestrator
-from empirica.cli import query_goal_orchestrator
+# Query your own goal management
+from empirica.cli import goals-list
 
-goals = query_goal_orchestrator(session_id=session_id)
+goals = goals-list(session_id=session_id)
 print(f"Current goals: {goals}")
 
 # Query your Bayesian beliefs
@@ -442,7 +442,7 @@ print(f"Beliefs about {context_key}: {beliefs}")
 
 ### ❌ Don't: Rush through investigation
 **Why:** Systematic beats fast  
-**Do:** Use goal orchestrator, track beliefs, investigate thoroughly
+**Do:** Use goal management, track beliefs, investigate thoroughly
 
 ### ❌ Don't: Skip CHECK
 **Why:** You might not be ready (better to know now)  

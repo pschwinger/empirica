@@ -215,10 +215,10 @@ def handle_sessions_list_command(args):
         # Query sessions
         cursor = db.conn.cursor()
         cursor.execute("""
-            SELECT session_id, ai_id, started_at, ended_at,
+            SELECT session_id, ai_id, start_time, end_time,
                    (SELECT COUNT(*) FROM cascades WHERE cascades.session_id = sessions.session_id) as cascade_count
             FROM sessions
-            ORDER BY started_at DESC
+            ORDER BY start_time DESC
             LIMIT ?
         """, (args.limit,))
         
@@ -233,11 +233,11 @@ def handle_sessions_list_command(args):
         print(f"\n📊 Found {len(sessions)} session(s):\n")
         
         for session in sessions:
-            session_id, ai_id, started_at, ended_at, cascade_count = session
+            session_id, ai_id, start_time, end_time, cascade_count = session
             
             # Parse timestamps
-            started = datetime.fromisoformat(started_at) if started_at else None
-            ended = datetime.fromisoformat(ended_at) if ended_at and ended_at != 'None' else None
+            started = datetime.fromisoformat(start_time) if start_time else None
+            ended = datetime.fromisoformat(end_time) if end_time and end_time != 'None' else None
             
             # Status indicator
             status = "✅ Complete" if ended else "🔄 Active"
@@ -293,7 +293,7 @@ def handle_sessions_show_command(args):
         # Get session info
         cursor = db.conn.cursor()
         cursor.execute("""
-            SELECT session_id, ai_id, started_at, ended_at
+            SELECT session_id, ai_id, start_time, end_time
             FROM sessions
             WHERE session_id = ?
         """, (args.session_id,))
@@ -305,11 +305,11 @@ def handle_sessions_show_command(args):
             db.close()
             return
         
-        session_id, ai_id, started_at, ended_at = session
+        session_id, ai_id, start_time, end_time = session
         
         # Parse timestamps
-        started = datetime.fromisoformat(started_at) if started_at else None
-        ended = datetime.fromisoformat(ended_at) if ended_at and ended_at != 'None' else None
+        started = datetime.fromisoformat(start_time) if start_time else None
+        ended = datetime.fromisoformat(end_time) if end_time and end_time != 'None' else None
         
         # Show session info
         print(f"\n🆔 Session ID: {session_id}")
@@ -400,7 +400,7 @@ def handle_sessions_export_command(args):
         # Get session info
         cursor = db.conn.cursor()
         cursor.execute("""
-            SELECT session_id, ai_id, started_at, ended_at
+            SELECT session_id, ai_id, start_time, end_time
             FROM sessions
             WHERE session_id = ?
         """, (args.session_id,))
@@ -412,14 +412,14 @@ def handle_sessions_export_command(args):
             db.close()
             return
         
-        session_id, ai_id, started_at, ended_at = session
+        session_id, ai_id, start_time, end_time = session
         
         # Build export data
         export_data = {
             "session_id": session_id,
             "ai_id": ai_id,
-            "started_at": started_at,
-            "ended_at": ended_at,
+            "start_time": start_time,
+            "end_time": end_time,
             "cascades": []
         }
         

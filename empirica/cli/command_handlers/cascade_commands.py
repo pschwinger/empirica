@@ -1,5 +1,8 @@
 """
-Cascade Commands - Metacognitive cascade and decision-making functionality
+Cascade Commands - CASCADE workflow (PREFLIGHT → CHECK → POSTFLIGHT)
+
+Handles core Empirica CASCADE epistemic workflow phases.
+For LLM adapter routing, see modality_commands.py (experimental).
 """
 
 import json
@@ -12,12 +15,27 @@ from ..cli_utils import print_component_status, handle_cli_error, format_uncerta
 logger = logging.getLogger(__name__)
 
 
-def handle_cascade_command(args):
-    """Handle main cascade command - THINK→UNCERTAINTY→INVESTIGATE→CHECK→ACT"""
+def handle_cascade_command_deprecated(args):
+    """DEPRECATED: Use 'empirica modality-route' instead. This command routes to LLM adapters."""
+    logger.warning("⚠️  DEPRECATED: 'empirica cascade' is deprecated for ModalitySwitcher routing")
+    logger.warning("    Use 'empirica modality-route' instead (experimental feature)")
+    logger.warning("    For CASCADE workflow, use: preflight → check → postflight")
+    
+    # Redirect to modality routing
+    try:
+        from empirica.cli.command_handlers.modality_commands import handle_modality_route_command
+        return handle_modality_route_command(args)
+    except ImportError:
+        logger.error("❌ ModalitySwitcher not available")
+        return
+
+
+def handle_cascade_command_old(args):
+    """OLD: Handle main cascade command - THINK→UNCERTAINTY→INVESTIGATE→CHECK→ACT"""
     try:
         from empirica.plugins.modality_switcher.modality_switcher import ModalitySwitcher, RoutingPreferences, RoutingStrategy
         
-        logger.info(f"🔄 Running epistemic adaptive cascade: {args.question}")
+        logger.info(f"🔄 Running epistemic adaptive routing: {args.question}")
         
         # Parse context and epistemic vectors from CLI args
         context = parse_json_safely(getattr(args, 'context', None)) or {}
