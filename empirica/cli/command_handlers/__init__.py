@@ -12,7 +12,6 @@ from .bootstrap_commands import (
 )
 from .assessment_commands import handle_assess_command, handle_self_awareness_command, handle_metacognitive_command
 from .cascade_commands import (
-    handle_cascade_command_deprecated as handle_cascade_command,  # Deprecated: redirects to modality_commands
     handle_preflight_command,
     handle_postflight_command,
     handle_workflow_command
@@ -92,7 +91,6 @@ __all__ = [
     'handle_metacognitive_command',
     
     # Cascade commands
-    'handle_cascade_command',  # Deprecated: use handle_modality_route_command
     'handle_preflight_command',
     'handle_postflight_command',
     'handle_workflow_command',

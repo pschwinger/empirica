@@ -9,7 +9,7 @@
 **🤖 AI Agent (via MCP)?** → [**MCP Quick Start**](01_b_MCP_AI_START.md) - Discovered via IDE tools  
 **🤖 AI Agent (learning)?** → [**AI Agent Quick Start**](01_a_AI_AGENT_START.md) - Complete introduction  
 **👤 Human Developer?** → [**Installation**](02_INSTALLATION.md) → [**CLI Quick Start**](03_CLI_QUICKSTART.md)  
-**👤 Getting AI to use Empirica?** → [**📋 Prompt Templates**](user-guides/README.md) - Copy-paste prompts for your AI  
+**👤 Getting AI to use Empirica?** → [**📋 Prompt Templates**](system-prompts/README.md) - Copy-paste prompts for your AI  
 **Want comprehensive overview?** → [**Start Here**](00_START_HERE.md) - 5-minute system overview
 
 **Complete learning path:** [🎓 Onboarding Guide](ONBOARDING_GUIDE.md)

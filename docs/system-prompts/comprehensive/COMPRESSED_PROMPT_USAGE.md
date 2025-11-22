@@ -112,7 +112,7 @@ cat /home/yogapad/.rovodev/config_empirica.yml | grep -A 5 "additionalSystemProm
 **For Gemini CLI:**
 ```bash
 # Copy compressed prompt to Gemini system prompt location
-cp docs/user-guides/SYSTEM_PROMPT_COMPRESSED.md ~/.gemini/system_empirica.md
+cp docs/system-prompts/development/SYSTEM_PROMPT_COMPRESSED.md ~/.gemini/system_empirica.md
 
 # Set environment variable
 export GEMINI_SYSTEM_MD=~/.gemini/system_empirica.md
@@ -121,7 +121,7 @@ export GEMINI_SYSTEM_MD=~/.gemini/system_empirica.md
 **For Claude Desktop:**
 ```bash
 # Copy to project root
-cp docs/user-guides/SYSTEM_PROMPT_COMPRESSED.md ./CLAUDE.md
+cp docs/system-prompts/development/SYSTEM_PROMPT_COMPRESSED.md ./CLAUDE.md
 ```
 
 **For other platforms:**
@@ -133,11 +133,11 @@ cp docs/user-guides/SYSTEM_PROMPT_COMPRESSED.md ./CLAUDE.md
 
 ```bash
 # Count tokens in full prompt
-wc -w docs/user-guides/GENERIC_EMPIRICA_SYSTEM_PROMPT.md
+wc -w docs/system-prompts/comprehensive/GENERIC_EMPIRICA_SYSTEM_PROMPT.md
 # Output: 1603 words (~2,100 tokens)
 
 # Count tokens in compressed prompt
-wc -w docs/user-guides/SYSTEM_PROMPT_COMPRESSED.md
+wc -w docs/system-prompts/development/SYSTEM_PROMPT_COMPRESSED.md
 # Output: 854 words (~1,100 tokens)
 
 # Savings
@@ -233,12 +233,12 @@ cat /home/yogapad/.rovodev/config_empirica.yml | grep -A 2 "additionalSystemProm
 
 ```bash
 # Temporarily reference full documentation
-cat docs/user-guides/GENERIC_EMPIRICA_SYSTEM_PROMPT.md | grep -A 20 "Phase 2: INVESTIGATE"
+cat docs/system-prompts/comprehensive/GENERIC_EMPIRICA_SYSTEM_PROMPT.md | grep -A 20 "Phase 2: INVESTIGATE"
 ```
 
 Or add to query:
 ```
-"Help me with X. For detailed examples, reference: docs/user-guides/GENERIC_EMPIRICA_SYSTEM_PROMPT.md"
+"Help me with X. For detailed examples, reference: docs/system-prompts/comprehensive/GENERIC_EMPIRICA_SYSTEM_PROMPT.md"
 ```
 
 ### "Token savings not as expected"
@@ -268,7 +268,7 @@ grep -c "EMPIRICA AGENT: CORE DIRECTIVES" /home/yogapad/.rovodev/config_empirica
 ### 3. Load Full Prompt On-Demand
 ```bash
 # Only when needed:
-"For detailed workflow examples, read: docs/user-guides/GENERIC_EMPIRICA_SYSTEM_PROMPT.md"
+"For detailed workflow examples, read: docs/system-prompts/comprehensive/GENERIC_EMPIRICA_SYSTEM_PROMPT.md"
 ```
 
 ### 4. Monitor Effectiveness
@@ -295,12 +295,12 @@ A: Possible, but diminishing returns. 854 words is near-optimal for maintaining 
 A: For production: yes. For learning/onboarding: use full prompt.
 
 **Q: What if I need examples?**  
-A: Reference full prompt on-demand: `docs/user-guides/GENERIC_EMPIRICA_SYSTEM_PROMPT.md`
+A: Reference full prompt on-demand: `docs/system-prompts/comprehensive/GENERIC_EMPIRICA_SYSTEM_PROMPT.md`
 
 ## References
 
-- **Compressed Prompt:** `docs/user-guides/SYSTEM_PROMPT_COMPRESSED.md`
-- **Full Prompt:** `docs/user-guides/GENERIC_EMPIRICA_SYSTEM_PROMPT.md`
+- **Compressed Prompt:** `docs/system-prompts/development/SYSTEM_PROMPT_COMPRESSED.md`
+- **Full Prompt:** `docs/system-prompts/comprehensive/GENERIC_EMPIRICA_SYSTEM_PROMPT.md`
 - **Optimization Plan:** `SYSTEM_PROMPT_OPTIMIZATION_PLAN.md`
 - **Config Location:** `/home/yogapad/.rovodev/config_empirica.yml`
 

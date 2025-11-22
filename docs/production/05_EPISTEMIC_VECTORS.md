@@ -1,17 +1,27 @@
-# 📊 Understanding the 12 Epistemic Vectors
+# 📊 Understanding the 13 Epistemic Vectors
 
-A complete guide to the 13-vector UVL system with explicit uncertainty tracking.
+A complete guide to the 13-vector epistemic system with explicit uncertainty tracking.
 
 ---
 
 ## Overview
 
-Empirica assesses epistemic state across **12 vectors** organized into 4 groups, plus explicit UNCERTAINTY tracking:
+Empirica assesses epistemic state across **13 vectors** organized into 5 groups:
+
 1. **ENGAGEMENT** (Gate) - 1 vector (15% weight)
-2. **FOUNDATION** (35% weight) - KNOW, DO, CONTEXT (3 vectors)
-3. **COMPREHENSION** (25% weight) - CLARITY, COHERENCE, SIGNAL, DENSITY (4 vectors)
-4. **EXECUTION** (25% weight) - STATE, CHANGE, COMPLETION, IMPACT (4 vectors)
-5. **UNCERTAINTY** (Meta) - Explicit meta-epistemic tracking ⭐
+   - Collaborative intelligence quality (≥0.60 required to proceed)
+
+2. **FOUNDATION** (35% weight) - 3 vectors
+   - KNOW, DO, CONTEXT
+
+3. **COMPREHENSION** (25% weight) - 4 vectors
+   - CLARITY, COHERENCE, SIGNAL, DENSITY
+
+4. **EXECUTION** (25% weight) - 4 vectors
+   - STATE, CHANGE, COMPLETION, IMPACT
+
+5. **UNCERTAINTY** (Meta-Epistemic) - 1 vector ⭐
+   - Explicit uncertainty measurement (not included in overall confidence calculation)
 
 ---
 
@@ -541,7 +551,7 @@ Overall: 0.78
 
 ## Dashboard Visualization
 
-In the tmux dashboard, all 12 vectors are shown with visual bars:
+In the tmux dashboard, all 13 vectors are shown with visual bars:
 
 ```
 13-VECTOR EPISTEMIC STATE

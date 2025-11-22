@@ -92,7 +92,7 @@ AI: "I'll run the onboarding wizard and explain each phase..."
 ```
 
 **Option 2: Use ready-made prompts**
-📋 **[Prompt Templates for Your AI](../user-guides/README.md)** - Copy-paste instructions to get Claude, GPT, or other AIs to use Empirica effectively.
+📋 **[Prompt Templates for Your AI](system-prompts/README.md)** - Copy-paste instructions to get Claude, GPT, or other AIs to use Empirica effectively.
 
 Includes:
 - Prompts for getting AI to use Empirica

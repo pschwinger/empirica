@@ -52,19 +52,39 @@ POSTFLIGHT → measure learning (APIs, patterns discovered)
 
 **Categories:** Session, CASCADE, Goals, Continuity
 
-**Critical Parameters (Prevent Errors):**
+**Critical Parameters (Most Common Issues):**
 ```python
-# Correct usage:
-create_goal(scope="project_wide", success_criteria=["Tests pass"])  # ✅
-add_subtask(importance="high")  # ✅ NOT epistemic_importance
-complete_subtask(task_id="uuid")  # ✅ NOT subtask_id
-submit_postflight_assessment(reasoning="...")  # ✅ NOT changes
+# ✅ Correct usage patterns:
+create_goal(
+    scope="project_wide",  # Enum: task_specific | session_scoped | project_wide
+    success_criteria=["Tests pass", "Documentation updated"],  # Array, not string
+    session_id="uuid"
+)
 
-# Common errors:
-create_goal(scope="Add feature")  # ❌ must be enum
-create_goal(success_criteria="Tests pass")  # ❌ must be array
-add_subtask(epistemic_importance="high")  # ❌ wrong param
-complete_subtask(subtask_id="uuid")  # ❌ wrong param
+add_subtask(
+    goal_id="uuid",
+    description="Write unit tests",
+    importance="high",  # Enum: critical | high | medium | low
+    estimated_tokens=500
+)
+
+complete_subtask(
+    task_id="uuid",  # Not "subtask_id"
+    evidence="Created 15 tests, all passing, 95% coverage"
+)
+
+submit_postflight_assessment(
+    session_id="uuid",
+    vectors={"know": 0.8, "do": 0.7},
+    reasoning="What I learned"  # Unified parameter (not "changes" or "summary")
+)
+
+# Quick Reference:
+# • scope: Must be enum value
+# • success_criteria: Must be array  
+# • importance: Not "epistemic_importance"
+# • task_id: Not "subtask_id"
+# • reasoning: Both preflight and postflight use "reasoning"
 ```
 
 ---

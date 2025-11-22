@@ -19,18 +19,10 @@ from .metacognitive_cascade import (
     CanonicalCascadeState
 )
 
-# Legacy support (deprecated)
-EpistemicAdaptiveCascade = CanonicalEpistemicCascade
-run_epistemic_cascade = run_canonical_cascade
-
 __all__ = [
     # Canonical (primary)
     'CanonicalEpistemicCascade',
     'run_canonical_cascade',
     'CascadePhase',
     'CanonicalCascadeState',
-
-    # Legacy (deprecated - use canonical versions)
-    'EpistemicAdaptiveCascade',
-    'run_epistemic_cascade',
 ]

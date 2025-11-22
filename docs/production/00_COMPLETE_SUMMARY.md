@@ -20,7 +20,7 @@ A production-grade **epistemic reasoning system** that helps AIs measure and val
 ### 1. **Canonical Epistemic Cascade**
 - LLM-powered assessment (no heuristics)
 - **13 epistemic dimensions** including ENGAGEMENT and **UNCERTAINTY**
-- Complete flow: THINK → ENGAGEMENT → UNCERTAINTY → INVESTIGATE → CHECK → ACT
+- Complete flow: PREFLIGHT → THINK → PLAN → INVESTIGATE → CHECK → ACT → POSTFLIGHT
 
 ### NEW IN 2.0: **13th Vector - Explicit UNCERTAINTY** ⭐
 - Meta-epistemic self-awareness
@@ -77,7 +77,7 @@ A production-grade **epistemic reasoning system** that helps AIs measure and val
 ## Quick Example
 
 ```python
-from metacognitive_cascade.metacognitive_cascade import CanonicalEpistemicCascade
+from empirica.core.metacognitive_cascade.metacognitive_cascade import CanonicalEpistemicCascade
 
 # Create cascade with all features
 cascade = CanonicalEpistemicCascade(

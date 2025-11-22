@@ -1,65 +1,43 @@
 # Cascade Flow - Phase by Phase
 
-**Empirica v2.0 - Understanding THINK → UNCERTAINTY → INVESTIGATE → CHECK → ACT**
+**Empirica v2.0 - Understanding PREFLIGHT → THINK → PLAN → INVESTIGATE → CHECK → ACT → POSTFLIGHT**
 
 ---
 
 ## Overview
 
-Every Empirica cascade follows this flow:
+Every Empirica cascade follows this 7-phase flow:
 
 ```
-THINK → UNCERTAINTY → INVESTIGATE → CHECK → ACT
-  ↓         ↓            ↓           ↓       ↓
-Meta-    13-vector    Fill gaps   Verify   Final
-prompt   assessment   (optional)  ready   decision
+PREFLIGHT → THINK → PLAN → INVESTIGATE → CHECK → ACT → POSTFLIGHT
+    ↓         ↓       ↓         ↓           ↓       ↓        ↓
+  Initial   Meta-   Strategy  Fill gaps   Verify  Execute  Learning
+  assess    prompt  formulate (optional)  ready   decision & calibrate
 ```
 
-**Duration:** 5-30 seconds depending on investigation needs
+**Duration:** 5-40 seconds depending on investigation needs
 
 ---
 
-## Phase 1: THINK
+## Phase 1: PREFLIGHT
 
-**Purpose:** Generate assessment prompt for self-assessment
+**Purpose:** Initial epistemic self-assessment across 13 vectors
 
 **What Happens:**
 1. Receives task and context
-2. Classifies domain (code_analysis, security, etc.)
-3. Generates assessment prompt asking AI to assess itself
-4. Activates Bayesian Guardian if precision-critical domain
-
-**Output:**
-```python
-{
-    'assessment_prompt': "Assess your epistemic state for: [task]...",
-    'domain': 'code_analysis',
-    'bayesian_activated': True
-}
-```
-
-**Duration:** < 1 second
-
----
-
-## Phase 2: UNCERTAINTY
-
-**Purpose:** Measure 13-vector epistemic state
-
-**What Happens:**
-1. AI receives assessment prompt
-2. Performs genuine self-assessment (no heuristics)
+2. AI performs genuine self-assessment (no heuristics)
 3. Scores 13 epistemic vectors (0.0-1.0)
 4. Checks ENGAGEMENT gate (≥0.60)
 5. Applies canonical weights (35/25/25/15)
 6. Calculates overall confidence
 7. Recommends action
 
-**The 12 Vectors:**
+**The 13 Vectors:**
 - **GATE:** ENGAGEMENT (≥0.60 required)
-- **TIER 0 (35%):** KNOW, DO, CONTEXT
-- **TIER 1 (25%):** CLARITY, COHERENCE, SIGNAL, DENSITY
-- **TIER 2 (25%):** STATE, CHANGE, COMPLETION, IMPACT
+- **FOUNDATION (35%):** KNOW, DO, CONTEXT
+- **COMPREHENSION (25%):** CLARITY, COHERENCE, SIGNAL, DENSITY
+- **EXECUTION (25%):** STATE, CHANGE, COMPLETION, IMPACT
+- **META-EPISTEMIC:** UNCERTAINTY
 
 **Output:**
 ```python
@@ -76,7 +54,54 @@ prompt   assessment   (optional)  ready   decision
 
 ---
 
-## Phase 3: INVESTIGATE (Optional)
+## Phase 2: THINK
+
+**Purpose:** Task analysis and domain classification
+
+**What Happens:**
+1. Analyzes task requirements
+2. Classifies domain (code_analysis, security, etc.)
+3. Identifies constraints and dependencies
+4. Activates Bayesian Guardian if precision-critical domain
+
+**Output:**
+```python
+{
+    'domain': 'code_analysis',
+    'task_type': 'refactoring',
+    'bayesian_activated': True,
+    'constraints': ['backward_compatibility', 'test_coverage']
+}
+```
+
+**Duration:** < 1 second
+
+---
+
+## Phase 3: PLAN
+
+**Purpose:** Strategy formulation for task execution
+
+**What Happens:**
+1. Develops investigation strategy (if needed)
+2. Plans execution approach
+3. Identifies required tools and resources
+4. Creates structured completion path
+
+**Output:**
+```python
+{
+    'strategy': 'systematic_investigation',
+    'tools_needed': ['documentation_search', 'workspace_scan'],
+    'execution_steps': ['analyze', 'refactor', 'test', 'validate']
+}
+```
+
+**Duration:** < 1 second
+
+---
+
+## Phase 4: INVESTIGATE (Optional)
 
 **Purpose:** Fill knowledge gaps through strategic investigation
 
@@ -121,7 +146,7 @@ Low DO/CHANGE → test simulation, impact analysis
 
 ---
 
-## Phase 4: CHECK
+## Phase 5: CHECK
 
 **Purpose:** Verify readiness to act
 
@@ -159,7 +184,7 @@ Low DO/CHANGE → test simulation, impact analysis
 
 ---
 
-## Phase 5: ACT
+## Phase 6: ACT
 
 **Purpose:** Make final decision
 
@@ -230,21 +255,25 @@ asyncio.run(example())
 ```
 START
   ↓
-THINK (classify domain)
-  ↓
-UNCERTAINTY (assess 12 vectors)
+PREFLIGHT (assess 13 vectors)
   ↓
 ENGAGEMENT >= 0.60? → NO → ACT: clarify
   ↓ YES
 Critical flags? → YES → ACT: reset/stop
   ↓ NO
+THINK (classify domain, analyze task)
+  ↓
+PLAN (formulate strategy)
+  ↓
 Confidence >= threshold? → YES → CHECK → ACT: proceed
   ↓ NO
-INVESTIGATE (improve confidence)
+INVESTIGATE (improve confidence, max 3 rounds)
   ↓
 CHECK (verify + detect discrepancies/drift)
   ↓
 ACT (final decision)
+  ↓
+POSTFLIGHT (measure learning, generate handoff)
 ```
 
 ---
@@ -252,17 +281,19 @@ ACT (final decision)
 ## Timing Breakdown
 
 **Typical cascade timing:**
-- THINK: < 1s
-- UNCERTAINTY: 2-5s (LLM call)
+- PREFLIGHT: 2-5s (LLM self-assessment)
+- THINK: < 1s (task analysis)
+- PLAN: < 1s (strategy formulation)
 - INVESTIGATE: 0-30s (0-3 rounds × 5-10s each)
-- CHECK: < 1s
-- ACT: < 1s
+- CHECK: < 1s (validation)
+- ACT: < 1s (final decision)
+- POSTFLIGHT: 2-5s (LLM reassessment + handoff generation)
 
-**Total:** 3-37 seconds depending on investigation needs
+**Total:** 5-45 seconds depending on investigation needs
 
-**Fast path (high confidence):** ~3-6 seconds
-**Normal path (1-2 rounds):** ~10-20 seconds
-**Deep investigation (3 rounds):** ~25-37 seconds
+**Fast path (high confidence):** ~5-10 seconds
+**Normal path (1-2 rounds):** ~15-25 seconds
+**Deep investigation (3 rounds):** ~35-45 seconds
 
 ---
 
@@ -283,13 +314,15 @@ Each phase logs a Reflex Frame:
 
 ---
 
-## Phase 6: POSTFLIGHT (Generate Handoff Report)
+## Phase 7: POSTFLIGHT
 
-**Purpose:** Create compressed session summary for multi-agent coordination
+**Purpose:** Learning measurement and session continuity
 
 **What Happens:**
-1. Complete POSTFLIGHT epistemic assessment (vectors + calibration)
-2. Generate handoff report capturing:
+1. Complete POSTFLIGHT epistemic assessment (re-assess all 13 vectors)
+2. Compare PREFLIGHT vs POSTFLIGHT (epistemic delta)
+3. Validate calibration accuracy
+4. Generate handoff report capturing:
    - What was learned (key findings)
    - What gaps were filled (epistemic growth)
    - What's still unknown (remaining uncertainties)
@@ -301,7 +334,11 @@ Each phase logs a Reflex Frame:
 {
     'session_id': 'abc123...',
     'report_id': 'git-sha...',
-    'token_count': 238,  # ~90%+ reduction vs full history
+    'epistemic_delta': {
+        'know': +0.45,
+        'uncertainty': -0.50
+    },
+    'token_count': 238,  # ~98% reduction vs full history
     'markdown': '# Epistemic Handoff Report...',
     'storage_location': 'git:refs/notes/empirica/handoff/abc123'
 }

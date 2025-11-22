@@ -23,7 +23,7 @@
 
 **Examples:**
 - Claude/Rovo Dev collaborating with user on feature design
-- GPT-4 planning system architecture
+- GPT-4/5 planning system architecture
 - Gemini researching and proposing solutions
 
 **Empirica Usage:** Full CASCADE workflow
@@ -43,7 +43,9 @@
 - May use lighter epistemic tracking
 
 **Examples:**
-- Mini-agent implementing test suite from specifications
+- Mini-agent (minimax) implementing test suite from specifications
+- Grok Fast, GPT-OSS, Qwen-2.5/3
+- Smaller local models based on modality and roles
 - Code formatter applying linting rules
 - Documentation generator creating API docs
 - Test runner executing test suites

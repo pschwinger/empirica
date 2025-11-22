@@ -23,29 +23,16 @@ __author__ = "Empirica Project"
 try:
     from empirica.core.canonical import CanonicalEpistemicAssessor, ReflexLogger
     from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
-except ImportError:
+except ImportError as e:
+    print(f"Warning: Core imports failed: {e}")
     pass
 
 # Data imports
 try:
     from empirica.data.session_database import SessionDatabase
     from empirica.data.session_json_handler import SessionJSONHandler
-except ImportError:
-    pass
-
-# Workflow imports (new enhanced cascade)
-try:
-    # Import canonical cascade components
-    try:
-        from empirica.core.metacognitive_cascade.metacognitive_cascade import CanonicalEpistemicCascade
-        CANONICAL_AVAILABLE = True
-    except ImportError:
-        CANONICAL_AVAILABLE = False
-    from empirica.workflow.cascade_workflow_orchestrator import (
-        CascadeWorkflowOrchestrator,
-        WorkflowGuide
-    )
-except ImportError:
+except ImportError as e:
+    print(f"Warning: Data imports failed: {e}")
     pass
 
 __all__ = [
@@ -55,10 +42,4 @@ __all__ = [
     'ReflexLogger',
     'SessionDatabase',
     'SessionJSONHandler',
-    # Enhanced workflow
-    'PreflightAssessor',
-    'PostflightAssessor',
-    'CheckPhaseEvaluator',
-    'CascadeWorkflowOrchestrator',
-    'WorkflowGuide',
 ]
