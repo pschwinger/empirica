@@ -297,7 +297,7 @@ Empirica tracks how well your confidence matches reality:
 ### Learn More
 
 - **[Features Overview](features.md)** - Deep dive into capabilities
-- **[API Reference](api.md)** - Complete Python API documentation
+- **[API Reference](api-reference.md)** - Complete Python API documentation
 - **[Architecture Guide](architecture.md)** - System design and components
 - **[Use Cases](use-cases.md)** - Real-world examples and patterns
 
@@ -311,7 +311,7 @@ Empirica tracks how well your confidence matches reality:
 ### Community
 
 - **[GitHub Repository](https://github.com/your-org/empirica)** - Source code and issues
-- **[System Prompts](system-prompts/README.md)** - AI assistant configurations
+- **[System Prompts](system-prompts.md)** - AI assistant configurations
 - **[Examples Gallery](examples.md)** - Community-contributed examples
 
 ---

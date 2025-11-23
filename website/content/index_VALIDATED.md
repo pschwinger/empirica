@@ -4,7 +4,7 @@
 
 Measure and validate AI knowledge state through genuine LLM-powered self-assessment across 13 epistemic dimensions.
 
-[Get Started](#getting-started) | [View on GitHub](https://github.com/Nubaeon/empirica) | [Documentation](docs/production/)
+[Get Started](getting-started.md) | [View on GitHub](https://github.com/Nubaeon/empirica) | [Documentation](api-reference.md)
 
 ---
 
@@ -29,6 +29,8 @@ Empirica is a **metacognitive AI framework** that helps AI systems measure and v
 ## The 13 Epistemic Vectors
 
 Empirica's core innovation: comprehensive self-assessment across 13 dimensions.
+
+[Read full Epistemics Guide →](epistemics.md)
 
 ### Gate: ENGAGEMENT (≥0.60 required)
 - Collaborative intelligence quality
@@ -76,6 +78,8 @@ Empirica implements a canonical 7-phase epistemic cascade:
 ```
 PREFLIGHT → THINK → PLAN → INVESTIGATE → CHECK → ACT → POSTFLIGHT
 ```
+
+[See Architecture Details →](architecture.md)
 
 ### Phase Descriptions
 
@@ -156,6 +160,8 @@ print(f"Epistemic Delta: {result.get('epistemic_delta', {})}")  # PREFLIGHT vs P
 
 Empirica provides **23 MCP tools** for Claude Desktop integration.
 
+[View MCP Integration Guide →](mcp-integration.md)
+
 ### Architecture
 - **Thin CLI wrapper** - Routes to Empirica CLI for reliability
 - **3 stateless tools** - Handled directly (introduction, guidance, help)
@@ -196,7 +202,7 @@ Empirica provides **23 MCP tools** for Claude Desktop integration.
 
 ### CLI Commands
 
-50+ commands available via `empirica` CLI:
+50+ commands available via `empirica` CLI. [View CLI Reference →](cli-interface.md)
 
 ```bash
 # Bootstrap
@@ -233,6 +239,8 @@ empirica handoff-query --ai-id=your-id --limit=5
 ## Enterprise Components
 
 **11 production-ready enterprise components** with **27 Python implementation modules**.
+
+[Explore Components →](components.md)
 
 ### Component Catalog
 
@@ -274,6 +282,8 @@ print(f"High: {len(scan.high)}")
 ---
 
 ## Data Persistence & Session Continuity
+
+[View Collaboration Features →](collaboration.md)
 
 ### Storage Systems
 
@@ -376,10 +386,10 @@ The MCP server runs automatically when Claude Desktop starts. All 23 tools are a
 
 ### Next Steps
 
-1. **[13-Vector System](docs/production/05_EPISTEMIC_VECTORS.md)** - Deep dive into vectors
-2. **[CASCADE Tutorial](docs/production/06_CASCADE_FLOW.md)** - Complete workflow guide
-3. **[MCP Integration](docs/04_MCP_QUICKSTART.md)** - Claude Desktop setup
-4. **[Production Docs](docs/production/)** - 25 comprehensive guides
+1. **[13-Vector System](epistemics.md)** - Deep dive into vectors
+2. **[Use Cases](use-cases.md)** - Real-world applications
+3. **[MCP Integration](mcp-integration.md)** - Claude Desktop setup
+4. **[API Reference](api-reference.md)** - Comprehensive API docs
 
 ---
 
@@ -403,9 +413,9 @@ The MCP server runs automatically when Claude Desktop starts. All 23 tools are a
 ## Learn More
 
 - **GitHub:** [https://github.com/Nubaeon/empirica](https://github.com/Nubaeon/empirica)
-- **Documentation:** [docs/production/](docs/production/)
-- **Quick Start:** [docs/production/01_QUICK_START.md](docs/production/01_QUICK_START.md)
-- **API Reference:** [docs/production/13_PYTHON_API.md](docs/production/13_PYTHON_API.md)
+- **Documentation:** [api-reference.md](api-reference.md)
+- **Quick Start:** [getting-started.md](getting-started.md)
+- **Features:** [features.md](features.md)
 
 ---
 

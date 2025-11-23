@@ -130,47 +130,18 @@ def _add_assessment_parsers(subparsers):
 
 
 def _add_cascade_parsers(subparsers):
-    """Add cascade command parsers"""
-    # Main cascade command with ModalitySwitcher
-    cascade_parser = subparsers.add_parser('cascade', help='Epistemic cascade with ModalitySwitcher')
-    cascade_parser.add_argument('question', help='Question for cascade analysis')
+    """Add cascade command parsers (DEPRECATED - use MCP tools instead)
     
-    # Epistemic state input options
-    cascade_parser.add_argument('--epistemic-state', help='Path to JSON file with epistemic state')
+    The 'cascade' command was part of ModalitySwitcher plugin.
+    For CASCADE workflow, use MCP tools:
+    - empirica execute-preflight
+    - empirica execute-check  
+    - empirica execute-postflight
     
-    # Individual vector flags
-    cascade_parser.add_argument('--know', type=float, help='KNOW vector (0.0-1.0)')
-    cascade_parser.add_argument('--do', type=float, help='DO vector (0.0-1.0)')
-    cascade_parser.add_argument('--context-vec', type=float, dest='context_vec', help='CONTEXT vector (0.0-1.0)')
-    cascade_parser.add_argument('--uncertainty', type=float, help='UNCERTAINTY vector (0.0-1.0)')
-    cascade_parser.add_argument('--clarity', type=float, help='CLARITY vector (0.0-1.0)')
-    cascade_parser.add_argument('--coherence', type=float, help='COHERENCE vector (0.0-1.0)')
-    cascade_parser.add_argument('--signal', type=float, help='SIGNAL vector (0.0-1.0)')
-    cascade_parser.add_argument('--density', type=float, help='DENSITY vector (0.0-1.0)')
-    cascade_parser.add_argument('--state', type=float, help='STATE vector (0.0-1.0)')
-    cascade_parser.add_argument('--change', type=float, help='CHANGE vector (0.0-1.0)')
-    cascade_parser.add_argument('--completion', type=float, help='COMPLETION vector (0.0-1.0)')
-    cascade_parser.add_argument('--impact', type=float, help='IMPACT vector (0.0-1.0)')
-    cascade_parser.add_argument('--engagement', type=float, help='ENGAGEMENT vector (0.0-1.0)')
-    
-    # Quiet mode
-    cascade_parser.add_argument('--quiet', action='store_true', help='Quiet mode (minimal output)')
-    
-    # Routing options
-    cascade_parser.add_argument('--strategy', choices=['epistemic', 'cost', 'latency', 'quality', 'balanced'],
-                               default='epistemic', help='Routing strategy')
-    cascade_parser.add_argument('--adapter', choices=['minimax', 'qwen', 'rovodev', 'gemini', 'qodo', 'openrouter', 'copilot', 'local'],
-                               help='Force specific adapter')
-    cascade_parser.add_argument('--model', type=str, help='Model to use (e.g., qwen-coder-turbo, gpt-5, claude-sonnet-4)')
-    cascade_parser.add_argument('--list-models', action='store_true', help='List available models for selected adapter')
-    cascade_parser.add_argument('--max-cost', type=float, default=1.0, help='Maximum cost in USD')
-    cascade_parser.add_argument('--max-latency', type=float, default=30.0, help='Maximum latency in seconds')
-    cascade_parser.add_argument('--min-quality', type=float, default=0.7, help='Minimum quality score')
-    cascade_parser.add_argument('--no-fallback', action='store_true', help='Disable fallback adapters')
-    
-    # Output options  
-    cascade_parser.add_argument('--verbose', action='store_true', help='Show detailed epistemic vectors')
-    cascade_parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation prompt')
+    This function is kept for backward compatibility but does nothing.
+    """
+    # Deprecated - CASCADE workflow now uses MCP tools
+    pass
     
     # Enhanced decision analysis command with ModalitySwitcher
     decision_parser = subparsers.add_parser('decision', help='Epistemic decision-making with ModalitySwitcher')
@@ -676,8 +647,8 @@ def main(args=None):
             'self-awareness': handle_self_awareness_command,
             'metacognitive': handle_metacognitive_command,
             
-            # Cascade commands
-            'cascade': handle_cascade_command,
+            # Cascade commands (core workflow via MCP)
+            # 'cascade': removed - use MCP tools: execute_preflight, execute_check, execute_postflight
             'preflight': handle_preflight_command,
             'postflight': handle_postflight_command,
             'workflow': handle_workflow_command,
