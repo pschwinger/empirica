@@ -185,6 +185,7 @@ def _add_cascade_parsers(subparsers):
     preflight_parser.add_argument('--session-id', help='Optional session ID (auto-generated if not provided)')
     preflight_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier for session tracking')
     preflight_parser.add_argument('--no-git', action='store_true', help='Disable automatic git checkpoint creation')
+    preflight_parser.add_argument('--sign', action='store_true', help='Sign assessment with AI keypair (Phase 2: EEP-1)')
     preflight_parser.add_argument('--prompt-only', action='store_true', help='Return ONLY the self-assessment prompt as JSON (no waiting, for genuine AI assessment)')
     preflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
     preflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
@@ -201,6 +202,7 @@ def _add_cascade_parsers(subparsers):
     postflight_parser.add_argument('--summary', help='Task completion summary')
     postflight_parser.add_argument('--ai-id', help='AI identifier for session tracking (should match preflight)')
     postflight_parser.add_argument('--no-git', action='store_true', help='Disable automatic git checkpoint creation')
+    postflight_parser.add_argument('--sign', action='store_true', help='Sign assessment with AI keypair (Phase 2: EEP-1)')
     postflight_parser.add_argument('--prompt-only', action='store_true', help='Return ONLY the self-assessment prompt as JSON (no waiting, for genuine AI assessment)')
     postflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
     postflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
@@ -567,6 +569,23 @@ def _add_checkpoint_parsers(subparsers):
     goals_resume_parser.add_argument('--ai-id', default='empirica_cli', help='Your AI identifier')
     goals_resume_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
+    # Identity commands (NEW: Phase 2 - Cryptographic Trust / EEP-1)
+    identity_create_parser = subparsers.add_parser('identity-create', help='Create new AI identity with Ed25519 keypair')
+    identity_create_parser.add_argument('--ai-id', required=True, help='AI identifier')
+    identity_create_parser.add_argument('--overwrite', action='store_true', help='Overwrite existing identity')
+    identity_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    identity_list_parser = subparsers.add_parser('identity-list', help='List all AI identities')
+    identity_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    identity_export_parser = subparsers.add_parser('identity-export', help='Export public key for sharing')
+    identity_export_parser.add_argument('--ai-id', required=True, help='AI identifier')
+    identity_export_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    identity_verify_parser = subparsers.add_parser('identity-verify', help='Verify signed session')
+    identity_verify_parser.add_argument('session_id', help='Session ID to verify')
+    identity_verify_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
     # Sessions resume command
     sessions_resume_parser = subparsers.add_parser('sessions-resume', help='Resume previous sessions')
     sessions_resume_parser.add_argument('--ai-id', help='Filter by AI ID')
@@ -732,6 +751,10 @@ def main(args=None):
             'goals-list': handle_goals_list_command,
             'goals-discover': handle_goals_discover_command,
             'goals-resume': handle_goals_resume_command,
+            'identity-create': handle_identity_create_command,
+            'identity-list': handle_identity_list_command,
+            'identity-export': handle_identity_export_command,
+            'identity-verify': handle_identity_verify_command,
             'sessions-resume': handle_sessions_resume_command,
             
             # Checkpoint commands (Phase 2)

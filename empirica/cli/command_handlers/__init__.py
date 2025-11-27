@@ -42,6 +42,12 @@ from .goal_discovery_commands import (
     handle_goals_discover_command,
     handle_goals_resume_command
 )
+from .identity_commands import (
+    handle_identity_create_command,
+    handle_identity_list_command,
+    handle_identity_export_command,
+    handle_identity_verify_command
+)
 from .decision_commands import handle_decision_command, handle_decision_batch_command
 from .config_commands import (
     handle_config_command,
@@ -122,6 +128,12 @@ __all__ = [
     'handle_goals_discover_command',
     'handle_goals_resume_command',
     'handle_sessions_resume_command',
+    
+    # NEW: Identity Management Commands (Phase 2 - EEP-1)
+    'handle_identity_create_command',
+    'handle_identity_list_command',
+    'handle_identity_export_command',
+    'handle_identity_verify_command',
     
     # Decision commands
     'handle_decision_command',

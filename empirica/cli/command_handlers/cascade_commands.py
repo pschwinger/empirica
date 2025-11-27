@@ -8,6 +8,7 @@ For LLM adapter routing, see modality_commands.py (experimental).
 import json
 import logging
 import uuid
+import hashlib
 from datetime import datetime
 from ..cli_utils import print_component_status, handle_cli_error, format_uncertainty_output, parse_json_safely, print_header
 
@@ -277,6 +278,46 @@ def handle_preflight_command(args):
             # Safe degradation - don't fail CASCADE if checkpoint fails
             logger.debug(f"Checkpoint creation skipped: {e}")
         
+        # Sign assessment if --sign flag provided (Phase 2: EEP-1)
+        signature_data = None
+        if getattr(args, 'sign', False):
+            try:
+                from empirica.core.identity import AIIdentity, sign_assessment
+                import subprocess
+                
+                identity = AIIdentity(ai_id)
+                identity.load_keypair()
+                
+                # Get cascade trace hash from git
+                cascade_trace_hash = ""
+                try:
+                    result = subprocess.run(
+                        ['git', 'log', '--pretty=format:%H', '-n', '100'],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        cascade_trace_hash = hashlib.sha256(result.stdout.encode()).hexdigest()
+                except Exception:
+                    pass
+                
+                # Sign the assessment
+                signature_data = sign_assessment(
+                    content=str(assessment),
+                    epistemic_state=vectors,
+                    identity=identity,
+                    cascade_trace_hash=cascade_trace_hash,
+                    session_id=session_id
+                )
+                
+                logger.info(f"✓ Assessment signed with EEP-1 (public_key={identity.public_key_hex()[:16]}...)")
+                
+            except FileNotFoundError:
+                logger.error(f"❌ Identity not found for {ai_id}. Create with: empirica identity-create --ai-id {ai_id}")
+            except Exception as e:
+                logger.error(f"Signing failed: {e}")
+        
         # Format output based on requested format
         if args.json:
             output = {
@@ -286,6 +327,8 @@ def handle_preflight_command(args):
                 "vectors": vectors,
                 "recommendation": _get_recommendation(vectors)
             }
+            if signature_data:
+                output['signature'] = signature_data
             logger.info(json.dumps(output, indent=2))
         
         elif args.compact:
