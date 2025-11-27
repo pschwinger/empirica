@@ -307,12 +307,316 @@ python3 /tmp/test_sentinel.py
 
 ---
 
+## 🆕 Phase 2: Cryptographic Trust Layer Tests
+
+### Test 9: Identity Creation
+
+**Objective:** Verify AI identity creation with Ed25519 keypairs
+
+**Steps:**
+```bash
+# Create new identity
+empirica identity-create --ai-id mini-agent
+
+# Verify output shows:
+# - Public key (64 hex characters)
+# - File paths (.empirica/identity/mini-agent.key and .pub)
+# - Security notice (0600 permissions)
+
+# Check files exist
+ls -la .empirica/identity/mini-agent.key
+ls -la .empirica/identity/mini-agent.pub
+
+# Verify permissions (CRITICAL)
+stat -c "%a %n" .empirica/identity/mini-agent.key
+# Should show: 600 .empirica/identity/mini-agent.key
+
+# Verify it's not empty
+cat .empirica/identity/mini-agent.key | jq '.ai_id'
+# Should show: "mini-agent"
+```
+
+**Expected Result:**
+- ✅ Identity created successfully
+- ✅ Private key has 0600 permissions (read/write owner only)
+- ✅ Public key has 0644 permissions (world-readable)
+- ✅ Both files contain valid JSON
+- ✅ ai_id matches in both files
+
+**If Fails:**
+- Check .empirica/identity/ directory exists
+- Verify permissions: `chmod 600 .empirica/identity/mini-agent.key`
+- Check JSON is valid: `cat .empirica/identity/mini-agent.key | jq .`
+
+---
+
+### Test 10: Identity Listing
+
+**Objective:** Verify identity list command
+
+**Steps:**
+```bash
+# List all identities
+empirica identity-list
+
+# Should show:
+# 1. mini-agent
+#    Created: 2025-11-27
+#    Key file: .empirica/identity/mini-agent.key
+#    Public key: ✓
+
+# Try JSON output
+empirica identity-list --output json | jq '.'
+
+# Should be valid JSON with:
+# - ok: true
+# - count: 1 (or more)
+# - identities: [...]
+```
+
+**Expected Result:**
+- ✅ Lists mini-agent identity
+- ✅ Shows creation date
+- ✅ Shows file paths
+- ✅ Indicates public key exists
+- ✅ JSON output is valid
+
+---
+
+### Test 11: Public Key Export
+
+**Objective:** Verify public key can be exported for sharing
+
+**Steps:**
+```bash
+# Export public key
+empirica identity-export --ai-id mini-agent
+
+# Should display:
+# - Public Key: (64 hex characters)
+# - Created: timestamp
+# - Security note about sharing
+
+# Export as JSON
+empirica identity-export --ai-id mini-agent --output json
+
+# Verify JSON structure
+empirica identity-export --ai-id mini-agent --output json | jq '.public_key' | wc -c
+# Should be 65 (64 hex chars + newline)
+
+# Verify public key is hex
+empirica identity-export --ai-id mini-agent --output json | jq -r '.public_key' | grep -E '^[0-9a-f]{64}$'
+# Should match (no output = success)
+```
+
+**Expected Result:**
+- ✅ Public key displayed correctly
+- ✅ 64 hexadecimal characters
+- ✅ JSON output valid
+- ✅ Safe to share (no private key exposed)
+
+---
+
+### Test 12: Identity Security
+
+**Objective:** Verify private key is secure and not leaked
+
+**Steps:**
+```bash
+# Check private key permissions
+PERMS=$(stat -c "%a" .empirica/identity/mini-agent.key)
+if [ "$PERMS" != "600" ]; then
+    echo "❌ SECURITY ISSUE: Private key has wrong permissions: $PERMS"
+    exit 1
+fi
+echo "✓ Private key has correct permissions (600)"
+
+# Verify private key is never displayed by commands
+empirica identity-export --ai-id mini-agent | grep -i "private" && echo "❌ Private key leaked!" || echo "✓ Private key not exposed"
+
+empirica identity-list | grep -E "[0-9a-f]{64}" && echo "⚠️  Key displayed in list" || echo "✓ No keys in list output"
+
+# Verify public key file is readable
+cat .empirica/identity/mini-agent.pub | jq '.public_key' > /dev/null && echo "✓ Public key file is valid JSON"
+
+# Verify private key cannot be read by other users (if not root)
+if [ "$(id -u)" != "0" ]; then
+    su - nobody -c "cat .empirica/identity/mini-agent.key 2>&1" | grep -i "permission denied" && echo "✓ Private key protected from other users"
+fi
+```
+
+**Expected Result:**
+- ✅ Private key has 0600 permissions
+- ✅ Private key never displayed in commands
+- ✅ Public key is accessible
+- ✅ Other users cannot read private key
+
+---
+
+### Test 13: Signature Generation (Integration)
+
+**Objective:** Verify assessments can be signed with EEP-1
+
+**Steps:**
+```bash
+# Run preflight with signing
+empirica preflight "Test cryptographic signing" \
+  --ai-id mini-agent \
+  --session-id test-sign-$RANDOM \
+  --sign \
+  --prompt-only | tee /tmp/preflight_sign.json
+
+# Check output contains signature
+cat /tmp/preflight_sign.json | jq '.signature' > /dev/null && echo "✓ Signature present" || echo "❌ No signature in output"
+
+# Verify signature structure (when implemented)
+# Should contain:
+# - payload: with content_hash, epistemic_state_final, cascade_trace_hash, creator_id
+# - signature: hex-encoded Ed25519 signature
+# - eep_version: "1.0"
+
+# NOTE: This test may show "not yet implemented" - that's expected for Phase 2.0
+# Full implementation in Phase 2.1
+```
+
+**Expected Result:**
+- ✅ Command accepts --sign flag
+- ✅ Output includes signature field (or indicates not yet fully implemented)
+- ✅ No errors about missing identity
+
+**If Fails:**
+- Ensure identity exists: `empirica identity-list`
+- Check identity loaded: Look for "Identity not found" errors
+- Verify in git repo: `git status`
+
+---
+
+### Test 14: EEP-1 Payload Structure (Python API)
+
+**Objective:** Verify EEP-1 signature payload is correct
+
+**Steps:**
+```bash
+cat > /tmp/test_eep1.py << 'EOF'
+from empirica.core.identity import AIIdentity, sign_assessment, verify_signature
+
+# Create test identity
+identity = AIIdentity("test-eep1")
+identity.generate_keypair()
+
+# Test data
+content = "This is test content"
+epistemic_state = {
+    'know': 0.85,
+    'do': 0.75,
+    'uncertainty': 0.15,
+    'engagement': 0.90
+}
+
+# Sign assessment
+signed = sign_assessment(
+    content=content,
+    epistemic_state=epistemic_state,
+    identity=identity,
+    cascade_trace_hash="test_hash_123",
+    session_id="test_session"
+)
+
+print("✓ Signature generated")
+
+# Verify structure
+assert 'payload' in signed, "Missing payload"
+assert 'signature' in signed, "Missing signature"
+assert 'eep_version' in signed, "Missing eep_version"
+
+payload = signed['payload']
+assert 'content_hash' in payload, "Missing content_hash"
+assert 'creator_id' in payload, "Missing creator_id"
+assert 'epistemic_state_final' in payload, "Missing epistemic_state_final"
+assert 'cascade_trace_hash' in payload, "Missing cascade_trace_hash"
+
+print("✓ EEP-1 payload structure valid")
+
+# Verify signature
+is_valid = verify_signature(signed)
+assert is_valid, "Signature verification failed"
+print("✓ Signature verified")
+
+# Test tamper detection
+signed_tampered = signed.copy()
+signed_tampered['payload']['content_hash'] = "tampered"
+is_valid_tampered = verify_signature(signed_tampered)
+assert not is_valid_tampered, "Tampered signature should be invalid"
+print("✓ Tamper detection working")
+
+print("\n✅ All EEP-1 tests passed!")
+EOF
+
+python3 /tmp/test_eep1.py
+```
+
+**Expected Result:**
+- ✅ Signature generated
+- ✅ EEP-1 payload structure valid
+- ✅ Signature verified
+- ✅ Tamper detection working
+
+---
+
+### Test 15: Cross-Identity Verification
+
+**Objective:** Verify one AI can verify another AI's signature
+
+**Steps:**
+```bash
+cat > /tmp/test_cross_verify.py << 'EOF'
+from empirica.core.identity import AIIdentity, sign_assessment, verify_signature
+
+# AI-1 creates and signs
+identity1 = AIIdentity("ai-1")
+identity1.generate_keypair()
+
+signed_by_ai1 = sign_assessment(
+    content="Signed by AI-1",
+    epistemic_state={'know': 0.9},
+    identity=identity1,
+    session_id="cross-test"
+)
+
+print(f"✓ AI-1 signed assessment")
+print(f"  Public key: {identity1.public_key_hex()[:16]}...")
+
+# AI-2 verifies AI-1's signature (using public key from payload)
+is_valid = verify_signature(signed_by_ai1)
+assert is_valid, "Cross-verification failed"
+print(f"✓ AI-2 verified AI-1's signature")
+
+# Verify with explicit public key
+public_key_hex = signed_by_ai1['payload']['creator_id']
+is_valid_explicit = verify_signature(signed_by_ai1, public_key_hex)
+assert is_valid_explicit, "Explicit verification failed"
+print(f"✓ Explicit public key verification works")
+
+print("\n✅ Cross-identity verification working!")
+EOF
+
+python3 /tmp/test_cross_verify.py
+```
+
+**Expected Result:**
+- ✅ AI-1 can sign
+- ✅ AI-2 can verify without knowing AI-1's private key
+- ✅ Verification uses only public key from payload
+- ✅ Cross-identity verification confirmed
+
+---
+
 ## 📊 Test Results Summary
 
 **Create this section after running tests:**
 
 ```
-Test Results:
+Phase 1 Results:
 ├─ Test 1: Automatic Checkpoint      [ PASS / FAIL ]
 ├─ Test 2: --no-git Flag              [ PASS / FAIL ]
 ├─ Test 3: Goal Storage               [ PASS / FAIL ]
@@ -322,7 +626,18 @@ Test Results:
 ├─ Test 7: Safe Degradation           [ PASS / FAIL ]
 └─ Test 8: Sentinel Hooks             [ PASS / FAIL ]
 
-Overall: X/8 tests passed
+Phase 2 Results:
+├─ Test 9: Identity Creation          [ PASS / FAIL ]
+├─ Test 10: Identity Listing          [ PASS / FAIL ]
+├─ Test 11: Public Key Export         [ PASS / FAIL ]
+├─ Test 12: Identity Security         [ PASS / FAIL ]
+├─ Test 13: Signature Generation      [ PASS / FAIL ]
+├─ Test 14: EEP-1 Payload Structure   [ PASS / FAIL ]
+└─ Test 15: Cross-Identity Verify     [ PASS / FAIL ]
+
+Overall: X/15 tests passed
+Phase 1: X/8 passed
+Phase 2: X/7 passed
 ```
 
 ---
