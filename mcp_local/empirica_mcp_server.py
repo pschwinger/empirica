@@ -357,6 +357,81 @@ async def list_tools() -> List[types.Tool]:
                 }
             }
         ),
+
+        # ========== Phase 1: Cross-AI Coordination (Route to CLI) ==========
+
+        types.Tool(
+            name="discover_goals",
+            description="Discover goals from other AIs via git notes (Phase 1)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "from_ai_id": {"type": "string", "description": "Filter by AI creator"},
+                    "session_id": {"type": "string", "description": "Filter by session"}
+                }
+            }
+        ),
+
+        types.Tool(
+            name="resume_goal",
+            description="Resume another AI's goal with epistemic handoff (Phase 1)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "goal_id": {"type": "string", "description": "Goal UUID to resume"},
+                    "ai_id": {"type": "string", "description": "Your AI identifier"}
+                },
+                "required": ["goal_id", "ai_id"]
+            }
+        ),
+
+        # ========== Phase 2: Cryptographic Trust (Route to CLI) ==========
+
+        types.Tool(
+            name="create_identity",
+            description="Create new AI identity with Ed25519 keypair (Phase 2)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "ai_id": {"type": "string", "description": "AI identifier"},
+                    "overwrite": {"type": "boolean", "description": "Overwrite existing identity"}
+                },
+                "required": ["ai_id"]
+            }
+        ),
+
+        types.Tool(
+            name="list_identities",
+            description="List all AI identities (Phase 2)",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+
+        types.Tool(
+            name="export_public_key",
+            description="Export public key for sharing (Phase 2)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "ai_id": {"type": "string", "description": "AI identifier"}
+                },
+                "required": ["ai_id"]
+            }
+        ),
+
+        types.Tool(
+            name="verify_signature",
+            description="Verify signed session (Phase 2)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID to verify"}
+                },
+                "required": ["session_id"]
+            }
+        ),
     ]
 
     return tools
@@ -546,6 +621,16 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         # Handoff Reports
         "create_handoff_report": ["handoff-create"],
         "query_handoff_reports": ["handoff-query"],
+
+        # Phase 1: Cross-AI Coordination
+        "discover_goals": ["goals-discover"],
+        "resume_goal": ["goals-resume"],
+
+        # Phase 2: Cryptographic Trust
+        "create_identity": ["identity-create"],
+        "list_identities": ["identity-list"],
+        "export_public_key": ["identity-export"],
+        "verify_signature": ["identity-verify"],
     }
     
     # Commands that take positional arguments (not flags)

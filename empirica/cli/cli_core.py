@@ -522,6 +522,7 @@ def _add_checkpoint_parsers(subparsers):
     # Goals create command
     goals_create_parser = subparsers.add_parser('goals-create', help='Create new goal')
     goals_create_parser.add_argument('--session-id', required=True, help='Session ID')
+    goals_create_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier')
     goals_create_parser.add_argument('--objective', required=True, help='Goal objective text')
     goals_create_parser.add_argument('--scope', choices=['task_specific', 'session_scoped', 'project_wide'], default='task_specific', help='Goal scope')
     goals_create_parser.add_argument('--success-criteria', help='Success criteria as JSON array')
