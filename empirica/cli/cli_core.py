@@ -101,6 +101,14 @@ def _add_bootstrap_parsers(subparsers):
     bootstrap_parser.add_argument('--domain', help='Optional domain context')
     bootstrap_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier for session tracking (used with --onboard)')
 
+    # Cognitive Vault integration
+    bootstrap_parser.add_argument('--use-cognitive-vault', action='store_true',
+                                help='Use Cognitive Vault for key management and identity verification (requires COGNITIVE_VAULT_URL and COGNITIVE_VAULT_API_KEY env vars)')
+
+    # CASCADE phase enforcement
+    bootstrap_parser.add_argument('--enforce-cascade-phases', action='store_true',
+                                help='Enforce CASCADE phase ordering and validation (PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT)')
+
     # REMOVED: bootstrap-system and onboard commands - now consolidated into bootstrap
     # Use: bootstrap --level=extended (instead of bootstrap-system)
     # Use: bootstrap --onboard (instead of onboard)
@@ -492,12 +500,56 @@ def _add_checkpoint_parsers(subparsers):
     )
     efficiency_report_parser.add_argument('--output', '-o', help='Save to file (optional)')
 
+    # Checkpoint Signing Commands (Phase 2 - Crypto)
+    
+    # Checkpoint sign command
+    checkpoint_sign_parser = subparsers.add_parser(
+        'checkpoint-sign',
+        help='Sign checkpoint with AI identity (Phase 2 - Crypto)'
+    )
+    checkpoint_sign_parser.add_argument('--session-id', required=True, help='Session ID')
+    checkpoint_sign_parser.add_argument(
+        '--phase',
+        choices=['PREFLIGHT', 'CHECK', 'ACT', 'POSTFLIGHT'],
+        required=True,
+        help='Workflow phase'
+    )
+    checkpoint_sign_parser.add_argument('--round', type=int, required=True, help='Round number')
+    checkpoint_sign_parser.add_argument('--ai-id', required=True, help='AI identity to sign with')
+    checkpoint_sign_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Checkpoint verify command
+    checkpoint_verify_parser = subparsers.add_parser(
+        'checkpoint-verify',
+        help='Verify signed checkpoint (Phase 2 - Crypto)'
+    )
+    checkpoint_verify_parser.add_argument('--session-id', required=True, help='Session ID')
+    checkpoint_verify_parser.add_argument(
+        '--phase',
+        choices=['PREFLIGHT', 'CHECK', 'ACT', 'POSTFLIGHT'],
+        required=True,
+        help='Workflow phase'
+    )
+    checkpoint_verify_parser.add_argument('--round', type=int, required=True, help='Round number')
+    checkpoint_verify_parser.add_argument('--ai-id', help='AI identity (uses embedded public key if omitted)')
+    checkpoint_verify_parser.add_argument('--public-key', help='Public key hex (overrides AI ID)')
+    checkpoint_verify_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Checkpoint signatures command
+    checkpoint_signatures_parser = subparsers.add_parser(
+        'checkpoint-signatures',
+        help='List all signed checkpoints (Phase 2 - Crypto)'
+    )
+    checkpoint_signatures_parser.add_argument('--session-id', help='Filter by session ID (optional)')
+    checkpoint_signatures_parser.add_argument('--ai-id', help='AI identity (only needed if no local identities exist)')
+    checkpoint_signatures_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+
     # Handoff Reports Commands (Phase 1.6)
     
     # Handoff create command
     handoff_create_parser = subparsers.add_parser(
         'handoff-create',
-        help='Create epistemic handoff report (98%% token reduction)'
+        help='Create epistemic handoff report (~90%% token reduction)'
     )
     handoff_create_parser.add_argument('--session-id', required=True, help='Session UUID')
     handoff_create_parser.add_argument('--task-summary', required=True, help='What was accomplished (2-3 sentences)')
@@ -771,6 +823,11 @@ def main(args=None):
             'checkpoint-list': handle_checkpoint_list_command,
             'checkpoint-diff': handle_checkpoint_diff_command,
             'efficiency-report': handle_efficiency_report_command,
+            
+            # Checkpoint signing commands (Phase 2 - Crypto)
+            'checkpoint-sign': handle_checkpoint_sign_command,
+            'checkpoint-verify': handle_checkpoint_verify_command,
+            'checkpoint-signatures': handle_checkpoint_signatures_command,
             
             # Handoff Reports commands (Phase 1.6)
             'handoff-create': handle_handoff_create_command,
