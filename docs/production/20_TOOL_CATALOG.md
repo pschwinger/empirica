@@ -34,6 +34,87 @@ Empirica includes 11 production-ready enterprise components located in `/empiric
 
 ---
 
+## Goal Management (MCP Tools)
+
+Structured goal tracking with 3D ScopeVector system for precise scope definition.
+
+### `create_goal`
+
+**Purpose:** Create structured goal with ScopeVector scope definition
+
+**Inputs:**
+- `session_id` - Session UUID
+- `objective` - Clear, actionable goal statement
+- `scope` - ScopeVector object with 3D dimensions:
+  - `breadth` (0.0-1.0): How wide the goal spans (0.0=single function, 1.0=entire codebase)
+  - `duration` (0.0-1.0): Expected lifetime (0.0=minutes/hours, 1.0=weeks/months)
+  - `coordination` (0.0-1.0): Multi-agent coordination needed (0.0=solo, 1.0=heavy collaboration)
+- `success_criteria` - Array of success criteria strings
+- `estimated_complexity` - Complexity estimate 0.0-1.0 (optional)
+- `metadata` - Additional metadata as JSON object (optional)
+
+**Outputs:**
+- `goal_id` - UUID for the created goal
+- `scope` - Validated ScopeVector
+- `created_timestamp` - Creation time
+
+**Example:**
+```python
+create_goal(
+    session_id="uuid",
+    objective="Implement rate limiting middleware",
+    scope={"breadth": 0.5, "duration": 0.4, "coordination": 0.3},
+    success_criteria=["Rate limiter working", "Tests pass"],
+    estimated_complexity=0.6
+)
+```
+
+**ScopeVector Patterns:**
+- **Quick fix**: `{breadth: 0.2, duration: 0.2, coordination: 0.1}`
+- **Feature**: `{breadth: 0.5, duration: 0.5, coordination: 0.4}`
+- **Refactoring**: `{breadth: 0.7, duration: 0.6, coordination: 0.3}`
+
+### `add_subtask`, `complete_subtask`, `get_goal_progress`, `list_goals`
+
+See [26_CROSS_AI_COORDINATION.md](file:///home/yogapad/empirical-ai/empirica/docs/production/26_CROSS_AI_COORDINATION.md) for complete documentation.
+
+---
+
+## Cross-AI Coordination (MCP Tools)
+
+Multi-agent collaboration via git notes with epistemic handoff.
+
+### `discover_goals`
+
+**Purpose:** Find goals created by other AIs via git notes
+
+**Inputs:**
+- `from_ai_id` - Filter by AI creator (optional)
+- `session_id` - Filter by session (optional)
+
+**Outputs:**
+- `goals` - Array of discovered goals with epistemic states and lineage
+
+**Example:**
+```python
+discover_goals(from_ai_id="claude-code")
+```
+
+### `resume_goal`
+
+**Purpose:** Resume another AI's goal with epistemic handoff
+
+**Inputs:**
+- `goal_id` - Goal UUID to resume
+- `ai_id` - Your AI identifier
+
+**Outputs:**
+- Full goal object with previous AI's epistemic state
+
+See [26_CROSS_AI_COORDINATION.md](file:///home/yogapad/empirical-ai/empirica/docs/production/26_CROSS_AI_COORDINATION.md) for complete documentation.
+
+---
+
 ## Phase 1.6: Handoff Report Tools (NEW ✨)
 
 Efficient context transfer for multi-agent coordination (90%+ token reduction).
@@ -56,7 +137,7 @@ Efficient context transfer for multi-agent coordination (90%+ token reduction).
 - `token_count` - Estimated tokens (~238-400 typical)
 - `markdown` - Full markdown report
 
-**Token Efficiency:** ~238-400 tokens (98.8% reduction vs 20,000 baseline)
+**Token Efficiency:** ~238-400 tokens (~90% reduction vs 20,000 baseline)
 
 **Example:**
 ```python

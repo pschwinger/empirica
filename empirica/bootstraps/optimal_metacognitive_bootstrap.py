@@ -189,16 +189,27 @@ class OptimalMetacognitiveBootstrap:
         print("   ✅ 13-vector system loaded (11 foundation + ENGAGEMENT + UNCERTAINTY)")
         print(f"   📊 Total: 13 epistemic vectors")
         
-        # 2. Load adaptive uncertainty calibration (EMPIRICAL LEARNING)
+        # 2. Load adaptive uncertainty calibration (EMPIRICAL LEARNING) - DEPRECATED
         print("\n2️⃣ Loading adaptive uncertainty calibration...")
-        from empirica.calibration.adaptive_uncertainty_calibration import (
-            AdaptiveUncertaintyCalibration,
-            UQVector,
-            CalibrationResult
-        )
-        
-        self.components['calibration'] = AdaptiveUncertaintyCalibration(self.ai_id)
-        self.components['uq_vector'] = UQVector
+
+        # DEPRECATED: This feature used heuristic-based calibration
+        # Removed as part of migration to no-heuristics architecture
+        # See: MirrorDriftMonitor for new drift detection
+        try:
+            from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import (
+                UQVector,
+                CalibrationResult
+            )
+            self.components['uq_vector'] = UQVector
+        except ImportError:
+            # Calibration component is not available
+            print("   ⚠️ Adaptive uncertainty calibration not available (deprecated)")
+            pass
+
+        if False:  # Disabled deprecated feature
+            self.components['calibration'] = "DEPRECATED" #AdaptiveUncertaintyCalibration(self.ai_id)
+        else:
+            self.components['calibration'] = None
         
         print("   ✅ Calibration system loaded (KNOW-DO-CONTEXT)")
         print("   🔄 Empirical feedback loop: ACTIVE")
@@ -429,21 +440,22 @@ class OptimalMetacognitiveBootstrap:
             calibration_id: ID from calibration result
             outcome: Feedback dict with accuracy, task_success, etc.
         """
-        if 'calibration' not in self.components:
-            raise RuntimeError("Bootstrap minimal or higher first")
+        if 'calibration' not in self.components or self.components['calibration'] is None:
+            print("⚠️ Calibration component is disabled. Feedback not provided.")
+            return
         
-        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import FeedbackOutcome
+        # from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import FeedbackOutcome
         
-        feedback = FeedbackOutcome(
-            accuracy=outcome.get('accuracy', 0.5),
-            task_success=outcome.get('task_success', True),
-            human_correction=outcome.get('human_correction', False),
-            execution_quality=outcome.get('execution_quality', 0.5),
-            semantic_notes=outcome.get('notes')
-        )
+        # feedback = FeedbackOutcome(
+        #     accuracy=outcome.get('accuracy', 0.5),
+        #     task_success=outcome.get('task_success', True),
+        #     human_correction=outcome.get('human_correction', False),
+        #     execution_quality=outcome.get('execution_quality', 0.5),
+        #     semantic_notes=outcome.get('notes')
+        # )
         
-        self.components['calibration'].provide_feedback(calibration_id, feedback)
-        print(f"✅ Feedback provided for {calibration_id}")
+        # self.components['calibration'].provide_feedback(calibration_id, feedback)
+        # print(f"✅ Feedback provided for {calibration_id}")
 
 
 # Convenience function for quick bootstrap

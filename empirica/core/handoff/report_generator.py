@@ -97,7 +97,13 @@ class EpistemicHandoffReportGenerator:
         if not preflight or not postflight:
             raise ValueError(
                 f"Missing assessments for session {session_id}. "
-                f"PREFLIGHT: {bool(preflight)}, POSTFLIGHT: {bool(postflight)}"
+                f"PREFLIGHT: {bool(preflight)}, POSTFLIGHT: {bool(postflight)}\n\n"
+                f"💡 Handoff reports require completed CASCADE workflow:\n"
+                f"   1. execute_preflight() → submit_preflight_assessment()\n"
+                f"   2. [Do your work with investigate/act phases]\n"
+                f"   3. execute_postflight() → submit_postflight_assessment()\n"
+                f"   4. create_handoff_report() ← You are here\n\n"
+                f"Without PREFLIGHT/POSTFLIGHT, there's no epistemic delta to measure."
             )
         
         # Calculate vector deltas

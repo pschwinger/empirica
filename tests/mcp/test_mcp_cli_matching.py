@@ -50,14 +50,24 @@ def extract_mcp_tool_schema(tool_name):
 class TestCriticalTools:
     """Test the tools that had issues in previous sessions"""
     
-    def test_create_goal_scope_is_enum(self):
-        """Validate create_goal scope parameter is enum (was: free text causing errors)"""
+    def test_create_goal_scope_is_vector(self):
+        """Validate create_goal scope parameter is object with numeric vectors"""
         mcp_schema = extract_mcp_tool_schema('create_goal')
         assert mcp_schema is not None
         
         scope = mcp_schema['properties']['scope']
-        assert 'enum' in scope, "scope must be enum to prevent free-text errors"
-        assert set(scope['enum']) == {'task_specific', 'session_scoped', 'project_wide'}
+        assert scope['type'] == 'object', "scope must be object (ScopeVector)"
+        assert 'properties' in scope, "scope must have breadth/duration/coordination properties"
+        
+        # Validate all three required dimensions
+        required_fields = ['breadth', 'duration', 'coordination']
+        for field in required_fields:
+            assert field in scope['properties'], f"scope must have {field} property"
+            assert scope['properties'][field]['type'] == 'number', f"scope.{field} must be numeric"
+            assert scope['properties'][field]['minimum'] == 0.0, f"scope.{field} must have min 0.0"
+            assert scope['properties'][field]['maximum'] == 1.0, f"scope.{field} must have max 1.0"
+        
+        assert scope['required'] == required_fields, "All scope dimensions must be required"
     
     def test_create_goal_success_criteria_is_array(self):
         """Validate success_criteria is array type (was: accepting strings causing errors)"""

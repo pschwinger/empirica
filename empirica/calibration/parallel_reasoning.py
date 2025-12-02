@@ -21,8 +21,8 @@ class ParallelReasoningSystem:
 
     def __init__(
         self,
-        llm_model: str = "phi3",
-        ollama_url: str = "http://localhost:11434/v1/chat/completions",
+        llm_model: str = "phi4",
+        ollama_url: str = "http://empirica-server:11434/v1/chat/completions",
         enable_perspective_caching: bool = True,
         cache_ttl: int = 300,  # 5 minutes
         cache_similarity_threshold: float = 0.9  # 90% similarity required for cache hit

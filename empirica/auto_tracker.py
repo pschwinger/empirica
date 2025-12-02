@@ -52,7 +52,7 @@ if str(empirica_root) not in sys.path:
     sys.path.insert(0, str(empirica_root))
 
 from empirica.data.session_database import SessionDatabase
-from empirica.core.canonical.reflex_frame import EpistemicAssessment, Action
+from empirica.core.canonical.reflex_frame import EpistemicAssessmentSchema, Action
 
 # Optional JSON export
 try:
@@ -245,12 +245,12 @@ class EmpericaTracker:
             self.current_cascade_id = None
             self.cascade_start_time = None
     
-    def log_assessment(self, assessment: EpistemicAssessment, phase: str = "uncertainty"):
+    def log_assessment(self, assessment: EpistemicAssessmentSchema, phase: str = "uncertainty"):
         """
         Log an epistemic assessment
-        
+
         Args:
-            assessment: EpistemicAssessment object with all 13 vectors
+            assessment: EpistemicAssessmentSchema object with all 13 vectors
             phase: Cascade phase (think, uncertainty, investigate, check, act)
         """
         if self.current_cascade_id is None:
@@ -443,7 +443,7 @@ if __name__ == "__main__":
     from empirica.core.canonical.reflex_frame import VectorState
     import uuid
     
-    assessment = EpistemicAssessment(
+    assessment = EpistemicAssessmentSchema(
         assessment_id=f"demo_{uuid.uuid4().hex[:12]}",
         task="Demo task",
         engagement=VectorState(0.8, "High engagement"),

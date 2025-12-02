@@ -600,12 +600,12 @@ empirica bootstrap --level extended --test
 # AI agent runs this to learn Empirica
 empirica onboard --ai-id claude-assistant
 
-# Interactive 7-phase wizard:
+# Interactive onboarding wizard:
 # 1. Introduction
-# 2. Understanding vectors
-# 3. Practice self-assessment
-# 4. Investigation workflow
-# 5. Calibration concepts
+# 2. Understanding epistemic vectors
+# 3. Practice self-assessment (PRE/CHECK/POST)
+# 4. Implicit CASCADE workflow (think→investigate→act)
+# 5. Calibration concepts (PRE→POST deltas)
 # 6. Real task practice
 # 7. Graduation
 ```

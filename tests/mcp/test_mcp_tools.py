@@ -2,7 +2,7 @@
 import pytest
 import json
 from unittest.mock import MagicMock, patch
-from mcp_local.empirica_mcp_server import call_tool, _calculate_delta_and_calibration
+from mcp_local.empirica_mcp_server import call_tool
 from mcp import types
 
 @pytest.mark.asyncio

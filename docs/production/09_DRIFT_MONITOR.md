@@ -1,380 +1,509 @@
-# 📊 Drift Monitor - Behavioral Integrity Monitoring
+# 📊 Mirror Drift Monitor - Temporal Self-Validation
 
-Complete guide to detecting sycophancy and tension avoidance.
+**Status:** ✅ Production-ready (No heuristics, no external LLMs)
 
 ---
 
 ## Overview
 
-The Drift Monitor tracks behavioral patterns over time to detect:
-1. **Sycophancy Drift** - Becoming too agreeable
-2. **Tension Avoidance** - Avoiding conflicts and disagreements
+The **MirrorDriftMonitor** detects epistemic drift by comparing current self-assessments to historical baselines stored in Git checkpoints. It uses the **Mirror Principle**: your past epistemic state reflects back to validate your present state.
 
-### Purpose:
-Maintain intellectual honesty and behavioral integrity across long sessions or multiple interactions.
+### Purpose
+
+Detect significant changes in epistemic vectors that indicate:
+- **Drops in capability** (KNOW, DO decreasing unexpectedly)
+- **Context loss** (CONTEXT, CLARITY degrading)
+- **Overconfidence patterns** (Uncertainty too low for complex tasks)
+
+**Note:** Increases in epistemic vectors are EXPECTED from learning and are not flagged as drift.
+
+---
+
+## Architecture
+
+### No Heuristics Design
+
+The drift monitor is built on **pure temporal comparison**:
+
+```
+Current Assessment → Compare to → Historical Baseline → Flag Drops
+                                  (from Git checkpoints)
+```
+
+**What it does NOT do:**
+- ❌ Use keyword matching to classify domains
+- ❌ Apply heuristic rules about what "should" happen
+- ❌ Require external LLMs for validation
+- ❌ Make assumptions about task types
+
+**What it DOES do:**
+- ✅ Load recent checkpoints from `checkpoint_manager`
+- ✅ Calculate baseline by averaging historical vectors
+- ✅ Detect statistical drops (current << baseline)
+- ✅ Integrate with Git for persistence
 
 ---
 
 ## How It Works
 
-### 1. Parallel Reasoning (Optional)
+### 1. Data Source: checkpoint_manager (PRIMARY Tier)
+
+The drift monitor depends on the PRIMARY storage tier:
+
 ```python
-# When high-stakes decision
-delegate_response = generate_delegate_response(...)  # User satisfaction
-trustee_response = generate_trustee_response(...)    # Epistemic accuracy
+from empirica.core.canonical.empirica_git.checkpoint_manager import CheckpointManager
 
-# Synthesize
-synthesis = synthesize_response(delegate, trustee, stakes='high')
-```
-
-### 2. Track Synthesis Decisions
-```python
-synthesis_history.append({
-    'turn': turn_number,
-    'weights': {
-        'delegate': 0.40,  # User-pleasing weight
-        'trustee': 0.60    # Truth-seeking weight
-    },
-    'tensions_acknowledged': True
-})
-```
-
-### 3. Analyze Drift (CHECK Phase)
-```python
-if len(synthesis_history) >= 10:
-    drift_analysis = drift_monitor.analyze_drift(synthesis_history)
-    
-    if drift_analysis['sycophancy_drift']['detected']:
-        # Warning: Becoming too agreeable
-        ...
-    
-    if drift_analysis['tension_avoidance']['detected']:
-        # Warning: Not acknowledging conflicts
-        ...
-```
-
----
-
-## Sycophancy Drift
-
-### What It Is:
-Pattern where delegate (user-pleasing) weight increases over time.
-
-### Example:
-```python
-Turn 1: delegate=0.40, trustee=0.60  # Balanced
-Turn 5: delegate=0.50, trustee=0.50  # Shifting
-Turn 10: delegate=0.70, trustee=0.30 # Sycophancy drift!
-```
-
-### Detection:
-```python
-# Calculate trend
-recent_delegate_weight = mean(last_5_turns)
-earlier_delegate_weight = mean(first_5_turns)
-
-drift = recent_delegate_weight - earlier_delegate_weight
-
-if drift > 0.15:  # 15% increase
-    # Sycophancy drift detected
-    severity = min(1.0, drift / 0.30)
-```
-
-### Warning Display:
-```
-📊 Drift Monitor: Analyzing behavioral patterns...
-⚠️  Sycophancy drift detected (severity: 0.72)
-   Evidence: Delegate weight increased from 0.40 to 0.75 over 10 turns
-   Recommendation: Increase trustee weight or activate skeptic mode
-```
-
----
-
-## Tension Avoidance
-
-### What It Is:
-Pattern where conflicts and disagreements are not being acknowledged in synthesis.
-
-### Example:
-```python
-Turn 1: tensions_acknowledged=True   # Good
-Turn 3: tensions_acknowledged=False  # Avoiding
-Turn 5: tensions_acknowledged=False  # Pattern
-Turn 8: tensions_acknowledged=False  # Tension avoidance!
-```
-
-### Detection:
-```python
-recent_acknowledgments = sum(last_5_turns['tensions_acknowledged'])
-
-if recent_acknowledgments < 2:  # Less than 40%
-    # Tension avoidance detected
-    evidence = f"{recent_acknowledgments}/5 recent turns acknowledged tensions"
-```
-
-### Warning Display:
-```
-⚠️  Tension avoidance detected
-   Evidence: Only 1/5 recent turns acknowledged tensions or conflicts
-   Recommendation: Force tension analysis in synthesizer
-```
-
----
-
-## Integration with Cascade
-
-### When Drift Monitor Runs:
-```python
-# In CHECK phase
-if self.enable_drift_monitor and len(self.synthesis_history) >= 10:
-    drift_analysis = self.drift_monitor.analyze_drift(
-        self.parallel_reasoner.synthesis_history
-    )
-    
-    # Add to readiness check
-    readiness_check['drift_analysis'] = drift_analysis
-```
-
-### Configuration:
-```python
-cascade = CanonicalEpistemicCascade(
-    enable_drift_monitor=True  # Default
+checkpoint_manager = CheckpointManager()
+recent = checkpoint_manager.load_recent_checkpoints(
+    session_id=session_id,
+    count=5  # Look back 5 checkpoints
 )
 ```
 
----
+**Storage:** `refs/notes/empirica/checkpoints` (~200 bytes each)
 
-## Parallel Reasoning System
-
-### Delegate Mode (User-Aligned):
-```python
-# Maximize user satisfaction
-delegate_prompt = """
-Generate a response that:
-- Maximally aligns with user preferences
-- Provides what user wants to hear
-- Emphasizes agreement and harmony
-"""
-```
-
-### Trustee Mode (Truth-Aligned):
-```python
-# Maximize epistemic accuracy
-trustee_prompt = """
-Generate a response that:
-- Maximally pursues truth and accuracy
-- Provides intellectually honest assessment
-- Emphasizes evidence and logic
-"""
-```
-
-### Synthesizer:
-```python
-# Balance based on stakes
-if stakes == 'high':
-    weights = {'delegate': 0.30, 'trustee': 0.70}  # Favor truth
-elif stakes == 'low':
-    weights = {'delegate': 0.60, 'trustee': 0.40}  # Favor satisfaction
-else:
-    weights = {'delegate': 0.50, 'trustee': 0.50}  # Balanced
-```
+**Why PRIMARY tier?** The drift monitor requires lightweight, frequent checkpoints for temporal comparison. The compressed format is perfect for this.
 
 ---
 
-## Example Scenarios
+### 2. Baseline Calculation
 
-### Scenario 1: Healthy Balance
 ```python
-Turn 1: delegate=0.40, trustee=0.60, tensions=True
-Turn 2: delegate=0.45, trustee=0.55, tensions=True
-Turn 3: delegate=0.40, trustee=0.60, tensions=False
-Turn 4: delegate=0.42, trustee=0.58, tensions=True
-Turn 5: delegate=0.40, trustee=0.60, tensions=True
-
-Analysis:
-✅ No sycophancy drift (delegate weight stable)
-✅ No tension avoidance (4/5 turns acknowledged)
+def calculate_baseline(self, recent_checkpoints: List[dict]) -> dict:
+    """
+    Average recent epistemic vectors to create baseline.
+    
+    No heuristics - just statistical mean of past assessments.
+    """
+    vectors = [cp['assessment']['vectors'] for cp in recent_checkpoints]
+    
+    baseline = {}
+    for vector_name in EPISTEMIC_VECTORS:
+        values = [v[vector_name] for v in vectors]
+        baseline[vector_name] = sum(values) / len(values)
+    
+    return baseline
 ```
 
-### Scenario 2: Sycophancy Detected
+**Simple principle:** Your average recent performance is your baseline.
+
+---
+
+### 3. Drift Detection
+
 ```python
-Turn 1: delegate=0.40, trustee=0.60
-Turn 2: delegate=0.45, trustee=0.55
-Turn 3: delegate=0.50, trustee=0.50
-Turn 4: delegate=0.60, trustee=0.40
-Turn 5: delegate=0.70, trustee=0.30
-
-Analysis:
-⚠️  Sycophancy drift detected
-   Drift: 0.40 → 0.70 (30% increase)
-   Severity: 1.00 (maximum)
-   
-Recommendation: Reset to balanced weights
-```
-
-### Scenario 3: Tension Avoidance
-```python
-Turn 1: tensions=True  # Acknowledged disagreement
-Turn 2: tensions=False # Avoided mentioning conflict
-Turn 3: tensions=False # Avoided
-Turn 4: tensions=False # Avoided
-Turn 5: tensions=False # Pattern established
-
-Analysis:
-⚠️  Tension avoidance detected
-   Evidence: Only 1/5 turns acknowledged tensions
-   
-Recommendation: Force tension analysis
+def detect_drift(
+    self,
+    current_assessment: EpistemicAssessmentSchema,
+    session_id: str
+) -> DriftReport:
+    """
+    Compare current to baseline, flag significant drops.
+    
+    Increases are expected (learning), only drops indicate drift.
+    """
+    # Load recent history
+    recent = self.checkpoint_manager.load_recent_checkpoints(
+        session_id=session_id,
+        count=self.lookback_window
+    )
+    
+    if len(recent) < 3:
+        return DriftReport(sufficient_history=False)
+    
+    # Calculate baseline
+    baseline = self.calculate_baseline(recent)
+    
+    # Detect drops (not increases!)
+    drift_detected = {}
+    for vector, current_value in current_assessment.vectors.items():
+        baseline_value = baseline[vector]
+        delta = current_value - baseline_value
+        
+        # Only flag DROPS beyond threshold
+        if delta < -self.drift_threshold:
+            drift_detected[vector] = {
+                'current': current_value,
+                'baseline': baseline_value,
+                'drop': abs(delta)
+            }
+    
+    return DriftReport(
+        drift_detected=bool(drift_detected),
+        vectors_drifted=drift_detected,
+        baseline=baseline,
+        current=current_assessment.vectors
+    )
 ```
 
 ---
 
-## Corrective Actions
+## Integration with Dual-Tier Storage
 
-### When Sycophancy Detected:
-```python
-# Recommendation: Increase trustee weight
-new_weights = {
-    'delegate': 0.30,  # Reduce from current
-    'trustee': 0.70    # Increase
-}
+The drift monitor showcases why we have two storage tiers:
 
-# Or activate skeptic mode
-skeptic_mode = True
-```
+### Uses PRIMARY Tier (checkpoint_manager)
+- Loads 5-10 recent checkpoints efficiently
+- ~200 bytes each = ~2KB total for drift detection
+- Fast temporal comparison
+- Automatic integration with CASCADE
 
-### When Tension Avoidance Detected:
-```python
-# Force tension analysis
-synthesis_prompt += """
-IMPORTANT: Explicitly identify and discuss any tensions,
-disagreements, or conflicts between delegate and trustee
-perspectives. Do not avoid or smooth over differences.
-"""
-```
+### Does NOT Use SECONDARY Tier (git_enhanced_reflex_logger)
+- The 2-3KB detailed logs are for debugging
+- Drift detection needs lightweight, frequent data
+- Shows clear separation of concerns
 
 ---
 
-## Dashboard Display
+## Usage Examples
 
-When drift detected:
-```
-CHECK PHASE
-═══════════════════════════════════════
+### Basic Usage
 
-📊 Drift Monitor: Analyzing behavioral patterns...
-
-⚠️  Sycophancy drift detected (severity: 0.72)
-   Evidence: Delegate weight increased from 0.40 to 0.75
-   Recommendation: Increase trustee weight or activate skeptic mode
-
-✅ No tension avoidance detected
-   4/5 recent turns acknowledged tensions appropriately
-
-Guidance: Reset synthesis weights to maintain intellectual honesty
-```
-
----
-
-## Best Practices
-
-### 1. Use Parallel Reasoning for High-Stakes
 ```python
-# Only for important decisions
-if stakes == 'high':
-    use_parallel_reasoning = True
+from empirica.core.drift.mirror_drift_monitor import MirrorDriftMonitor
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+
+# Initialize
+monitor = MirrorDriftMonitor(
+    drift_threshold=0.2,  # Flag 20% drops
+    lookback_window=5     # Compare to last 5 checkpoints
+)
+
+# Current assessment from PREFLIGHT/CHECK/POSTFLIGHT
+current = EpistemicAssessmentSchema(
+    vectors={
+        'engagement': 0.8,
+        'know': 0.4,  # ⚠️ Potential drop
+        'do': 0.9,
+        'context': 0.7,
+        # ... etc
+    }
+)
+
+# Detect drift
+report = monitor.detect_drift(
+    current_assessment=current,
+    session_id='abc-123'
+)
+
+if report.drift_detected:
+    print(f"Drift detected in: {list(report.vectors_drifted.keys())}")
+    for vector, data in report.vectors_drifted.items():
+        print(f"{vector}: {data['current']:.2f} (was {data['baseline']:.2f})")
 ```
 
-### 2. Track Synthesis Decisions
+### Integration with CASCADE
+
+The CASCADE workflow automatically creates checkpoints, feeding the drift monitor:
+
 ```python
-# Always record synthesis when using parallel reasoning
-synthesis_history.append({
-    'turn': turn,
-    'weights': weights,
-    'tensions_acknowledged': bool
-})
+# CASCADE creates checkpoint after each round
+checkpoint_manager.save(
+    session_id=session_id,
+    assessment=current_assessment,
+    phase='INVESTIGATE',
+    round_num=2
+)
+
+# Drift monitor automatically has data for next CHECK
+report = monitor.detect_drift(current_assessment, session_id)
 ```
-
-### 3. Review Drift Warnings
-Don't ignore drift warnings - they indicate important patterns.
-
-### 4. Maintain Minimum History
-Need at least 10 synthesis decisions for reliable drift detection.
-
----
-
-## When to Use Parallel Reasoning
-
-### Good Use Cases:
-- High-stakes decisions (medical, legal, safety)
-- Controversial topics
-- Complex ethical dilemmas
-- Long-running sessions
-
-### Not Needed For:
-- Simple tasks
-- Creative work
-- Short interactions
-- Low-stakes decisions
 
 ---
 
 ## Configuration
 
-### Enable/Disable:
+### Thresholds
+
 ```python
-cascade = CanonicalEpistemicCascade(
-    enable_drift_monitor=True  # Default
+MirrorDriftMonitor(
+    drift_threshold=0.2,     # 20% drop triggers alert
+    lookback_window=5,       # Compare to last 5 checkpoints
+    min_history=3            # Need 3+ checkpoints to start
 )
 ```
 
-### Customize Thresholds:
+**Tuning guidance:**
+- **drift_threshold=0.1**: Sensitive (10% drop triggers)
+- **drift_threshold=0.2**: Balanced (20% drop triggers) ← Default
+- **drift_threshold=0.3**: Conservative (30% drop triggers)
+
+### Session-Specific Tuning
+
 ```python
-# In parallel_reasoning.py
-SYCOPHANCY_THRESHOLD = 0.15    # Drift % to trigger warning
-TENSION_THRESHOLD = 0.40       # Min acknowledgment rate
-MIN_HISTORY = 10               # Min decisions for analysis
+# Load from config
+from empirica.config.threshold_loader import ThresholdLoader
+
+thresholds = ThresholdLoader.load()
+monitor = MirrorDriftMonitor(
+    drift_threshold=thresholds['drift_threshold'],
+    lookback_window=thresholds['lookback_window']
+)
+```
+
+---
+
+## Drift Reports
+
+### Report Structure
+
+```python
+@dataclass
+class DriftReport:
+    drift_detected: bool
+    sufficient_history: bool
+    vectors_drifted: dict  # {vector: {current, baseline, drop}}
+    baseline: dict         # Baseline values
+    current: dict          # Current values
+    timestamp: float
+```
+
+### Example Report
+
+```json
+{
+  "drift_detected": true,
+  "sufficient_history": true,
+  "vectors_drifted": {
+    "know": {
+      "current": 0.4,
+      "baseline": 0.7,
+      "drop": 0.3
+    },
+    "context": {
+      "current": 0.5,
+      "baseline": 0.8,
+      "drop": 0.3
+    }
+  },
+  "baseline": {
+    "engagement": 0.85,
+    "know": 0.7,
+    "do": 0.9,
+    "context": 0.8,
+    ...
+  },
+  "current": {
+    "engagement": 0.8,
+    "know": 0.4,
+    "do": 0.9,
+    "context": 0.5,
+    ...
+  },
+  "timestamp": 1234567890.5
+}
+```
+
+---
+
+## Why This Design Works
+
+### 1. Pure Temporal Comparison
+No heuristics means no assumptions about what tasks "should" look like. The AI's own history is the truth.
+
+### 2. Git Integration
+Leverages existing checkpoint infrastructure - no separate storage needed.
+
+### 3. Learning-Aware
+Only flags DROPS, not increases. Learning should increase epistemic vectors over time.
+
+### 4. Lightweight
+Uses PRIMARY tier (checkpoint_manager) for efficiency - ~450 tokens per checkpoint.
+
+### 5. Self-Contained
+No external LLMs, no keyword matching, no complex rules. Just: current vs baseline.
+
+---
+
+## Common Scenarios
+
+### Scenario 1: Normal Learning Pattern
+
+```
+Round 1: know=0.5, do=0.6
+Round 2: know=0.6, do=0.7  ← Learning (increase)
+Round 3: know=0.7, do=0.8  ← More learning
+
+Drift? NO - increases are expected
+```
+
+### Scenario 2: Context Loss
+
+```
+Round 1: context=0.8, clarity=0.9
+Round 2: context=0.7, clarity=0.8  ← Slight drop
+Round 3: context=0.4, clarity=0.5  ← Significant drop!
+
+Drift? YES - context dropped 40%, clarity dropped 40%
+Likely cause: Scope creep, task switched without PREFLIGHT
+```
+
+### Scenario 3: Overconfidence Pattern
+
+```
+Round 1: uncertainty=0.3 (appropriate for exploration)
+Round 2: uncertainty=0.2 (gaining confidence)
+Round 3: uncertainty=0.05 (very confident)
+Round 4: uncertainty=0.02 (extremely confident)
+
+Drift? Possibly - if baseline uncertainty=0.25, current=0.02 is a 92% drop
+Warning: May indicate overconfidence, not true confidence
+```
+
+---
+
+## Testing
+
+### Unit Tests
+
+See `tests/unit/drift/test_mirror_drift_monitor.py`:
+
+```python
+def test_drift_detection_drops():
+    """Verify drops are detected"""
+    monitor = MirrorDriftMonitor(drift_threshold=0.2)
+    
+    # Create history with know=0.7
+    history = [create_checkpoint(know=0.7) for _ in range(5)]
+    
+    # Current has know=0.4 (drop of 0.3)
+    current = create_assessment(know=0.4)
+    
+    report = monitor.detect_drift(current, 'test-session')
+    
+    assert report.drift_detected
+    assert 'know' in report.vectors_drifted
+    assert report.vectors_drifted['know']['drop'] == 0.3
+```
+
+### Integration Tests
+
+See `tests/integration/test_check_drift_integration.py`:
+
+```python
+def test_cascade_drift_detection():
+    """Verify CASCADE → checkpoint → drift detection flow"""
+    # Run CASCADE, create checkpoints
+    # Simulate context loss
+    # Verify drift detected at CHECK phase
 ```
 
 ---
 
 ## Troubleshooting
 
-### Drift Monitor Not Running?
-- Check if `enable_drift_monitor=True`
-- Verify at least 10 synthesis decisions recorded
-- Parallel reasoning must be used to generate history
+### "Insufficient history" Error
 
-### False Positives?
-- May need to adjust thresholds for your use case
-- Review synthesis history manually
-- Consider if drift is actually appropriate
+**Cause:** Less than 3 checkpoints available
+**Solution:** Run a few CASCADE rounds first to build history
 
-### No History?
-- Parallel reasoning not being used
-- Synthesis history not being recorded
-- Check integration code
+```python
+if report.sufficient_history is False:
+    print("Need more checkpoints for drift detection")
+    # Continue working, drift detection will activate later
+```
+
+### False Positives
+
+**Cause:** Drift threshold too low
+**Solution:** Increase threshold or lookback window
+
+```python
+# More conservative
+monitor = MirrorDriftMonitor(
+    drift_threshold=0.3,  # 30% drop required
+    lookback_window=10    # More history context
+)
+```
+
+### Missing Checkpoints
+
+**Cause:** CASCADE not creating checkpoints
+**Solution:** Verify checkpoint_manager is enabled
+
+```python
+from empirica.core.canonical.empirica_git.checkpoint_manager import auto_checkpoint
+
+# Ensure auto_checkpoint decorator is used in CASCADE
+@auto_checkpoint
+def investigate_phase(self):
+    # ... CASCADE work
+```
 
 ---
 
-## Philosophy
+## Implementation Details
 
-### Why Monitor Drift?
+### File Structure
 
-**Sycophancy:** 
-Over time, systems can learn to be too agreeable to maintain user satisfaction. This compromises intellectual honesty.
+```
+empirica/core/drift/
+├── __init__.py
+└── mirror_drift_monitor.py  # Main implementation
+```
 
-**Tension Avoidance:**
-Smoothing over all conflicts may feel nice but loses important nuance and honest disagreement.
+### Dependencies
 
-**Goal:**
-Maintain balanced, intellectually honest interactions that serve both user satisfaction and epistemic accuracy.
+```python
+# Core dependencies
+from empirica.core.canonical.empirica_git.checkpoint_manager import CheckpointManager
+from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
+
+# No external LLM dependencies
+# No heuristic libraries
+# Pure Python + Git
+```
+
+### Git Notes Namespace
+
+```
+refs/notes/empirica/checkpoints/
+  └── <commit-sha>
+      └── {
+            "vectors": {...},      # 13 epistemic vectors
+            "phase": "CHECK",       # CASCADE phase
+            "round_num": 2,         # CASCADE round
+            "timestamp": 1234567890
+          }
+```
 
 ---
 
-## Next Steps
+## Related Documentation
 
-- Bayesian Guardian: `08_BAYESIAN_GUARDIAN.md`
-- Understanding vectors: `05_EPISTEMIC_VECTORS.md`
-- Configuration: `15_CONFIGURATION.md`
+- [GIT_NOTES_CONSOLIDATION_PLAN.md](../../GIT_NOTES_CONSOLIDATION_PLAN.md) - Dual-tier storage architecture
+- [GIT_CHECKPOINT_ARCHITECTURE.md](../architecture/GIT_CHECKPOINT_ARCHITECTURE.md) - Checkpoint system
+- [UNIFIED_DRIFT_MONITOR_DESIGN.md](../../UNIFIED_DRIFT_MONITOR_DESIGN.md) - Design rationale
+- [MIRROR_DRIFT_MONITOR_COMPLETE.md](../../MIRROR_DRIFT_MONITOR_COMPLETE.md) - Implementation summary
+- [06_CASCADE_FLOW.md](./06_CASCADE_FLOW.md) - CASCADE workflow
+- [05_EPISTEMIC_VECTORS.md](./05_EPISTEMIC_VECTORS.md) - Vector definitions
 
+---
+
+## Future Enhancements
+
+### Phase 2: Cross-Session Drift
+```python
+# Compare to baseline across multiple sessions
+monitor.detect_drift_cross_session(
+    current_session='session-2',
+    baseline_session='session-1'
+)
+```
+
+### Phase 3: Inter-Agent Coordination
+```python
+# Detect drift when resuming another AI's work
+monitor.detect_handoff_drift(
+    current_ai='ai-2',
+    previous_ai='ai-1',
+    goal_id='goal-123'
+)
+```
+
+---
+
+**Status:** ✅ Production-ready
+**Heuristics:** None
+**External Dependencies:** None
+**Storage:** PRIMARY tier (checkpoint_manager)

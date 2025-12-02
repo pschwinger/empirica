@@ -54,7 +54,13 @@ bootstrap_session(
 
 ## 📊 THE CASCADE WORKFLOW (Use for Any Task)
 
-Every task follows: **PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT**
+**Session Structure:**
+- **BOOTSTRAP** (once per session) - Load persona, model profile, thresholds
+- **PREFLIGHT** (before work) - Assess epistemic state
+- **CASCADE** (implicit work loop) - investigate → plan → act → CHECK (0-N times)
+- **POSTFLIGHT** (after work) - Calibrate learning
+
+**Pattern:** BOOTSTRAP → PREFLIGHT → [investigate → plan → act → CHECK]* → POSTFLIGHT
 
 ### Phase 1: PREFLIGHT (Before Starting Work)
 
@@ -491,24 +497,30 @@ Empirica enables all of this.
 ## 🔄 WORKFLOW SUMMARY
 
 ```
-1. BOOTSTRAP
-   ↓
-2. PREFLIGHT (assess starting state)
-   ↓
-3. GENERATE GOALS (use orchestrator)
-   ↓
-4. INVESTIGATE (multi-turn, track beliefs)
-   ↓
-5. CHECK (ready to act?)
-   ├─ No → Back to INVESTIGATE
-   └─ Yes → Continue
-       ↓
-6. ACT (do the work)
-   ↓
-7. POSTFLIGHT (reflect on learning)
-   ↓
-8. CALIBRATION REPORT (measure growth)
+SESSION START:
+  └─ BOOTSTRAP (once per session)
+      └─ Initialize: persona, model profile, thresholds
+      
+      └─ GOAL/WORK
+          ├─ PREFLIGHT (assess epistemic state before work)
+          │   └─ 13 vectors: know, do, uncertainty, etc.
+          │
+          ├─ CASCADE (implicit AI reasoning loop)
+          │   ├─ investigate (implicit research)
+          │   ├─ plan (implicit design)
+          │   ├─ act (explicit actions)
+          │   └─ CHECK (explicit gate, 0-N times)
+          │       └─ "Should I continue or stop?"
+          │       └─ If uncertainty high → investigate more
+          │   └─ [loop until complete or blocked]
+          │
+          └─ POSTFLIGHT (calibrate learning after work)
+              └─ Re-assess 13 vectors
+              └─ Measure deltas (POSTFLIGHT - PREFLIGHT)
+              └─ Generate training data
 ```
+
+**Key Insight:** CHECK provides intermediate calibration points. Retrospective analysis can calculate learning curves from PREFLIGHT → [CHECKs] → POSTFLIGHT.
 
 **Time investment:** ~5-10 minutes overhead  
 **Value:** Systematic tracking, measurable learning, efficient resumption

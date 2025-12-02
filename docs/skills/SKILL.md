@@ -1,6 +1,6 @@
 ---
 name: empirica-epistemic-framework
-description: Empirica epistemic self-assessment framework for AI agents. Use when you need to assess your knowledge state, track learning, measure calibration, or ensure genuine metacognitive reasoning. Provides 13-vector epistemic assessment (KNOW, DO, CONTEXT, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, ENGAGEMENT, UNCERTAINTY). Use for preflight assessment before tasks, postflight validation after completion, continuous epistemic tracking during complex work, or session handoff reports for multi-session/multi-agent coordination (98% token reduction).
+description: Empirica epistemic self-assessment framework for AI agents. Use when you need to assess your knowledge state, track learning, measure calibration, or ensure genuine metacognitive reasoning. Provides 13-vector epistemic assessment (KNOW, DO, CONTEXT, CLARITY, COHERENCE, SIGNAL, DENSITY, STATE, CHANGE, COMPLETION, IMPACT, ENGAGEMENT, UNCERTAINTY). Use for preflight assessment before tasks, postflight validation after completion, continuous epistemic tracking during complex work, or session handoff reports for multi-session/multi-agent coordination (~90% token reduction).
 ---
 
 # Empirica: Functional Self-Awareness Framework for AI Agents
@@ -416,7 +416,7 @@ empirica onboard --ai-id claude
 
 **Use when:** Working across multiple sessions or coordinating with other AI agents
 
-**Purpose:** Resume work efficiently with 98% token reduction vs full conversation history
+**Purpose:** Resume work efficiently with ~90% token reduction vs full conversation history
 
 #### End of Session: Generate Handoff
 ```python
@@ -514,7 +514,7 @@ for r in reports:
 **Why This Matters:**
 - ✅ Resume exactly where you left off (multi-session work)
 - ✅ Coordinate with other AI agents efficiently
-- ✅ 98% token reduction enables frequent context loading
+- ✅ ~90% token reduction enables frequent context loading
 - ✅ Uses your genuine POSTFLIGHT introspection (not heuristics)
 - ✅ Queryable by AI, date, task pattern
 

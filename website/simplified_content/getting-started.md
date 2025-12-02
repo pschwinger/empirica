@@ -87,6 +87,16 @@ cascade = CanonicalEpistemicCascade(
 
 ---
 
+## New in v2.0
+
+**MCO Architecture**: Dynamic configuration with persona selection and model-specific bias correction.
+
+**ScopeVector Goals**: 3D goal scoping (`breadth`, `duration`, `coordination`) instead of categorical enums.
+
+**Cross-AI Coordination**: Discover and resume goals from other AIs via git notes.
+
+---
+
 **Next Steps:**
 - [Features Overview](features.md)
 - [API Reference](developers/api-reference.md)

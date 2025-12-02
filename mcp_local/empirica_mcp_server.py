@@ -13,6 +13,13 @@ Benefits:
 - Easy testing (empirica <cmd> --output json)
 - Single source of truth (CLI implementation)
 
+CASCADE Philosophy:
+- validate_input=False: Schemas are GUIDANCE, not enforcement
+- No rigid validation: AI agents self-assess what parameters make sense
+- Flexible parsing: Accept string shortcuts for bootstrap_level ("optimal") 
+- Scope is vectorial (self-assessed): {"breadth": 0-1, "duration": 0-1, "coordination": 0-1}
+- Trust AI reasoning: Let agents assess epistemic state → scope vectors (see goal_scopes.yaml)
+
 Author: Claude Code
 Date: 2025-01-18
 Version: 2.0.0
@@ -22,8 +29,12 @@ import asyncio
 import subprocess
 import json
 import sys
+import logging
 from pathlib import Path
 from typing import List, Dict, Any
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Add paths for proper imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -354,7 +365,7 @@ async def list_tools() -> List[types.Tool]:
 
         types.Tool(
             name="create_handoff_report",
-            description="Create epistemic handoff report for session continuity (98% token reduction)",
+            description="Create epistemic handoff report for session continuity (~90% token reduction)",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -464,9 +475,14 @@ async def list_tools() -> List[types.Tool]:
 # Tool Call Handler
 # ============================================================================
 
-@app.call_tool()
+@app.call_tool(validate_input=False)  # CASCADE = guidance, not enforcement
 async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
-    """Route tool calls to appropriate handler"""
+    """Route tool calls to appropriate handler
+    
+    Note: validate_input=False allows flexible AI self-assessment.
+    Schemas provide guidance, but don't enforce rigid validation.
+    Handlers parse parameters flexibly (strings, objects, etc.)
+    """
 
     try:
         # Category 1: Stateless tools (handle directly)
@@ -477,7 +493,11 @@ async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
         elif name == "cli_help":
             return handle_cli_help()
 
-        # Category 2: All other tools (route to CLI)
+        # Category 2: Direct Python handlers (AI-centric, no CLI conversion)
+        elif name == "create_goal":
+            return await handle_create_goal_direct(arguments)
+
+        # Category 3: All other tools (route to CLI)
         else:
             return await route_to_cli(name, arguments)
 
@@ -490,6 +510,134 @@ async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
                 "error": str(e),
                 "tool": name,
                 "suggestion": "Check tool arguments and try again"
+            }, indent=2)
+        )]
+
+# ============================================================================
+# Direct Python Handlers (AI-Centric)
+# ============================================================================
+
+async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
+    """Handle create_goal directly in Python (no CLI conversion)
+    
+    AI-centric design: accepts scope as object, no schema conversion needed.
+    """
+    try:
+        from empirica.core.goals.repository import GoalRepository
+        from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
+        from empirica.core.canonical.empirica_git import GitGoalStore
+        import uuid
+        import time
+        
+        # Extract arguments
+        session_id = arguments["session_id"]
+        objective = arguments["objective"]
+        
+        # Parse scope: AI self-assesses vectors (no semantic presets - that's heuristics!)
+        scope_arg = arguments.get("scope", {"breadth": 0.3, "duration": 0.2, "coordination": 0.1})
+        
+        # If somehow a string comes in, convert to default and let AI know to use vectors
+        if isinstance(scope_arg, str):
+            # Don't try to interpret semantic names - that's adding heuristics back!
+            # AI should assess: breadth (0-1), duration (0-1), coordination (0-1)
+            logger.warning(f"Scope string '{scope_arg}' ignored - scope must be vectorial: {{'breadth': 0-1, 'duration': 0-1, 'coordination': 0-1}}")
+            scope_dict = {"breadth": 0.3, "duration": 0.2, "coordination": 0.1}
+        else:
+            scope_dict = scope_arg
+        
+        scope = ScopeVector(
+            breadth=scope_dict.get("breadth", 0.3),
+            duration=scope_dict.get("duration", 0.2),
+            coordination=scope_dict.get("coordination", 0.1)
+        )
+        
+        # Parse success criteria
+        success_criteria_list = arguments.get("success_criteria", [])
+        success_criteria_objects = []
+        for criteria in success_criteria_list:
+            success_criteria_objects.append(SuccessCriterion(
+                id=str(uuid.uuid4()),
+                description=str(criteria),
+                validation_method="completion",
+                is_required=True,
+                is_met=False
+            ))
+        
+        # Optional parameters
+        estimated_complexity = arguments.get("estimated_complexity")
+        constraints = arguments.get("constraints")
+        metadata = arguments.get("metadata", {})
+        
+        # Create Goal object
+        goal = Goal.create(
+            objective=objective,
+            success_criteria=success_criteria_objects,
+            scope=scope,
+            estimated_complexity=estimated_complexity,
+            constraints=constraints,
+            metadata=metadata
+        )
+        
+        # Save to database
+        goal_repo = GoalRepository()
+        success = goal_repo.save_goal(goal, session_id)
+        goal_repo.close()
+        
+        if not success:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "ok": False,
+                    "error": "Failed to save goal to database",
+                    "goal_id": None,
+                    "session_id": session_id
+                }, indent=2)
+            )]
+        
+        # Store in git notes for cross-AI discovery (safe degradation)
+        try:
+            ai_id = arguments.get("ai_id", "empirica_mcp")
+            goal_store = GitGoalStore()
+            goal_data = {
+                "objective": objective,
+                "scope": scope.to_dict(),
+                "success_criteria": [sc.description for sc in success_criteria_objects],
+                "estimated_complexity": estimated_complexity,
+                "constraints": constraints,
+                "metadata": metadata
+            }
+            
+            goal_store.store_goal(
+                goal_id=goal.id,
+                session_id=session_id,
+                ai_id=ai_id,
+                goal_data=goal_data
+            )
+        except Exception as e:
+            # Safe degradation - don't fail goal creation if git storage fails
+            pass
+        
+        # Return success response
+        result = {
+            "ok": True,
+            "goal_id": goal.id,
+            "session_id": session_id,
+            "message": "Goal created successfully",
+            "objective": objective,
+            "scope": scope.to_dict(),
+            "timestamp": goal.created_timestamp
+        }
+        
+        return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+        
+    except Exception as e:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "ok": False,
+                "error": str(e),
+                "tool": "create_goal",
+                "suggestion": "Check scope format: {\"breadth\": 0.7, \"duration\": 0.3, \"coordination\": 0.8}"
             }, indent=2)
         )]
 
@@ -564,7 +712,18 @@ def parse_cli_output(tool_name: str, stdout: str, stderr: str, arguments: dict) 
         # The MCP layer creates the session and returns its ID
         # Extract ai_id and bootstrap_level from arguments
         ai_id = arguments.get('ai_id', 'unknown')
-        bootstrap_level = arguments.get('bootstrap_level', level)
+        bootstrap_level_arg = arguments.get('bootstrap_level', level)
+        
+        # Flexible parsing: accept strings or integers
+        if isinstance(bootstrap_level_arg, str):
+            bootstrap_level_map = {
+                'minimal': 0, 'min': 0, '0': 0,
+                'standard': 1, 'std': 1, '1': 1,
+                'optimal': 2, 'full': 2, 'max': 2, '2': 2
+            }
+            bootstrap_level = bootstrap_level_map.get(bootstrap_level_arg.lower(), level)
+        else:
+            bootstrap_level = int(bootstrap_level_arg) if bootstrap_level_arg is not None else level
         
         try:
             from empirica.data.session_database import SessionDatabase
@@ -751,37 +910,55 @@ def handle_introduction() -> List[types.TextContent]:
 
 **Purpose:** Track what you know, what you can do, and how uncertain you are throughout any task.
 
-## Quick Start
+## CASCADE Workflow (Core Pattern)
 
-1. **Bootstrap:** `bootstrap_session(ai_id="your-id", session_type="development")`
-2. **PREFLIGHT:** Assess before starting
-3. **INVESTIGATE:** Fill knowledge gaps
-4. **CHECK:** Validate readiness
-5. **ACT:** Execute task
-6. **POSTFLIGHT:** Measure learning
+**BOOTSTRAP** → **PREFLIGHT** → [**INVESTIGATE** → **CHECK**]* → **ACT** → **POSTFLIGHT**
+
+1. **BOOTSTRAP:** Initialize session with `bootstrap_session(ai_id="your-id")`
+2. **PREFLIGHT:** Assess epistemic state BEFORE starting (13 vectors)
+3. **INVESTIGATE:** Research unknowns systematically (loop 0-N times)
+4. **CHECK:** Gate decision - ready to proceed? (confidence ≥ 0.7)
+5. **ACT:** Execute task with learned knowledge
+6. **POSTFLIGHT:** Measure actual learning (compare to PREFLIGHT)
 
 ## 13 Epistemic Vectors (0-1 scale)
 
-**Foundation:** engagement, know, do, context
-**Comprehension:** clarity, coherence, signal, density
-**Execution:** state, change, completion, impact
-**Meta:** uncertainty (high >0.6 → investigate)
+**Foundation (4):** engagement, know, do, context
+**Comprehension (4):** clarity, coherence, signal, density  
+**Execution (4):** state, change, completion, impact
+**Meta (1):** uncertainty (high >0.6 → must investigate)
 
-## When to Use Empirica
+## When to Use CASCADE
 
-✅ Use if: UNCERTAINTY > 0.6, task >1 hour, high stakes
-❌ Skip if: Simple query, high confidence (KNOW >0.8)
+✅ **MUST use if:** uncertainty >0.6, complex task, multi-step work
+✅ **Should use if:** task >1 hour, learning needed, high stakes
+❌ **Skip if:** trivial task, high confidence (know >0.8), simple query
 
 ## Key Components
 
-- **Goal Orchestrator:** Auto-generates investigation goals
-- **Bayesian Tracker:** Updates beliefs as you learn
-- **Drift Monitor:** Detects overconfidence (auto-runs in CHECK)
-- **Git Checkpoints:** 97.5% token reduction for resumption
+- **Goal Orchestrator:** Auto-generates investigation goals from uncertainty
+- **Bayesian Tracker:** Updates beliefs as evidence accumulates
+- **Drift Monitor:** Detects overconfidence/underconfidence patterns
+- **Git Checkpoints:** ~85% token reduction for session resumption
+- **Handoff Reports:** ~90% token reduction for multi-agent work
 
-**Philosophy:** Epistemic transparency > speed. Know what you don't know.
+## Philosophy
 
-**Documentation:** /docs/ directory in Empirica repo
+**Epistemic transparency > task completion speed**
+
+It's better to:
+- Know what you don't know ✅
+- Investigate systematically ✅  
+- Admit uncertainty ✅
+- Measure learning ✅
+
+Than to:
+- Rush through tasks ❌
+- Guess confidently ❌
+- Hide uncertainty ❌
+- Never measure growth ❌
+
+**Documentation:** `/docs/` directory in Empirica repository
 """
 
     return [types.TextContent(type="text", text=intro)]
@@ -792,19 +969,109 @@ def handle_guidance(arguments: dict) -> List[types.TextContent]:
     phase = arguments.get("phase", "overview")
 
     guidance = {
-        "preflight": "Execute PREFLIGHT self-assessment across 13 vectors BEFORE engaging. Be honest about uncertainties.",
-        "investigate": "Systematically gather information to address unknowns. Use tools and documentation.",
-        "check": "Self-assess: remaining unknowns acceptable? Confidence >0.7 to proceed? Honesty critical for calibration.",
-        "act": "Execute task with learned knowledge. Document decisions and reasoning.",
-        "postflight": "Reassess 13 vectors AFTER completion. Compare to PREFLIGHT for calibration validation.",
-        "overview": "PREFLIGHT → INVESTIGATE → CHECK → (loop if needed) → ACT → POSTFLIGHT"
+        "preflight": """**PREFLIGHT: Assess BEFORE starting**
+
+MUST execute epistemic self-assessment across 13 vectors before engaging with task.
+
+**Action items:**
+1. Call `execute_preflight(session_id, prompt)` to get assessment template
+2. HONESTLY rate your current state (0-1 scale):
+   - ENGAGEMENT: Am I engaged with this? (must be ≥0.6)
+   - KNOW: What do I actually know? (not aspirational)
+   - DO: What can I proven-ly do? (capability evidence)
+   - CONTEXT: What environmental factors exist?
+   - UNCERTAINTY: What don't I know? (HIGH = need investigation)
+3. Call `submit_preflight_assessment(session_id, vectors, reasoning)`
+4. If UNCERTAINTY >0.6 → proceed to INVESTIGATE phase
+
+**Critical:** Be honest, not aspirational. Overconfidence breaks calibration.""",
+
+        "investigate": """**INVESTIGATE: Fill knowledge gaps systematically**
+
+MUST execute when UNCERTAINTY >0.6 or KNOW/DO/CONTEXT are low.
+
+**Action items:**
+1. Create investigation goals: `create_goal(session_id, objective, scope)`
+2. Research unknowns using available tools (filesystem, docs, web search)
+3. Update Bayesian beliefs as you gather evidence
+4. Track progress with subtasks
+5. Loop until uncertainty drops below threshold
+6. Proceed to CHECK phase when ready
+
+**Critical:** Systematic > fast. Evidence-based > guessing.""",
+
+        "check": """**CHECK: Gate decision - ready to proceed?**
+
+MUST execute after INVESTIGATE to validate readiness before ACT.
+
+**Action items:**
+1. Call `execute_check(session_id, findings, remaining_unknowns, confidence)`
+2. Self-assess updated epistemic state:
+   - Did KNOW/DO increase from PREFLIGHT?
+   - Did UNCERTAINTY decrease from PREFLIGHT?
+   - Are remaining unknowns acceptable?
+   - Is confidence ≥0.7 to proceed?
+3. Call `submit_check_assessment(session_id, vectors, decision)`
+4. Decision = "investigate" → loop back to INVESTIGATE
+5. Decision = "proceed" → continue to ACT
+
+**Critical:** Honesty prevents rushing into action unprepared.""",
+
+        "act": """**ACT: Execute task with learned knowledge**
+
+Execute the actual work after passing CHECK gate.
+
+**Action items:**
+1. Use knowledge gained from INVESTIGATE
+2. Document decisions and reasoning
+3. Create artifacts (code, docs, fixes)
+4. Save checkpoints at milestones: `create_git_checkpoint(session_id, phase="ACT")`
+5. Track progress toward goal completion
+6. When done, proceed to POSTFLIGHT
+
+**Critical:** This is where you do the actual task.""",
+
+        "postflight": """**POSTFLIGHT: Measure actual learning**
+
+MUST execute after completing task to calibrate epistemic growth.
+
+**Action items:**
+1. Call `execute_postflight(session_id, task_summary)`
+2. Reassess 13 vectors HONESTLY:
+   - Compare to PREFLIGHT baseline
+   - Did KNOW increase? (expected: yes)
+   - Did DO increase? (expected: yes if built capability)
+   - Did UNCERTAINTY decrease? (expected: yes)
+   - Is COMPLETION ~1.0? (task done?)
+3. Call `submit_postflight_assessment(session_id, vectors, reasoning)`
+4. Review calibration report to see if predictions matched reality
+
+**Critical:** Genuine reflection enables learning measurement and calibration.""",
+
+        "cascade": "**CASCADE Workflow:** BOOTSTRAP → PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT",
+        
+        "overview": """**CASCADE Workflow Overview**
+
+BOOTSTRAP → PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT
+
+**Phase sequence:**
+1. BOOTSTRAP: Initialize session (once)
+2. PREFLIGHT: Assess before starting (MUST do)
+3. INVESTIGATE: Fill knowledge gaps (0-N loops)
+4. CHECK: Validate readiness (gate decision)
+5. ACT: Execute task
+6. POSTFLIGHT: Measure learning (MUST do)
+
+**Key principle:** INVESTIGATE and CHECK form a loop. You may need multiple rounds before being ready to ACT.
+
+**Use:** For guidance on a specific phase, call with phase="preflight", "investigate", "check", "act", or "postflight"."""
     }
 
     result = {
         "ok": True,
         "phase": phase,
-        "guidance": guidance.get(phase, guidance["overview"]),
-        "workflow_order": "PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT"
+        "guidance": guidance.get(phase.lower(), guidance["overview"]),
+        "workflow_order": "BOOTSTRAP → PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT"
     }
 
     return [types.TextContent(type="text", text=json.dumps(result, indent=2))]

@@ -215,19 +215,49 @@ def handle_mcp_list_tools_command(args):
         for name, desc in session_tools:
             print(f"   • {name:35s} - {desc}")
         
-        # Monitoring tools
-        print("\n📊 Monitoring Tools:")
-        monitor_tools = [
-            ("query_bayesian_beliefs", "Belief tracking"),
-            ("check_drift_monitor", "Behavioral integrity check"),
-            ("query_goal_orchestrator", "Task hierarchy"),
+        # Goal Management (NEW)
+        print("\n🎯 Goal Management:")
+        goal_tools = [
+            ("create_goal", "Create structured goal with ScopeVector"),
+            ("add_subtask", "Add subtask to existing goal"),
+            ("complete_subtask", "Mark subtask as complete"),
+            ("get_goal_progress", "Check goal completion progress"),
+            ("list_goals", "List all goals for session"),
         ]
-        for name, desc in monitor_tools:
+        for name, desc in goal_tools:
+            print(f"   • {name:35s} - {desc}")
+        
+        # Cross-AI Coordination (NEW)
+        print("\n🤝 Cross-AI Coordination:")
+        coordination_tools = [
+            ("discover_goals", "Find goals from other AIs"),
+            ("resume_goal", "Resume another AI's goal"),
+        ]
+        for name, desc in coordination_tools:
+            print(f"   • {name:35s} - {desc}")
+        
+        # Checkpoints (NEW)
+        print("\n💾 Checkpoints:")
+        checkpoint_tools = [
+            ("create_git_checkpoint", "Save state to git notes"),
+            ("load_git_checkpoint", "Restore state from git notes"),
+        ]
+        for name, desc in checkpoint_tools:
+            print(f"   • {name:35s} - {desc}")
+        
+        # Handoff Reports (NEW)
+        print("\n📝 Handoff Reports:")
+        handoff_tools = [
+            ("create_handoff_report", "Create session handoff report"),
+            ("query_handoff_reports", "Query past handoff reports"),
+        ]
+        for name, desc in handoff_tools:
             print(f"   • {name:35s} - {desc}")
         
         # Guidance
         print("\n📖 Guidance:")
         guidance_tools = [
+            ("get_empirica_introduction", "Framework introduction"),
             ("get_workflow_guidance", "Workflow step guidance"),
             ("cli_help", "CLI command help"),
         ]
@@ -250,7 +280,9 @@ def handle_mcp_list_tools_command(args):
                 status = "✅" if modality_enabled else "⭕"
                 print(f"   {status} {name:33s} - {desc}")
         
-        total = len(core_tools) + len(session_tools) + len(monitor_tools) + len(guidance_tools)
+        total = (len(core_tools) + len(session_tools) + len(goal_tools) + 
+                 len(coordination_tools) + len(checkpoint_tools) + 
+                 len(handoff_tools) + len(guidance_tools))
         if modality_enabled:
             total += 4
         
@@ -258,7 +290,7 @@ def handle_mcp_list_tools_command(args):
         
         if args.verbose:
             print(f"\n💡 Use 'empirica mcp call <tool_name>' to test a tool")
-            print(f"💡 See docs/guides/setup/MCP_SERVERS_SETUP.md for configuration")
+            print(f"💡 See docs/production/20_TOOL_CATALOG.md for detailed documentation")
         
     except Exception as e:
         handle_cli_error(e, "Listing MCP tools", getattr(args, 'verbose', False))

@@ -67,6 +67,11 @@ from .checkpoint_commands import (
     handle_checkpoint_list_command, handle_checkpoint_diff_command,
     handle_efficiency_report_command
 )
+from .checkpoint_signing_commands import (
+    handle_checkpoint_sign_command,
+    handle_checkpoint_verify_command,
+    handle_checkpoint_signatures_command
+)
 from .handoff_commands import (
     handle_handoff_create_command,
     handle_handoff_query_command
@@ -166,6 +171,11 @@ __all__ = [
     'handle_checkpoint_list_command',
     'handle_checkpoint_diff_command',
     'handle_efficiency_report_command',
+    
+    # Checkpoint signing commands (Phase 2 - Crypto)
+    'handle_checkpoint_sign_command',
+    'handle_checkpoint_verify_command',
+    'handle_checkpoint_signatures_command',
     
     # Handoff Reports commands (Phase 1.6)
     'handle_handoff_create_command',

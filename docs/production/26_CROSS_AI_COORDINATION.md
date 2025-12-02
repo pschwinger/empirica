@@ -304,14 +304,14 @@ One AI starts, another continues:
 
 ```
 Claude Code:
-  1. Create goal with PREFLIGHT epistemic state
+  1. Create goal with PRE assessment epistemic state
   2. Begin investigation
   3. Store progress in git notes
 
 Minimax:
   1. Discover Claude's goal
   2. Resume with epistemic handoff
-  3. Compare own PREFLIGHT with Claude's
+  3. Compare own PRE assessment with Claude's
   4. Continue work
   5. Update lineage
 ```
@@ -389,13 +389,13 @@ Resume work across sessions:
 
 ```
 Session 1 (Claude Code):
-  - PREFLIGHT: KNOW=0.60, UNCERTAINTY=0.60
+  - PRE assessment: KNOW=0.60, UNCERTAINTY=0.60
   - INVESTIGATE: Research authentication patterns
   - Store goal in git notes
 
 Session 2 (Claude Code, next day):
   - Resume own goal
-  - PREFLIGHT: KNOW=0.75, UNCERTAINTY=0.35
+  - PRE assessment: KNOW=0.75, UNCERTAINTY=0.35
   - Continue from where left off
 ```
 

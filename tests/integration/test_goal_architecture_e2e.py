@@ -280,7 +280,7 @@ class TestGoalArchitectureE2E:
         completed_tasks = goal_repo.query_goals(
             session_id=session_id,
             is_completed=True,
-            scope=ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)
+            scope=ScopeVector(breadth=0.2, duration=0.1, coordination=0.05)
         )
         assert len(completed_tasks) == 1, "Should find 1 completed task-specific goal"
         

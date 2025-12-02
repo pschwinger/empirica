@@ -20,7 +20,7 @@ A production-grade **epistemic reasoning system** that helps AIs measure and val
 ### 1. **Canonical Epistemic Cascade**
 - LLM-powered assessment (no heuristics)
 - **13 epistemic dimensions** including ENGAGEMENT and **UNCERTAINTY**
-- Complete flow: PREFLIGHT → THINK → PLAN → INVESTIGATE → CHECK → ACT → POSTFLIGHT
+- Complete flow: PRE assessment → [implicit: think → investigate → act] → CHECK(s) → POST assessment
 
 ### NEW IN 2.0: **13th Vector - Explicit UNCERTAINTY** ⭐
 - Meta-epistemic self-awareness

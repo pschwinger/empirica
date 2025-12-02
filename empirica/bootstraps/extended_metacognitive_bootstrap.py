@@ -83,7 +83,7 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
     def __init__(self, ai_id: str = "empirica_ai", level: str = "2"):
         # Store the init level before parent initialization
         self.init_level = self._normalize_init_level(level)
-        
+
         # For parent class, map init level to named level for compatibility
         parent_level_map = {
             "0": "minimal",
@@ -93,15 +93,18 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
             "4": "full"   # Extended uses custom methods
         }
         parent_level = parent_level_map.get(self.init_level, "standard")
-        
-        # Initialize parent (but we'll override bootstrap() method)
-        # Temporarily bypass parent's __init__ to avoid double initialization
-        self.ai_id = ai_id
+
+        # Call parent __init__ properly to initialize everything
+        # Map init levels to compatible parent levels
+        normalized_parent_level = self._normalize_level(parent_level)
+
+        # Call parent constructor with all required parameters
+        super().__init__(ai_id=ai_id, level=normalized_parent_level, llm_callback=None, cascade_style=None)
+
+        # Override level to use init level
         self.level = self.init_level  # Use init_level as primary level
-        self.components = {}
-        self.bootstrap_start_time = time.time()
-        
-        # Initialize auto-tracker
+
+        # Initialize auto-tracker from parent (if it doesn't exist already)
         from empirica.auto_tracker import EmpericaTracker
         self.tracker = EmpericaTracker.get_instance(
             ai_id=ai_id,
@@ -369,79 +372,27 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
     def _load_tier2_foundation(self) -> int:
         """Load Tier 2 (Foundation) components"""
         loaded = 0
-        
-        # 1. Context Validation (ICT/PCT)
-        try:
-            print("1️⃣ Loading context_validation (ICT/PCT)...")
-            from empirica.components.context_validation import (
-                ContextIntegrityValidator,
-                InternalConsistencyToken,
-                PersistentConsistencyToken,
-                create_context_validator
-            )
-            
-            self.components['context_validator'] = create_context_validator()
-            self.components['ict_class'] = InternalConsistencyToken
-            self.components['pct_class'] = PersistentConsistencyToken
-            
-            print("   ✅ Context validation loaded (truth grounding active)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Context validation failed: {e}")
-        
-        # 2. Runtime Validation
-        try:
-            print("\n2️⃣ Loading runtime_validation...")
-            from empirica.components.runtime_validation import (
-                RuntimeCodeValidator,
-                ExecutionLogEntry
-            )
-            
-            self.components['runtime_validator'] = RuntimeCodeValidator()
-            self.components['execution_log'] = ExecutionLogEntry
-            
-            print("   ✅ Runtime validation loaded (execution safety active)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Runtime validation failed: {e}")
-        
-        # 3. Environment Stabilization
-        try:
-            print("\n3️⃣ Loading environment_stabilization...")
-            from empirica.components.environment_stabilization import (
-                EnvironmentStabilizer,
-                EnvironmentState
-            )
-            
-            self.components['environment_stabilizer'] = EnvironmentStabilizer()
-            self.components['environment_state'] = EnvironmentState
-            
-            print("   ✅ Environment stabilization loaded (cross-platform stability)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Environment stabilization failed: {e}")
-        
-        # 4. Workspace Awareness
-        try:
-            print("\n4️⃣ Loading workspace_awareness...")
-            from empirica.components.workspace_awareness import (
-                WorkspaceNavigator,
-                DigitalMap,
-                create_workspace_navigator
-            )
-            
-            self.components['workspace_navigator'] = create_workspace_navigator()
-            self.components['digital_map'] = DigitalMap
-            
-            print("   ✅ Workspace awareness loaded (spatial intelligence active)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Workspace awareness failed: {e}")
+
+        # 1. Context Validation (ICT/PCT) - REMOVED: Component deleted
+        print("1️⃣ Context validation skipped (component deleted)")
+        print("   ⚠️  'empirica.components.context_validation' component removed")
+
+        # 2. Runtime Validation - REMOVED: Component deleted
+        print("\n2️⃣ Runtime validation skipped (component deleted)")
+        print("   ⚠️  'empirica.components.runtime_validation' component removed")
+
+        # 3. Environment Stabilization - REMOVED: Component deleted
+        print("\n3️⃣ Environment stabilization skipped (component deleted)")
+        print("   ⚠️  'empirica.components.environment_stabilization' component removed")
+
+        # 4. Workspace Awareness - REMOVED: Component deleted
+        print("\n4️⃣ Workspace awareness skipped (component deleted)")
+        print("   ⚠️  'empirica.components.workspace_awareness' component removed")
 
         # 5. Canonical Epistemic Cascade (updated from EpistemicAdaptiveCascade)
         try:
             print("\n5️⃣ Loading canonical epistemic cascade...")
-            from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
+            from empirica.core.metacognitive_cascade.metacognitive_cascade import CanonicalEpistemicCascade
             self.components['canonical_cascade'] = CanonicalEpistemicCascade()
             # Keep legacy alias for backward compatibility
             self.components['epistemic_adaptive_cascade'] = self.components['canonical_cascade']
@@ -453,77 +404,82 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
         # 6. Epistemic Orchestrator - REMOVED (deprecated, use canonical cascade instead)
         # The canonical cascade handles orchestration internally via investigation strategy
         print("\n6️⃣ Epistemic Orchestrator skipped (deprecated, use canonical_cascade instead)")
-        
+
         return loaded
     
     def _load_tier2_5_calibration(self) -> int:
         """Load Tier 2.5 (Calibration Enhancements) - Optional, precision-critical domains"""
         loaded = 0
         
-        print("\n🔷 TIER 2.5: CALIBRATION ENHANCEMENTS (Optional)")
+        print("\n🔷 TIER 2.5: CALIBRATION ENHANCEMENTS (DEPRECATED)")
         print("=" * 70)
         
-        # 1. Bayesian Guardian
-        try:
-            print("1️⃣ Loading Bayesian Guardian...")
-            from empirica.calibration.adaptive_uncertainty_calibration.bayesian_belief_tracker import (
-                BayesianBeliefTracker,
-                Evidence,
-                DomainClassifier
-            )
+        # DEPRECATED: This feature used heuristic-based calibration
+        # Removed as part of migration to no-heuristics architecture
+        # See: MirrorDriftMonitor for new drift detection
+        if False:
+            # 1. Bayesian Guardian
+            try:
+                print("1️⃣ Loading Bayesian Guardian...")
+                # from empirica.calibration.adaptive_uncertainty_calibration.bayesian_belief_tracker import (
+                #     BayesianBeliefTracker,
+                #     Evidence,
+                #     DomainClassifier
+                # )
+                
+                # self.components['bayesian_tracker'] = BayesianBeliefTracker()
+                # self.components['evidence_class'] = Evidence
+                # self.components['domain_classifier'] = DomainClassifier
+                
+                print("   ✅ Bayesian Guardian loaded (evidence-based calibration)")
+                loaded += 1
+            except Exception as e:
+                print(f"   ❌ Bayesian Guardian failed: {e}")
             
-            self.components['bayesian_tracker'] = BayesianBeliefTracker()
-            self.components['evidence_class'] = Evidence
-            self.components['domain_classifier'] = DomainClassifier
-            
-            print("   ✅ Bayesian Guardian loaded (evidence-based calibration)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Bayesian Guardian failed: {e}")
+            # 2. Drift Monitor
+            try:
+                print("\n2️⃣ Loading Drift Monitor...")
+                # from empirica.calibration.parallel_reasoning import (
+                #     ParallelReasoningSystem,
+                #     DriftMonitor
+                # )
+                
+                # self.components['parallel_reasoning'] = ParallelReasoningSystem()
+                # self.components['drift_monitor'] = DriftMonitor()
+                
+                print("   ✅ Drift Monitor loaded (sycophancy/tension detection)")
+                loaded += 1
+            except Exception as e:
+                print(f"   ❌ Drift Monitor failed: {e}")
         
-        # 2. Drift Monitor
-        try:
-            print("\n2️⃣ Loading Drift Monitor...")
-            from empirica.calibration.parallel_reasoning import (
-                ParallelReasoningSystem,
-                DriftMonitor
-            )
-            
-            self.components['parallel_reasoning'] = ParallelReasoningSystem()
-            self.components['drift_monitor'] = DriftMonitor()
-            
-            print("   ✅ Drift Monitor loaded (sycophancy/tension detection)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Drift Monitor failed: {e}")
-        
+        print("   ⚠️  Tier 2.5 Calibration Enhancements are deprecated and have been disabled.")
         print()
         return loaded
     
     def _load_tier3_advanced(self) -> int:
         """Load Tier 3 (Advanced) components"""
         loaded = 0
-        
+
         # 1. Code Intelligence Analyzer - DISABLED (contains heuristics)
         try:
             print("1️⃣ Loading code_intelligence_analyzer...")
             print("   ⚠️ Code intelligence analyzer skipped (contains heuristics)")
             print("   💡 Use canonical architecture for code analysis")
-            
+
             # Disabled due to heuristic patterns
             # from empirica.components.code_intelligence_analyzer import (
             #     CodeIntelligenceAnalyzer,
             #     ProjectArchaeologist
             # )
-            
+
             # self.components['code_analyzer_class'] = CodeIntelligenceAnalyzer
             # self.components['project_archaeologist'] = ProjectArchaeologist
-            
+
             # print("   ✅ Code intelligence loaded (AI archaeologist ready)")
             loaded += 0  # Not loaded
         except Exception as e:
             print(f"   ❌ Code intelligence failed: {e}")
-        
+
         # 2. Advanced Investigation
         try:
             print("\n2️⃣ Loading advanced_investigation...")
@@ -531,103 +487,57 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
                 AdvancedInvestigationEngine,
                 InvestigationProtocol
             )
-            
+
             self.components['investigation_class'] = AdvancedInvestigationEngine
             self.components['investigation_protocol'] = InvestigationProtocol
-            
+
             print("   ✅ Advanced investigation loaded (deep analysis ready)")
             loaded += 1
         except Exception as e:
             print(f"   ❌ Advanced investigation failed: {e}")
-        
-        # 3. Empirical Performance Analyzer
-        try:
-            print("\n3️⃣ Loading empirical_performance_analyzer...")
-            from empirica.components.empirical_performance_analyzer import (
-                EmpiricalPerformanceAnalyzer
-            )
-            
-            self.components['performance_analyzer_class'] = EmpiricalPerformanceAnalyzer
-            
-            print("   ✅ Performance analyzer loaded (empirical benchmarking ready)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Performance analyzer failed: {e}")
-        
-        # 4. Intelligent Navigation
-        try:
-            print("\n4️⃣ Loading intelligent_navigation...")
-            from empirica.components.intelligent_navigation import (
-                IntelligentWorkspaceNavigator,
-                NavigationStrategy
-            )
-            
-            self.components['intelligent_navigator_class'] = IntelligentWorkspaceNavigator
-            self.components['navigation_strategy'] = NavigationStrategy
-            
-            print("   ✅ Intelligent navigation loaded (advanced navigation ready)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Intelligent navigation failed: {e}")
-        
+
+        # 3. Empirical Performance Analyzer - REMOVED: Component deleted
+        print("\n3️⃣ Empirical performance analyzer skipped (component deleted)")
+        print("   ⚠️  'empirica.components.empirical_performance_analyzer' component removed")
+
+        # 4. Intelligent Navigation - REMOVED: Component deleted
+        print("\n4️⃣ Intelligent navigation skipped (component deleted)")
+        print("   ⚠️  'empirica.components.intelligent_navigation' component removed")
+
         return loaded
     
     def _load_tier4_specialized(self) -> int:
         """Load Tier 4 (Specialized) components"""
         loaded = 0
-        
-        # 1. Security Monitoring
-        try:
-            print("1️⃣ Loading security_monitoring...")
-            from empirica.components.security_monitoring import (
-                SecurityMonitoringEngine,
-                create_security_monitor
-            )
-            
-            self.components['security_monitor_class'] = SecurityMonitoringEngine
-            self.components['create_security_monitor'] = create_security_monitor
-            
-            print("   ✅ Security monitoring loaded (threat detection ready)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Security monitoring failed: {e}")
-        
-        # 2. Procedural Analysis
-        try:
-            print("\n2️⃣ Loading procedural_analysis...")
-            from empirica.components.procedural_analysis import (
-                ProceduralAnalysisEngine,
-                create_procedural_analyzer
-            )
-            
-            self.components['procedural_analyzer_class'] = ProceduralAnalysisEngine
-            self.components['create_procedural_analyzer'] = create_procedural_analyzer
-            
-            print("   ✅ Procedural analysis loaded (process analysis ready)")
-            loaded += 1
-        except Exception as e:
-            print(f"   ❌ Procedural analysis failed: {e}")
-        
+
+        # 1. Security Monitoring - REMOVED: Component deleted
+        print("1️⃣ Security monitoring skipped (component deleted)")
+        print("   ⚠️  'empirica.components.security_monitoring' component removed")
+
+        # 2. Procedural Analysis - REMOVED: Component deleted
+        print("\n2️⃣ Procedural analysis skipped (component deleted)")
+        print("   ⚠️  'empirica.components.procedural_analysis' component removed")
+
         # 3. Tool Management - DISABLED (contains heuristics)
         try:
             print("\n3️⃣ Loading tool_management...")
             print("   ⚠️ Tool management skipped (contains heuristics)")
             print("   💡 Use canonical architecture for tool selection")
-            
+
             # Disabled due to heuristic patterns
             # from empirica.components.tool_management import (
             #     AIEnhancedToolManager,
             #     activate_standalone_tool_management
             # )
-            
+
             # self.components['tool_manager_class'] = AIEnhancedToolManager
             # self.components['activate_tool_management'] = activate_standalone_tool_management
-            
+
             # print("   ✅ Tool management loaded (AI-enhanced tools ready)")
             loaded += 0  # Not loaded
         except Exception as e:
             print(f"   ❌ Tool management failed: {e}")
-        
+
         return loaded
     
     # Lazy loading helpers
@@ -656,16 +566,10 @@ class ExtendedMetacognitiveBootstrap(OptimalMetacognitiveBootstrap):
         return self.components.get('investigation_engine')
     
     def load_performance_analyzer(self):
-        """Lazy load performance analyzer"""
-        if 'performance_analyzer' not in self.components:
-            print("📊 Loading performance analyzer...")
-            EmpiricalPerformanceAnalyzer = self.components.get('performance_analyzer_class')
-            if EmpiricalPerformanceAnalyzer:
-                self.components['performance_analyzer'] = EmpiricalPerformanceAnalyzer()
-                print("   ✅ Performance analyzer loaded")
-            else:
-                print("   ❌ Performance analyzer class not available - load tier 3 first")
-        return self.components.get('performance_analyzer')
+        """Lazy load performance analyzer - REMOVED: Component deleted"""
+        print("📊 Performance analyzer not available (component deleted)")
+        print("   ⚠️  'empirica.components.empirical_performance_analyzer' component removed")
+        return None
     
     def _print_bootstrap_summary(self):
         """Enhanced summary with tier information"""
@@ -794,11 +698,15 @@ async def main():
             print("   ✅ Code intelligence available")
         if 'investigation_class' in bootstrap.components:
             print("   ✅ Advanced investigation available")
-        if 'performance_analyzer_class' in bootstrap.components:
-            print("   ✅ Performance analyzer available")
-        if 'intelligent_navigator_class' in bootstrap.components:
-            print("   ✅ Intelligent navigation available")
-    
+        # Performance analyzer and intelligent navigation were removed
+        print("   ⚠️ Performance analyzer and intelligent navigation marked as removed")
+
+    # Test Tier 4 if complete
+    if args.level in ['complete']:
+        print("\n🧪 Testing Tier 4 (Specialized)...")
+        # Security monitoring and procedural analysis were removed
+        print("   ⚠️ Security monitoring and procedural analysis marked as removed")
+
     print("\n✅ All tests passed! Extended bootstrap operational!")
     print(f"📦 Total components available: {len(bootstrap.components)}")
 

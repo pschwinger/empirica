@@ -579,7 +579,14 @@ MCP_TOOLS = [
     "create_cascade", "get_session_summary",
     # ... and 26 more tools
 ]
-```
+
+**New in v2.0:**
+- **Goal Management**: `create_goal` now accepts `ScopeVector` (3D: breadth, duration, coordination) instead of categorical enum
+- **Cross-AI Coordination**: `discover_goals`, `resume_goal` for multi-agent collaboration
+- **Decision Logic**: Automatic comprehension + foundation checks guide AI behavior
+- **MCO Integration**: Dynamic threshold configuration via YAML personas
+
+See [20_TOOL_CATALOG.md](../docs/production/20_TOOL_CATALOG.md) for complete tool reference.
 
 ---
 

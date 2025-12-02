@@ -82,35 +82,51 @@ These are the foundation of epistemic self-awareness:
 
 ---
 
-## The 7-Phase Workflow
+## The Empirica Workflow
+
+Empirica uses **explicit epistemic assessments** around **implicit CASCADE workflow**:
 
 ```
-PREFLIGHT → THINK → PLAN → INVESTIGATE → CHECK → ACT → POSTFLIGHT
-                                            ↑_______↓
-                                        (recalibration)
+SESSION:
+  └─ PRE assessment (session start)
+      └─ WORK (implicit CASCADE: think → investigate → act)
+          ├─ CHECK assessment (decision point: ready to proceed?)
+          ├─ [More investigation if needed]
+          ├─ CHECK assessment (another decision point)
+          └─ ...
+      └─ POST assessment (session end, calibration)
 ```
 
-### When Each Phase Triggers:
+### Two Separate Systems:
 
-1. **PREFLIGHT** - Always (mandatory baseline)
-2. **THINK** - Always (initial reasoning)
-3. **PLAN** - Complex tasks only (multiple files/domains)
-4. **INVESTIGATE** - When UNCERTAINTY > 0.5 OR KNOW < 0.6
-5. **CHECK** - After investigation (decide: ACT or investigate more?)
-6. **ACT** - When DO ≥ 0.7 AND UNCERTAINTY < 0.3
-7. **POSTFLIGHT** - Always (mandatory validation)
+**1. Explicit Assessments (Tracked):**
+- **PRE** - Baseline epistemic state at session start (ENGAGEMENT gate)
+- **CHECK** - Decision points (can happen 0-N times: "investigate more or proceed?")
+- **POST** - Final state for calibration (measure learning: PRE→POST deltas)
 
-### Key Decision Points:
+**2. Implicit CASCADE Workflow (Guidance):**
+- **THINK** - Reason about the problem
+- **PLAN** - Design approach (if needed)
+- **INVESTIGATE** - Research, explore, gather info
+- **ACT** - Execute solution
+- **CHECK** - Self-assess: ready to act or investigate more?
 
-**CHECK phase logic:**
+The CASCADE is **guidance** for natural AI reasoning, not enforced phases.
+
+### Key Decision Point (CHECK Assessment):
+
 ```
+CHECK: "Am I ready to proceed?"
+
 IF (DO ≥ 0.7 AND UNCERTAINTY < 0.3):
-    → PROCEED to ACT
+    → YES - Proceed with action
 ELIF (cannot reduce uncertainty further):
-    → PROCEED with explicit caveats
+    → YES - Proceed with explicit caveats
 ELSE:
-    → RETURN to INVESTIGATE
+    → NO - Continue investigating (loop back)
 ```
+
+**CHECK can happen multiple times** as you iterate between investigating and acting.
 
 ---
 
@@ -118,12 +134,14 @@ ELSE:
 
 ### Well-Calibrated (Goal)
 ```
-Preflight:  KNOW=0.5, UNCERTAINTY=0.5
-Investigate: [reads 3 files, tests assumptions]
-Postflight: KNOW=0.8, UNCERTAINTY=0.2
+PRE assessment:  KNOW=0.5, UNCERTAINTY=0.5
+[Investigate: reads 3 files, tests assumptions]
+CHECK: "Ready to proceed" → YES (confidence adequate)
+[Act: implements solution]
+POST assessment: KNOW=0.8, UNCERTAINTY=0.2
 Result: ✅ Task completed successfully
 
-→ Confidence matched reality
+→ Confidence matched reality (PRE→POST delta = +0.3 learning)
 ```
 
 ### Overconfident (Common Problem)
@@ -338,8 +356,8 @@ After mastering the 4 core vectors, the full system includes:
    - Covers: MCP integration, full 13-vector system, advanced features
 
 **3. Practice on Real Tasks** (2-3 tasks)
-   - Use PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT
-   - Track your calibration after each task
+   - Use PRE → [implicit work: investigate/act] → CHECK(s) → POST
+   - Track your calibration after each task (PRE→POST deltas)
    - Build habit of epistemic transparency
 
 **4. Review Session Resumption Guide**

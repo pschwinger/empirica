@@ -45,6 +45,11 @@ empirica sessions-export latest:active:claude-code -o current.json
 # Checkpoint management
 empirica checkpoint-load --session-id latest:active
 empirica checkpoint-list --session-id latest
+
+# Checkpoint signing (Phase 2 - Crypto)
+empirica checkpoint-sign --session-id latest:active --phase PREFLIGHT --round 1 --ai-id copilot
+empirica checkpoint-verify --session-id latest:active --phase PREFLIGHT --round 1
+empirica checkpoint-signatures --session-id latest
 ```
 
 ### MCP Tools

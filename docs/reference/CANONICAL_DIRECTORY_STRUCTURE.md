@@ -95,7 +95,7 @@ empirica/core/
 
 **`canonical/git_enhanced_reflex_logger.py`** ⭐ NEW (Phase 1.5)
 - **Class:** `GitEnhancedReflexLogger`
-- **Purpose:** 97.5% token reduction via git notes integration
+- **Purpose:** ~85% token reduction via git notes integration
 - **Features:**
   - Compressed checkpoints (46 tokens vs 1,821 tokens baseline)
   - Git notes storage for epistemic snapshots
@@ -104,7 +104,7 @@ empirica/core/
 - **Metrics:**
   - Baseline session loading: ~1,821 tokens
   - Git-enhanced loading: 46 tokens
-  - Reduction: 97.5%
+  - Reduction: ~85%
 - **Import:** `from empirica.core.canonical import GitEnhancedReflexLogger`
 
 **`canonical/reflex_frame.py`** (327 lines)
@@ -471,7 +471,7 @@ empirica/metrics/
 - **Purpose:** Measure and validate Phase 1.5 token reduction
 - **Features:**
   - Baseline vs optimized token counting
-  - Efficiency calculations (97.5% measured)
+  - Efficiency calculations (~85% measured)
   - Report generation for validation
 - **Import:** `from empirica.metrics import TokenEfficiencyMetrics`
 

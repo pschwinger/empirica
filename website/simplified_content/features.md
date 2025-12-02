@@ -175,6 +175,34 @@ Designed for enterprise-scale deployments:
 
 ---
 
+## New in v2.0
+
+### MCO Architecture
+**Meta-Agent Configuration Object** provides dynamic AI configuration:
+- **6 Personas**: researcher, implementer, reviewer, coordinator, learner, expert
+- **YAML-based**: Dynamic threshold configuration per persona
+- **Model Profiles**: Bias correction for different AI models
+
+### ScopeVector System
+**3D Goal Scoping** replaces categorical enums:
+- **Breadth** (0-1): How wide the goal spans
+- **Duration** (0-1): Expected timeline
+- **Coordination** (0-1): Multi-agent needs
+
+### Epistemic Decision Logic
+**AI self-assesses before goal creation**:
+- Checks comprehension (clarity + signal)
+- Checks foundation (know + context)
+- Guides: CREATE_GOAL, INVESTIGATE_FIRST, or ASK_CLARIFICATION
+
+### Cross-AI Coordination
+**Seamless multi-AI collaboration**:
+- Discover goals from other AIs via git notes
+- Resume work with epistemic state transfer
+- Track lineage (who worked on what)
+
+---
+
 **Next Steps:**
 - [Explore Enterprise Components](developers/components.md)
 - [View Code Examples](examples.md)

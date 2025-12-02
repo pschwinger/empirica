@@ -72,6 +72,30 @@ Restart your IDE or MCP client. Tools will appear immediately.
 
 ---
 
+## New in v2.0
+
+### ScopeVector Goals
+Goals now use **3D self-assessment** instead of categories:
+```python
+create_goal(
+    objective="Implement rate limiting",
+    scope={"breadth": 0.7, "duration": 0.6, "coordination": 0.4}
+)
+```
+
+### Cross-AI Coordination
+Discover and resume goals from other AIs:
+- `discover_goals(from_ai_id="claude-code")`
+- `resume_goal(goal_id, ai_id="current-ai")`
+
+### Decision Logic
+AI self-assesses before creating goals:
+- **Comprehension** (clarity + signal) → Understands task?
+- **Foundation** (know + context) → Ready to act?
+- **Outcome**: CREATE_GOAL, INVESTIGATE_FIRST, or ASK_CLARIFICATION
+
+---
+
 **Next Steps:**
 - [Learn about Skills](skills.md)
 - [System Prompts](developers/system-prompts.md)

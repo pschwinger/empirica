@@ -59,8 +59,14 @@ Complete self-evaluation framework:
 - **Calibration:** Overall confidence tracking
 
 ### 🔄 CASCADE Workflow
-Systematic methodology: PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT
-- Measurable learning at each phase
+**Session Structure:**
+- **PRE assessment** → Session start, epistemic baseline
+- **Implicit CASCADE** → think → investigate → act (natural workflow)
+- **CHECK assessments** → Decision points (0-N times: "ready to proceed?")
+- **POST assessment** → Session end, calibration measurement
+
+**Benefits:**
+- Measurable learning (PRE→POST deltas)
 - Well-calibrated predictions
 - Transparent decision trails
 

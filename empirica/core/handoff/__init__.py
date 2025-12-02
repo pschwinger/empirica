@@ -4,7 +4,7 @@ Epistemic Handoff Reports - Phase 1.6
 Compressed, semantically-rich session summaries for multi-agent coordination.
 
 Combines:
-- Git checkpoint efficiency (97.5% token reduction)
+- Git checkpoint efficiency (~85% token reduction)
 - Semantic context (what was learned, what's next)
 - Queryable history (multi-agent coordination)
 

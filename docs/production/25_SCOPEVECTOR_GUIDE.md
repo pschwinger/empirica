@@ -17,6 +17,50 @@
 
 ---
 
+## Migration from Old Enum System
+
+### Before v2.0: Categorical Enum
+
+```python
+# OLD: Forced categorization
+from empirica.core.goals import GoalScope
+
+goal = Goal.create(
+    objective="Fix auth bug",
+    scope=GoalScope.SESSION_SCOPED  # What's the boundary?
+)
+```
+
+**Problem**: Forced AI into arbitrary categories. When does a task become "session_scoped" vs "task_specific"?
+
+### After v2.0: ScopeVector Self-Assessment
+
+```python
+# NEW: Genuine self-assessment
+from empirica.core.goals import ScopeVector
+
+goal = Goal.create(
+    objective="Fix auth bug",
+    scope=ScopeVector(
+        breadth=0.45,      # "This touches ~half the auth module"
+        duration=0.35,     # "Expect ~2 hours"
+        coordination=0.20  # "Mostly solo, some review needed"
+    )
+)
+```
+
+**Benefit**: AI reasoning preserved. "I estimate this is 0.45 breadth" vs forced into "session_scoped".
+
+### Breaking Change
+
+**No backward compatibility** - This was a clean migration.
+
+**Rationale**: Goal system was new and not widely used. Clean break avoids technical debt.
+
+**Impact**: If you have old code using `GoalScope.TASK_SPECIFIC`, update to `ScopeVector(breadth=0.2, duration=0.2, coordination=0.1)`.
+
+---
+
 ## The Three Dimensions
 
 ### 1. Breadth (Scope Width)

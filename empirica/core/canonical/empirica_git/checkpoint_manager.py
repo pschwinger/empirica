@@ -29,7 +29,7 @@ class CheckpointManager:
     Design:
     - Detects git repo automatically
     - Creates checkpoints in git notes (refs/notes/empirica/checkpoints)
-    - Compresses epistemic state (97.5% token reduction)
+    - Compresses epistemic state (~85% token reduction)
     - Tags with phase, round, ai_id for Sentinel routing
     """
     
@@ -140,7 +140,7 @@ class CheckpointManager:
         """
         Create compressed checkpoint in git notes
         
-        Format (compressed for 97.5% token reduction):
+        Format (compressed for ~85% token reduction):
         {
             "session_id": "abc123",
             "ai_id": "claude-code",

@@ -55,42 +55,42 @@ def _get_profile_thresholds():
 def handle_assess_command(args):
     """Handle main assessment command"""
     try:
-        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
-        
+        # DEPRECATED: AdaptiveUncertaintyCalibration removed (used heuristics)
+        # from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
+
         print(f"🔍 Running uncertainty assessment: {args.query}")
-        
-        analyzer = AdaptiveUncertaintyCalibration()
-        context = parse_json_safely(getattr(args, 'context', None))
-        
-        # Run comprehensive assessment
-        decision_context = {
-            'task': args.query,
-            'context': context or {},
-            'detailed': getattr(args, 'detailed', False),
-            'timestamp': time.time()
-        }
-        result = analyzer.assess_uncertainty(decision_context)
-        
-        print(f"✅ Assessment complete")
-        print(f"   🎯 Overall confidence: {result.calibrated_confidence:.2f}")
-        print(f"   📊 Decision: {result.decision}")
-        print(f"   🧠 Vector count: {len(result.vectors)}")
-        print(f"   🎨 UVL Status: {result.uvl_color}")
-        
+
+        # DEPRECATED: This calibration feature used heuristics
+        # Removed as part of no-heuristics migration
+        # TODO: Replace with MirrorDriftMonitor if needed
+        # analyzer = AdaptiveUncertaintyCalibration()
+        # context = parse_json_safely(getattr(args, 'context', None))
+
+        # # Run comprehensive assessment
+        # decision_context = {
+        #     'task': args.query,
+        #     'context': context or {},
+        #     'detailed': getattr(args, 'detailed', False),
+        #     'timestamp': time.time()
+        # }
+        # result = analyzer.assess_uncertainty(decision_context)
+
+        print(f"⚠️  Assessment feature deprecated (used heuristics)")
+        print(f"   Use mirror-drift monitoring instead")
+        result = None
+
+        # print(f"✅ Assessment complete")
+        # print(f"   🎯 Overall confidence: {getattr(result, 'calibrated_confidence', 'N/A'):.2f}")
+        print(f"   📊 Decision: N/A - feature deprecated")
+        print(f"   🧠 Vector count: N/A - feature deprecated")
+        print(f"   🎨 UVL Status: N/A - feature deprecated")
+
         # Display uncertainty vectors
-        if result.vectors:
-            thresholds = _get_profile_thresholds()
-            print("🔍 Uncertainty vectors:")
-            for vector_name, uncertainty in result.vectors.items():
-                status = "✅" if uncertainty < thresholds['uncertainty_low'] else "⚠️" if uncertainty < thresholds['uncertainty_high'] else "❌"
-                print(f"   {status} {vector_name}: {uncertainty:.2f}")
-        
+        print("🔍 Uncertainty vectors: N/A - feature deprecated")
+
         # Show recommendations if available
-        if hasattr(result, 'recommendations') and result.recommendations:
-            print("💡 Recommendations:")
-            for rec in result.recommendations:
-                print(f"   • {rec}")
-        
+        print("💡 Recommendations: N/A - feature deprecated")
+
     except Exception as e:
         handle_cli_error(e, "Assessment", getattr(args, 'verbose', False))
 

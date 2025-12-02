@@ -23,6 +23,8 @@ Traditional AI systems either:
 - ✅ **Calibrated confidence** - Measure accuracy of self-assessment
 - ✅ **Learning deltas** - Track epistemic growth over time
 
+> **Note on Schema Migration (v2.0):** Empirica's internal schema has been updated with tier-prefixed field names (e.g., `foundation_know`, `comprehension_clarity`). This is 90% complete and backward compatible. Users interact with the same 13 vectors - the changes are internal. See [Schema Migration Guide](../docs/production/27_SCHEMA_MIGRATION_GUIDE.md) for details.
+
 ---
 
 ## The 13 Epistemic Vectors

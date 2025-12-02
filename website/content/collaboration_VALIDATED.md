@@ -761,6 +761,48 @@ query_handoff_reports(ai_id="claude-dev", limit=5)
 
 ---
 
+## Cross-AI Coordination (v2.0) 🆕
+
+### Discover Goals Across AIs
+
+**New Feature**: AIs can discover and resume goals created by other AIs via git notes.
+
+```python
+# Discover goals from another AI
+discover_goals(from_ai_id="claude-code")
+
+# Returns:
+# [
+#   {
+#     "goal_id": "goal-uuid-1",
+#     "objective": "Implement rate limiting",
+#     "created_by": "claude-code",
+#     "epistemic_state": {"know": 0.7, "uncertainty": 0.3},
+#     "status": "in_progress"
+#   }
+# ]
+
+# Resume another AI's goal
+resume_goal(
+    goal_id="goal-uuid-1",
+    ai_id="current-ai",
+    handoff_context="Continuing rate limiting implementation"
+)
+```
+
+**Use Cases:**
+- **Multi-AI Projects**: Different AIs work on different goals
+- **Specialist Handoff**: Security AI → Payment AI → Integration AI
+- **Load Balancing**: Distribute goals across available AIs
+- **Continuity**: Resume work when original AI unavailable
+
+**Lineage Tracking:**
+- Every goal tracks which AIs worked on it
+- Epistemic handoffs preserve learning
+- Git notes enable distributed coordination
+
+---
+
 ## Best Practices
 
 ### For Lead AIs (High Reasoning)

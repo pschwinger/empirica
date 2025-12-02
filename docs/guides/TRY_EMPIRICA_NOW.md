@@ -21,7 +21,7 @@ Ready? Here's the question:
 
 ## Question: "What is Empirica?"
 
-### STEP 1: Your PREFLIGHT Assessment (BEFORE reading the answer)
+### STEP 1: Your PRE Assessment (BEFORE reading the answer)
 
 Take 10 seconds and honestly assess yourself:
 
@@ -79,7 +79,7 @@ AI: "Now my assessment:
 
 ---
 
-## STEP 3: Your POSTFLIGHT Assessment (AFTER reading)
+## STEP 3: Your POST Assessment (AFTER reading)
 
 Now reassess yourself:
 
@@ -109,24 +109,24 @@ UNCERTAINTY delta: [postflight] - [preflight] = ______
 
 **Well-Calibrated Learner:**
 ```
-Preflight:  KNOW=0.2, UNCERTAINTY=0.8
-Postflight: KNOW=0.7, UNCERTAINTY=0.3
+PRE:  KNOW=0.2, UNCERTAINTY=0.8
+POST: KNOW=0.7, UNCERTAINTY=0.3
 Delta: KNOW +0.5, UNCERTAINTY -0.5 ✅
 → "I learned a lot and know what I still don't know"
 ```
 
 **Overconfident:**
 ```
-Preflight:  KNOW=0.8, UNCERTAINTY=0.2 (thought they knew)
-Postflight: KNOW=0.5, UNCERTAINTY=0.6 (realized they didn't)
+PRE:  KNOW=0.8, UNCERTAINTY=0.2 (thought they knew)
+POST: KNOW=0.5, UNCERTAINTY=0.6 (realized they didn't)
 Delta: KNOW -0.3, UNCERTAINTY +0.4 ⚠️
 → "I overestimated my initial understanding"
 ```
 
 **Underconfident:**
 ```
-Preflight:  KNOW=0.1, UNCERTAINTY=0.9 (very unsure)
-Postflight: KNOW=0.9, UNCERTAINTY=0.1 (actually understood most)
+PRE:  KNOW=0.1, UNCERTAINTY=0.9 (very unsure)
+POST: KNOW=0.9, UNCERTAINTY=0.1 (actually understood most)
 Delta: KNOW +0.8, UNCERTAINTY -0.8 ⚠️
 → "I knew more than I thought, just lacked confidence"
 ```
@@ -137,10 +137,10 @@ Delta: KNOW +0.8, UNCERTAINTY -0.8 ⚠️
 
 You just experienced Empirica's core workflow:
 
-1. **PREFLIGHT** - Assess baseline before starting
-2. **INVESTIGATE** - Read the explanation  
-3. **POSTFLIGHT** - Measure what changed
-4. **CALIBRATION** - Check if learning matched expectations
+1. **PRE assessment** - Assess baseline before starting (session start)
+2. **Implicit CASCADE** - Read, think, investigate (natural workflow)
+3. **POST assessment** - Measure what changed (session end)
+4. **CALIBRATION** - Check if learning matched expectations (PRE→POST deltas)
 
 This is what Empirica does for AI on every task.
 
@@ -167,8 +167,10 @@ This is what Empirica does for AI on every task.
 ### The Workflow:
 
 ```
-PREFLIGHT → [Do Work] → POSTFLIGHT → Calculate Delta → Check Calibration
+PRE assessment → [Implicit CASCADE: investigate/act] → POST assessment → Calculate Deltas → Check Calibration
 ```
+
+**Note:** CHECK assessments can happen multiple times during work (decision points: "ready to proceed?")
 
 ### The Philosophy:
 
@@ -185,42 +187,57 @@ When AI admits uncertainty and shows their investigation process, users trust th
 ### AI Using Empirica:
 
 ```
-📊 PREFLIGHT Assessment:
+📊 PRE Assessment (session start):
 KNOW: 0.3 (don't know the codebase)
 DO: 0.7 (capable of security analysis)
 CONTEXT: 0.4 (don't know architecture)
 UNCERTAINTY: 0.7 (need to investigate)
 
-→ Recommended: INVESTIGATE before acting
+→ Decision: INVESTIGATE before acting
 
-🔍 INVESTIGATION:
-Reading: auth.py, middleware.py, config.py
-Found: JWT tokens, session handling, password hashing
+🎯 CREATE GOAL:
+Objective: "Audit authentication system for vulnerabilities"
+Scope: {breadth: 0.4, duration: 0.3, coordination: 0.0}
+Success criteria: ["Identify vulnerabilities", "Document findings"]
+Subtasks:
+  1. Review authentication code
+  2. Analyze JWT implementation
+  3. Check secret management
+  4. Write security report
 
-📊 CHECK (after investigation):
+🔍 IMPLICIT CASCADE (Round 1):
+INVESTIGATE:
+  - Reading: auth.py, middleware.py, config.py
+  - Found: JWT tokens, session handling, password hashing
+COMPLETE subtask #1: "Review authentication code" ✅
+
+📊 CHECK Assessment #1 (decision point):
 KNOW: 0.6 (understand structure)
 UNCERTAINTY: 0.4 (still some gaps)
-→ Decision: One more investigation round
+→ Decision: Continue investigating (not ready yet)
 
-🔍 INVESTIGATION (Round 2):
-Searching: JWT validation, secret rotation, session expiry
-Found: Secrets logged, no token refresh, weak timeout
+🔍 IMPLICIT CASCADE (Round 2):
+INVESTIGATE:
+  - Searching: JWT validation, secret rotation, session expiry
+  - Found: Secrets logged, no token refresh, weak timeout
+COMPLETE subtasks #2, #3 ✅
 
-📊 CHECK (after round 2):
+📊 CHECK Assessment #2 (decision point):
 KNOW: 0.8 (understand the issues)
 DO: 0.8 (ready to report)
 UNCERTAINTY: 0.2 (confident)
 → Decision: PROCEED to ACT
 
-✍️ ACTION:
+✍️ ACT:
 Writing security analysis with 3 vulnerabilities found
+COMPLETE subtask #4: "Write security report" ✅
 
-📊 POSTFLIGHT Assessment:
+📊 POST Assessment (session end):
 KNOW: 0.8 (+0.5 learned)
 CONTEXT: 0.9 (+0.5 learned)
 UNCERTAINTY: 0.2 (-0.5 reduced)
 
-Calibration: ✅ Well-calibrated
+Calibration: ✅ Well-calibrated (PRE→POST deltas match expectations)
 ```
 
 **Result:** Thorough analysis, nothing missed, user sees the process.
@@ -245,12 +262,12 @@ AI: "Oh, sorry, I didn't realize..."
 
 Next time you start a task (any task), try:
 
-1. **PREFLIGHT** - Rate your KNOW/DO/CONTEXT/UNCERTAINTY (0.0-1.0)
-2. **Decide** - If UNCERTAINTY > 0.5, investigate first
-3. **Investigate** - Read docs, ask questions, gather info
-4. **CHECK** - Reassess, decide if ready to act
+1. **PRE assessment** - Rate your KNOW/DO/CONTEXT/UNCERTAINTY (0.0-1.0)
+2. **Create goal** - Define objective, scope, success criteria, subtasks
+3. **Implicit CASCADE** - Investigate if uncertain, act when ready
+4. **CHECK assessments** - "Am I ready to proceed?" (can happen 0-N times)
 5. **ACT** - Do the task with confidence
-6. **POSTFLIGHT** - Reassess, calculate delta, check calibration
+6. **POST assessment** - Reassess, calculate delta, check calibration
 
 This is epistemic self-awareness in action.
 

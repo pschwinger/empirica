@@ -105,6 +105,69 @@ The MCP server exposes a comprehensive suite of tools organized by function:
 1. Calls `execute_postflight`.
 2. Calls `create_handoff_report` to save its learnings for the next session.
 
+### 4. Creating Goals with ScopeVector (NEW)
+**User:** "Let's implement rate limiting."
+**AI (using MCP):**
+1. Assesses epistemic state to get scope recommendations.
+2. Creates goal with 3D scope:
+```python
+create_goal(
+    session_id="uuid",
+    objective="Implement rate limiting middleware",
+    scope={"breadth": 0.5, "duration": 0.4, "coordination": 0.3},
+    success_criteria=["Rate limiter working", "Tests pass"]
+)
+```
+
+**ScopeVector Dimensions:**
+- `breadth` (0-1): How wide the goal spans (0.5 = module-level)
+- `duration` (0-1): Expected timeline (0.4 = days)
+- `coordination` (0-1): Collaboration needed (0.3 = minimal)
+
+### 5. Cross-AI Coordination (NEW)
+**User:** "What did Claude work on yesterday?"
+**AI (using MCP):**
+1. Calls `discover_goals(from_ai_id="claude-code")`.
+2. Shows goals with epistemic states.
+3. Can resume another AI's work: `resume_goal(goal_id, ai_id="current-ai")`.
+
+---
+
+## New Features (v2.0)
+
+### MCO Architecture
+The **Meta-Agent Configuration Object (MCO)** provides dynamic configuration:
+- **Persona Selection**: Researcher, implementer, analyst, etc.
+- **Model Profiles**: Bias correction for different AI models
+- **Threshold Profiles**: Adaptive confidence gates
+- **Scope Recommendations**: AI-driven scope suggestions based on epistemic state
+
+MCO automatically loads during `bootstrap_session` and provides intelligent defaults.
+
+### ScopeVector Goals
+Goals now use **3D ScopeVector** instead of categorical enums:
+- **OLD**: `scope="task_specific"` (limited options)
+- **NEW**: `scope={"breadth": 0.5, "duration": 0.4, "coordination": 0.3}` (precise)
+
+Benefits: More accurate scoping, AI self-assessment, MCO recommendations.
+
+### Cross-AI Coordination
+- **discover_goals**: Find goals from other AIs via git notes
+- **resume_goal**: Continue another AI's work with epistemic handoff
+- **Lineage tracking**: See which AIs worked on which goals
+
+### Epistemic Decision Logic
+The **decision logic system** guides AI behavior based on self-assessment:
+- **Comprehension Check**: clarity ≥ 0.6 AND signal ≥ 0.5
+- **Foundation Check**: know ≥ 0.5 AND context ≥ 0.5
+
+**Three Outcomes**:
+1. **CREATE_GOAL**: High comprehension + foundation → Proceed immediately
+2. **INVESTIGATE_FIRST**: High comprehension, low foundation → Learn first
+3. **ASK_CLARIFICATION**: Low comprehension → Request user input
+
+This solves the "simple task paradox" - the AI doesn't pre-classify tasks, it assesses itself and follows guidance.
+
 ---
 
 ## Troubleshooting

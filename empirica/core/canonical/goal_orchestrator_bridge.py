@@ -191,6 +191,113 @@ class GoalOrchestratorBridge:
         else:
             return 0.2
     
+    def create_goal_from_decision(
+        self,
+        task_description: str,
+        session_id: str,
+        epistemic_assessment: Any,
+        goal_decision: Dict[str, Any]
+    ) -> Optional[str]:
+        """
+        Create goal based on decision logic output
+        
+        This is called when goal_decision.should_create_goal_now is True.
+        Uses epistemic assessment to determine appropriate scope.
+        
+        Args:
+            task_description: Task/objective description
+            session_id: Session UUID
+            epistemic_assessment: PREFLIGHT assessment with vectors
+            goal_decision: Output from decide_goal_creation()
+            
+        Returns:
+            Goal ID if created, None otherwise
+        """
+        if not goal_decision.get('should_create_goal_now', False):
+            logger.info("Decision logic says not to create goal now")
+            return None
+        
+        # Extract epistemic scores for scope estimation
+        clarity = goal_decision.get('clarity', 0.5)
+        know = goal_decision.get('know', 0.5)
+        context_score = goal_decision.get('context', 0.5)
+        
+        # Estimate scope based on epistemic state
+        # High know + context → likely narrower scope (know what to do)
+        # Low know + high clarity → likely broader scope (clear goal, need to learn)
+        
+        foundation = (know + context_score) / 2
+        
+        if clarity >= 0.8 and foundation >= 0.7:
+            # Clear understanding + good foundation → focused task
+            scope = ScopeVector(
+                breadth=0.3 + (1 - know) * 0.2,  # 0.3-0.5 range
+                duration=0.3 + (1 - foundation) * 0.2,
+                coordination=0.1 + (1 - context_score) * 0.2
+            )
+        elif clarity >= 0.7 and foundation >= 0.5:
+            # Good comprehension, moderate foundation → session-level
+            scope = ScopeVector(
+                breadth=0.5 + (1 - know) * 0.2,  # 0.5-0.7 range
+                duration=0.5 + (1 - foundation) * 0.2,
+                coordination=0.3 + (1 - context_score) * 0.2
+            )
+        else:
+            # Lower confidence → broader exploration
+            scope = ScopeVector(
+                breadth=0.6,
+                duration=0.6,
+                coordination=0.4
+            )
+        
+        # Estimate complexity from uncertainty
+        uncertainty = getattr(epistemic_assessment, 'uncertainty', None)
+        if uncertainty and hasattr(uncertainty, 'score'):
+            complexity = uncertainty.score  # Higher uncertainty = higher complexity
+        else:
+            complexity = 0.5  # Default
+        
+        # Create success criterion
+        success_criteria = [
+            SuccessCriterion(
+                id=str(uuid.uuid4()),
+                description=f"Complete: {task_description[:100]}",
+                validation_method="completion",
+                is_required=True
+            )
+        ]
+        
+        # Create goal
+        goal = Goal.create(
+            objective=task_description,
+            success_criteria=success_criteria,
+            scope=scope,
+            estimated_complexity=complexity,
+            metadata={
+                'created_from': 'decision_logic',
+                'goal_decision': goal_decision,
+                'clarity': clarity,
+                'know': know,
+                'context': context_score,
+                'suggested_action': goal_decision.get('suggested_action'),
+                'decision_reasoning': goal_decision.get('reasoning')
+            }
+        )
+        
+        # Save to database
+        success = self.goal_repo.save_goal(goal, session_id)
+        
+        if success:
+            logger.info(
+                f"✅ Created goal from decision logic: {goal.id[:8]} - "
+                f"{goal.objective[:50]}... (scope: breadth={scope.breadth:.2f}, "
+                f"duration={scope.duration:.2f}, coordination={scope.coordination:.2f})"
+            )
+            return goal.id
+        else:
+            logger.error(f"Failed to save goal: {task_description[:50]}")
+            return None
+    
     def close(self):
         """Close repository connections"""
         self.goal_repo.close()

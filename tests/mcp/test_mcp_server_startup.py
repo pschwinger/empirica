@@ -14,11 +14,11 @@ async def test_server_starts():
 async def test_tools_registered():
     """All core tools are registered"""
     tools = await list_tools()
-    # Core tools (always available): 21 tools
-    # Optional modality switcher tools: +4 tools (if enabled)
-    # Total: 21 or 25 tools depending on EMPIRICA_ENABLE_MODALITY_SWITCHER
-    assert len(tools) >= 21, f"Expected at least 21 core tools, got {len(tools)}"
-    assert len(tools) <= 25, f"Expected at most 25 tools (21 core + 4 modality), got {len(tools)}"
+    # Core tools (v2.0): 29 tools total
+    # - 3 stateless tools (introduction, guidance, help)
+    # - 26 stateful tools (routed to CLI)
+    assert len(tools) >= 29, f"Expected at least 29 core tools, got {len(tools)}"
+    assert len(tools) <= 35, f"Expected at most 35 tools, got {len(tools)}"  # Allow for future growth
 
 @pytest.mark.asyncio
 async def test_introduction_tool_exists():

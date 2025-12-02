@@ -247,109 +247,144 @@ empirica bootstrap --level complete
 
 ---
 
-## Investigation Profiles (NEW in v2.0)
+## MCO Architecture (NEW in v2.0)
 
 ### Overview
 
-Investigation profiles configure how Empirica adapts investigation behavior to different AI capabilities and domain requirements.
+**MCO (Meta-Agent Configuration Object)** provides dynamic configuration through YAML files instead of hardcoded values. Configuration is loaded automatically during bootstrap based on:
+- **Persona type** (researcher, implementer, reviewer, coordinator, learner, expert)
+- **Model profile** (bias correction for specific AI models)
+- **Threshold profiles** (confidence gates, uncertainty tolerance)
+- **Protocol schemas** (standardized tool interfaces)
 
-### Built-In Profiles
+### MCO Personas
 
-**high_reasoning** - For advanced AI models (Claude Opus, GPT-4)
+Personas define behavioral patterns and threshold adjustments for different work modes. All persona configurations are stored in `/empirica/config/mco/personas.yaml`.
+
+**Available Personas:**
+
+**researcher** - Exploration and learning focused
 ```bash
-empirica bootstrap --profile high_reasoning
-# - Unlimited investigation cycles
-# - Dynamic thresholds
-# - Trust AI judgment
+empirica bootstrap --persona researcher
+# - High uncertainty tolerance (0.75)
+# - Max 10 investigation rounds
+# - Hypothesis-driven exploration
+# - Detailed documentation
 ```
 
-**autonomous** - For autonomous agents (Minimax, AutoGPT)
+**implementer** - Task execution focused
 ```bash
-empirica bootstrap --profile autonomous
-# - 5 investigation cycles max
-# - Structured guidance
-# - Explicit checkpoints
+empirica bootstrap --persona implementer
+# - Moderate uncertainty tolerance (0.50)
+# - Max 5 investigation rounds
+# - Requirement-driven
+# - Minimal documentation
 ```
 
-**critical** - For high-stakes domains (healthcare, finance, legal)
+**reviewer** - Quality and validation focused
 ```bash
-empirica bootstrap --profile critical
-# - 10 investigation cycles
-# - Mandatory investigation
-# - Audit trail required
+empirica bootstrap --persona reviewer
+# - Low uncertainty tolerance (0.40)
+# - Max 8 investigation rounds
+# - Thorough validation
+# - Extensive documentation
 ```
 
-**exploratory** - For research and discovery
+**coordinator** - Multi-agent orchestration
 ```bash
-empirica bootstrap --profile exploratory
-# - 7 investigation cycles
-# - Encourages investigation
-# - Tracks epistemic growth
+empirica bootstrap --persona coordinator
+# - Moderate uncertainty tolerance (0.60)
+# - Max 6 investigation rounds
+# - Workflow-based
+# - Coordination documentation
 ```
 
-**balanced** - Default general-purpose profile
+**learner** - Educational, guidance-needing
 ```bash
-empirica bootstrap  # Uses balanced by default
-# - 4 investigation cycles
-# - Moderate constraints
-# - Sensible defaults
+empirica bootstrap --persona learner
+# - High uncertainty tolerance (0.80)
+# - Max 12 investigation rounds
+# - Guided learning
+# - Comprehensive documentation
 ```
 
-### Profile Management Commands
-
+**expert** - Domain specialist, minimal guidance
 ```bash
-# List available profiles
-empirica profile-list
-
-# Show profile details
-empirica profile-show high_reasoning
-
-# Create custom profile
-empirica profile-create my-profile \
-  --ai-model custom-model \
-  --domain custom-domain
-
-# Set default profile
-empirica profile-set-default high_reasoning
+empirica bootstrap --persona expert
+# - Low uncertainty tolerance (0.45)
+# - Max 4 investigation rounds
+# - Expert hypothesis generation
+# - Minimal documentation
 ```
 
-### Profile Selection
+### Persona Selection
 
 **Automatic:**
-- AI model detected → Appropriate profile selected
-- Domain specified → Domain-appropriate profile selected
-- Neither specified → Uses `balanced` profile
+- AI capability detected → Appropriate persona selected
+- Task type specified → Task-appropriate persona selected
+- Neither specified → Uses `researcher` (default)
 
 **Manual Override:**
 ```bash
-empirica bootstrap --profile critical --ai-model gpt-3.5
-# Uses critical (not balanced) because explicitly set
+empirica bootstrap --persona implementer --ai-id my-ai
+# Uses implementer persona explicitly
 ```
 
-### Custom Profiles
+### YAML Configuration Files
 
-**Create profile file:** `~/.empirica/profiles/my-profile.yaml`
+MCO configurations are stored in `/empirica/config/mco/`:
+
+```
+/empirica/config/mco/
+├── personas.yaml           # Persona definitions
+├── model_profiles.yaml     # Model-specific adjustments
+├── cascade_styles.yaml     # CASCADE behavior profiles
+├── protocols.yaml          # Protocol schemas
+└── goal_scopes.yaml        # ScopeVector recommendations
+```
+
+**Example: Viewing Persona Config**
+```bash
+# View persona configuration
+cat empirica/config/mco/personas.yaml
+
+# See specific persona
+grep -A 30 "researcher:" empirica/config/mco/personas.yaml
+```
+
+### Custom Personas
+
+Create custom personas by editing `personas.yaml`:
 
 ```yaml
-name: my-profile
-description: Custom profile for my use case
-investigation:
-  max_cycles: 6
-  uncertainty_threshold: 0.35
-  required_when:
-    - uncertainty > 0.65
-capabilities:
-  reasoning: high
-  self_awareness: high
-  investigation: supported
+# Add to empirica/config/mco/personas.yaml
+custom_persona:
+  name: "My Custom Persona"
+  description: "Specialized for my use case"
+  
+  epistemic_priors:
+    engagement: 0.80
+    know: 0.70
+    # ... other vectors
+  
+  investigation_style:
+    max_rounds: 7
+    tools_per_round: 3
+    hypothesis_driven: true
+    uncertainty_threshold: 0.65
 ```
 
-**Use custom profile:**
+**Use custom persona:**
 ```bash
-empirica bootstrap --profile my-profile
+empirica bootstrap --persona custom_persona
 ```
 
-**For comprehensive guide:** See `docs/guides/PROFILE_MANAGEMENT.md`
+### For More Details
+
+See comprehensive MCO documentation:
+- **MCO Architecture**: [24_MCO_ARCHITECTURE.md](file:///home/yogapad/empirical-ai/empirica/docs/production/24_MCO_ARCHITECTURE.md)
+- **ScopeVector Guide**: [25_SCOPEVECTOR_GUIDE.md](file:///home/yogapad/empirical-ai/empirica/docs/production/25_SCOPEVECTOR_GUIDE.md)
+- **Threshold Tuning**: [16_TUNING_THRESHOLDS.md](file:///home/yogapad/empirical-ai/empirica/docs/production/16_TUNING_THRESHOLDS.md)
 
 ---
 

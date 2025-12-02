@@ -2,7 +2,7 @@
 Checkpoint Command Handlers - Phase 2
 
 Handles CLI commands for git-enhanced epistemic checkpoints.
-Achieves 97.5% token reduction through compressed checkpoint storage.
+Achieves ~85% token reduction through compressed checkpoint storage.
 """
 
 import json
@@ -80,45 +80,15 @@ def handle_checkpoint_create_command(args):
         # Get current vectors from session database
         db = SessionDatabase()
         vectors = {}
-        
+
         # Try to get latest vectors from session
         try:
-            # Get latest reflex for this session
-            cursor = db.conn.cursor()
-            cursor.execute("""
-                SELECT reflex_data FROM reflexes
-                WHERE session_id = ?
-                ORDER BY created_at DESC
-                LIMIT 1
-            """, (session_id,))
-            
-            result = cursor.fetchone()
-            if result:
-                reflex_data = json.loads(result[0])
-                # Extract vectors if they exist
-                if 'vectors' in reflex_data:
-                    vectors = reflex_data['vectors']
-                elif 'assessment' in reflex_data:
-                    # Extract from assessment object
-                    assessment = reflex_data['assessment']
-                    thresholds = _get_checkpoint_profile_thresholds()
-                    default_score = thresholds['default_vector_score']
-                    
-                    vectors = {
-                        'engagement': assessment.get('engagement', {}).get('score', default_score),
-                        'know': assessment.get('know', {}).get('score', default_score),
-                        'do': assessment.get('do', {}).get('score', default_score),
-                        'context': assessment.get('context', {}).get('score', default_score),
-                        'clarity': assessment.get('clarity', {}).get('score', default_score),
-                        'coherence': assessment.get('coherence', {}).get('score', default_score),
-                        'signal': assessment.get('signal', {}).get('score', default_score),
-                        'density': assessment.get('density', {}).get('score', default_score),
-                        'state': assessment.get('state', {}).get('score', default_score),
-                        'change': assessment.get('change', {}).get('score', default_score),
-                        'completion': assessment.get('completion', {}).get('score', default_score),
-                        'impact': assessment.get('impact', {}).get('score', default_score),
-                        'uncertainty': assessment.get('uncertainty', {}).get('score', default_score)
-                    }
+            # Load vectors from reflexes table using the new API
+            vectors = db.get_latest_vectors(session_id)
+            if vectors:
+                logger.info(f"Loaded vectors from reflexes table for session {session_id}: {len(vectors)} vectors")
+            else:
+                logger.warning(f"No vectors found in reflexes table for session {session_id}")
         except Exception as e:
             logger.warning(f"Could not load vectors from session: {e}")
             print(f"⚠️  Could not load vectors from session: {e}")
@@ -146,7 +116,7 @@ def handle_checkpoint_create_command(args):
         print(f"   Phase: {phase}")
         print(f"   Round: {round_num}")
         print(f"   Storage: {'git notes' if git_logger.git_available else 'SQLite fallback'}")
-        print(f"   Estimated tokens: ~450 (97.5% reduction vs full history)")
+        print(f"   Estimated tokens: ~450 (~85% reduction vs typical context)")
         
     except Exception as e:
         logger.error(f"Failed to create checkpoint: {e}", exc_info=True)

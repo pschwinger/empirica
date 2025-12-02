@@ -1,0 +1,585 @@
+# Empirica Storage Architecture - Complete Data Flow
+
+**Version:** 2.0  
+**Date:** 2025-12-02  
+**Purpose:** Document complete storage flow for dashboard/crypto-signing integration
+
+---
+
+## Storage Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    EPISTEMIC EVENT                           │
+│  (AI completes PREFLIGHT, CHECK, ACT, or POSTFLIGHT)        │
+└────────────────┬────────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│              GitEnhancedReflexLogger                         │
+│         add_checkpoint(phase, round, vectors, meta)          │
+└────────────────┬────────────────────────────────────────────┘
+                 │
+      ┌──────────┴──────────┐
+      │                     │
+      ▼                     ▼
+┌──────────────┐    ┌──────────────────┐
+│   SQLite     │    │   Git Notes      │
+│  (reflexes)  │    │  (compressed)    │
+└──────┬───────┘    └────────┬─────────┘
+       │                     │
+       │                     │
+       ▼                     ▼
+┌──────────────┐    ┌──────────────────┐
+│  JSON Files  │    │  Crypto Signing  │
+│ (full logs)  │    │  (Phase 2)       │
+└──────────────┘    └──────────────────┘
+```
+
+---
+
+## Three Storage Layers
+
+### Layer 1: SQLite Database (`.empirica/sessions/sessions.db`)
+
+**Purpose:** Structured queryable storage, SQL access, relational integrity
+
+**Table:** `reflexes`
+
+```sql
+CREATE TABLE reflexes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    cascade_id TEXT,
+    phase TEXT NOT NULL,  -- PREFLIGHT, CHECK, ACT, POSTFLIGHT
+    round INTEGER DEFAULT 1,
+    timestamp REAL NOT NULL,
+    
+    -- 13 epistemic vectors
+    engagement REAL,
+    know REAL,
+    do REAL,
+    context REAL,
+    clarity REAL,
+    coherence REAL,
+    signal REAL,
+    density REAL,
+    state REAL,
+    change REAL,
+    completion REAL,
+    impact REAL,
+    uncertainty REAL,
+    
+    -- Metadata
+    reflex_data TEXT,  -- Full JSON
+    reasoning TEXT,
+    evidence TEXT,
+    
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+```
+
+**What Gets Stored:**
+- Full epistemic vectors (13 dimensions)
+- Phase, round, timestamp
+- Reasoning and evidence (optional)
+- Full JSON in `reflex_data` field
+
+**Queryable By:**
+- Session ID
+- Phase
+- Round
+- Timestamp
+- Vector values (e.g., `WHERE know > 0.8`)
+
+**Use Cases:**
+- Dashboards (SQL queries)
+- Analytics (aggregate queries)
+- Debugging (full history)
+- Fallback (if git notes unavailable)
+
+---
+
+### Layer 2: Git Notes (Compressed Checkpoints)
+
+**Purpose:** Distributed, versioned, compressed epistemic state
+
+**Namespace:** `refs/notes/empirica/session/{session_id}/{phase}/{round}`
+
+**Example:**
+```
+refs/notes/empirica/session/abc-123/PREFLIGHT/1
+refs/notes/empirica/session/abc-123/CHECK/1
+refs/notes/empirica/session/abc-123/ACT/1
+refs/notes/empirica/session/abc-123/POSTFLIGHT/1
+```
+
+**What Gets Stored (Compressed):**
+```json
+{
+  "session_id": "abc-123",
+  "phase": "PREFLIGHT",
+  "round": 1,
+  "timestamp": "2025-12-02T11:00:00Z",
+  "vectors": {
+    "know": 0.85,
+    "do": 0.90,
+    "context": 0.75,
+    "uncertainty": 0.15
+  },
+  "overall_confidence": 0.833,
+  "meta": {
+    "task": "Review authentication module",
+    "investigated": ["jwt_impl", "session_timeout"],
+    "blocked_by": []
+  },
+  "token_count": 450
+}
+```
+
+**Compression:** ~450 tokens vs ~6,500 tokens (93% reduction)
+
+**What's Omitted (vs full reflex logs):**
+- Rationales for each vector ❌
+- Full reasoning transcript ❌
+- Tool execution details ❌
+- Investigation breadcrumbs ❌
+
+**What's Kept:**
+- Vector scores ✅
+- Phase/round/timestamp ✅
+- High-level metadata ✅
+- Overall confidence ✅
+
+**Use Cases:**
+- Session resumption (load last checkpoint)
+- Multi-agent coordination (read others' checkpoints)
+- Token efficiency (97.5% reduction)
+- Distributed storage (travels with git repo)
+- Crypto signing (Phase 2 - sign git note SHA)
+
+---
+
+### Layer 3: JSON Reflex Logs (Full Detail)
+
+**Purpose:** Complete reasoning transcript, debugging, audit trail
+
+**Location:** `.empirica_reflex_logs/{YYYY-MM-DD}/{agent_id}/{session_id}/`
+
+**Example:**
+```
+.empirica_reflex_logs/
+└── 2025-12-02/
+    └── copilot/
+        └── abc-123/
+            ├── checkpoint_PREFLIGHT_20251202T110000.json
+            ├── checkpoint_CHECK_20251202T113000.json
+            ├── checkpoint_ACT_20251202T120000.json
+            └── checkpoint_POSTFLIGHT_20251202T130000.json
+```
+
+**What Gets Stored (FULL):**
+```json
+{
+  "session_id": "abc-123",
+  "phase": "PREFLIGHT",
+  "round": 1,
+  "timestamp": "2025-12-02T11:00:00Z",
+  "vectors": {
+    "know": {
+      "score": 0.85,
+      "rationale": "I have reviewed JWT implementations in 3 similar projects",
+      "evidence": ["Similar patterns in project X", "Tested in staging"],
+      "confidence_basis": "hands_on_experience"
+    },
+    "do": {
+      "score": 0.90,
+      "rationale": "I can identify common auth vulnerabilities",
+      "evidence": ["OWASP top 10 familiarity", "Previous security audits"]
+    },
+    "uncertainty": {
+      "score": 0.15,
+      "rationale": "Confident about JWT basics, uncertain about distributed session sync",
+      "unknowns": ["redis_cluster_behavior", "session_replication"]
+    }
+  },
+  "overall_confidence": 0.833,
+  "meta": {
+    "task": "Review authentication module",
+    "investigated": ["jwt_impl", "session_timeout"],
+    "not_investigated": ["distributed_sync", "redis_cluster"],
+    "blocked_by": [],
+    "tools_used": ["grep", "git blame", "static analysis"]
+  },
+  "reasoning_transcript": "I started by examining...",
+  "token_count": 6500
+}
+```
+
+**What's Added (vs compressed):**
+- Rationales for each vector ✅
+- Evidence lists ✅
+- Full reasoning transcript ✅
+- Tool execution details ✅
+- Confidence basis explanations ✅
+
+**Use Cases:**
+- Deep debugging (why did AI think X?)
+- Audit trail (regulatory compliance)
+- Training data (future calibration)
+- Human review (understand AI reasoning)
+
+---
+
+## Data Flow Timeline
+
+### When Checkpoint Is Created
+
+```
+Step 1: AI calls add_checkpoint()
+  ↓
+Step 2: _create_checkpoint() - Build compressed format
+  ↓
+Step 3: _save_checkpoint_to_sqlite() - Save to reflexes table
+  ↓
+Step 4: _git_add_note() - Save to git notes
+  ↓
+Step 5: Return git note SHA (for crypto signing)
+```
+
+### Data Transformation
+
+```
+Full Assessment (from AI)
+  ↓ [compression]
+Compressed Checkpoint (~450 tokens)
+  ↓ [parallel writes]
+  ├─→ SQLite (reflexes table)
+  ├─→ Git Notes (refs/notes/empirica/...)
+  └─→ JSON File (.empirica_reflex_logs/...)
+```
+
+---
+
+## What Gets Signed (Crypto - Phase 2)
+
+### Git Note SHA (Recommended)
+
+```bash
+# Add checkpoint
+git notes --ref empirica/session/abc-123/PREFLIGHT/1 \
+  add -m '{"session_id":"abc-123",...}' HEAD
+
+# Get note SHA
+NOTE_SHA=$(git rev-parse refs/notes/empirica/session/abc-123/PREFLIGHT/1)
+
+# Sign with AI identity
+empirica identity-sign --sha $NOTE_SHA --ai-id copilot
+```
+
+**What Gets Signed:**
+- Compressed checkpoint content (450 tokens)
+- Session ID, phase, round
+- Vectors (scores only)
+- Timestamp
+- Metadata (high-level)
+
+**Why This:**
+- ✅ Tamper-proof (git SHA)
+- ✅ Distributed (travels with repo)
+- ✅ Efficient (small payload)
+- ✅ Verifiable (git notes are content-addressed)
+
+### Alternative: SQLite Row Hash
+
+```sql
+SELECT 
+  hash(session_id || phase || round || timestamp || reflex_data) as checkpoint_hash
+FROM reflexes
+WHERE id = ?;
+```
+
+---
+
+## Dashboard API Access
+
+### For Web Dashboards
+
+**Query SQLite for structured data:**
+
+```python
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+
+# Get all checkpoints for session
+checkpoints = db.conn.execute("""
+    SELECT phase, round, timestamp, know, do, uncertainty
+    FROM reflexes
+    WHERE session_id = ?
+    ORDER BY timestamp ASC
+""", (session_id,)).fetchall()
+
+# Get calibration deltas
+deltas = db.conn.execute("""
+    SELECT 
+        phase,
+        know - LAG(know) OVER (ORDER BY timestamp) as know_delta,
+        uncertainty - LAG(uncertainty) OVER (ORDER BY timestamp) as uncertainty_delta
+    FROM reflexes
+    WHERE session_id = ?
+""", (session_id,)).fetchall()
+```
+
+### For tmux/IDE Dashboards
+
+**Use Git Notes for efficiency:**
+
+```python
+from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+
+logger = GitEnhancedReflexLogger(session_id="abc-123")
+
+# List all checkpoints (fast - queries git notes)
+checkpoints = logger.list_checkpoints(limit=10)
+
+# Get latest checkpoint (compressed)
+latest = logger.get_last_checkpoint()
+print(f"Latest: {latest['phase']} - KNOW: {latest['vectors']['know']}")
+
+# Get vector diff (delta since last checkpoint)
+diff = logger.get_vector_diff(since_checkpoint=previous, current_vectors=current)
+print(f"KNOW changed by: {diff['delta']['know']}")
+```
+
+---
+
+## Epistemic State ≠ Git Diff
+
+### Git Diff (What Changed)
+
+```diff
+- const AUTH_TIMEOUT = 3600;
++ const AUTH_TIMEOUT = 7200;
+```
+
+**Tells you:**
+- What: Timeout doubled
+- When: Commit timestamp
+- Who: Commit author
+
+**Doesn't tell you:**
+- Why: Was this tested? Speculative?
+- How confident: High confidence or guessing?
+- What alternatives: Were other values considered?
+- Risk: What could break?
+
+### Epistemic Vectors (Confidence About What Changed)
+
+```json
+{
+  "auth_module": {
+    "phase": "ACT",
+    "vectors": {
+      "know": 0.85,
+      "do": 0.90,
+      "uncertainty": 0.15
+    },
+    "meta": {
+      "investigated": ["timeout_edge_cases", "session_hijack"],
+      "not_investigated": ["distributed_session_sync"],
+      "confidence_basis": "tested_in_staging_30_days",
+      "risk_assessment": "low_for_single_server_high_for_cluster"
+    }
+  }
+}
+```
+
+**Tells you:**
+- Why: "Tested in staging for 30 days"
+- Confidence: 85% knowledge, 15% uncertainty
+- Gaps: "distributed_session_sync not investigated"
+- Risk: "Low for single server, high for cluster"
+
+### The Key Distinction
+
+| Aspect | Git Diff | Epistemic Vectors |
+|--------|----------|-------------------|
+| **Tracks** | Content changes | Confidence about content |
+| **Compression** | Syntactic (min chars) | Semantic (min meaning) |
+| **Size** | Variable (depends on change) | Fixed (~450 tokens) |
+| **Query** | By file/line/author | By phase/confidence/uncertainty |
+| **Signed** | Commit SHA | Git note SHA |
+| **Purpose** | Version control | Epistemic tracking |
+
+---
+
+## Compression Comparison
+
+| Format | Size | Content |
+|--------|------|---------|
+| **Full Reasoning Transcript** | ~15,000 tokens | "I started by examining the auth module. First I looked at JWT..." |
+| **Full Reflex Log (JSON)** | ~6,500 tokens | All vectors with rationales, evidence, reasoning |
+| **Compressed Checkpoint** | ~450 tokens | Vector scores + high-level metadata only |
+| **Git Diff** | ~50 tokens | Just code changes (no reasoning) |
+
+**Key Insight:** Git diff tells you WHAT changed (50 tokens). Epistemic checkpoint tells you WHY and HOW CONFIDENT (450 tokens). Full transcript explains EVERYTHING (15,000 tokens).
+
+---
+
+## Query Patterns for Dashboards
+
+### Pattern 1: Current State (Latest Checkpoint)
+
+```python
+# Fast: Query git notes
+latest = logger.get_last_checkpoint()
+confidence = latest['overall_confidence']
+phase = latest['phase']
+```
+
+### Pattern 2: Historical Trend (All Checkpoints)
+
+```python
+# SQL: Aggregate over time
+cursor.execute("""
+    SELECT phase, AVG(know) as avg_know, AVG(uncertainty) as avg_uncertainty
+    FROM reflexes
+    WHERE session_id = ?
+    GROUP BY phase
+    ORDER BY timestamp
+""", (session_id,))
+```
+
+### Pattern 3: Calibration Delta (Learning)
+
+```python
+# Compare PREFLIGHT vs POSTFLIGHT
+preflight = db.get_checkpoint(phase="PREFLIGHT")
+postflight = db.get_checkpoint(phase="POSTFLIGHT")
+
+know_delta = postflight['vectors']['know'] - preflight['vectors']['know']
+uncertainty_delta = postflight['vectors']['uncertainty'] - preflight['vectors']['uncertainty']
+
+print(f"Learning: KNOW +{know_delta}, UNCERTAINTY {uncertainty_delta}")
+```
+
+### Pattern 4: Multi-Session Comparison
+
+```python
+# Find all sessions with low confidence
+cursor.execute("""
+    SELECT session_id, phase, know, uncertainty
+    FROM reflexes
+    WHERE know < 0.5 OR uncertainty > 0.7
+    ORDER BY timestamp DESC
+""")
+```
+
+---
+
+## Crypto Signing Architecture (Phase 2)
+
+### What to Sign
+
+**Recommended: Git Note SHA**
+
+```
+Signature Input:
+  - Git note SHA (refs/notes/empirica/session/{id}/{phase}/{round})
+  - AI identity (Ed25519 public key)
+  - Timestamp
+  
+Signature Output:
+  - Ed25519 signature
+  - Stored in: refs/notes/empirica/signatures/{session_id}/{phase}/{round}
+```
+
+**Verification:**
+
+```bash
+# Get checkpoint
+NOTE_SHA=$(git rev-parse refs/notes/empirica/session/abc-123/PREFLIGHT/1)
+
+# Get signature
+SIG=$(git notes --ref empirica/signatures/abc-123/PREFLIGHT/1 show HEAD)
+
+# Verify
+empirica identity-verify --sha $NOTE_SHA --signature $SIG --ai-id copilot
+```
+
+---
+
+## Summary Table: Where Each Field Lives
+
+| Field | SQLite | Git Notes | JSON Logs | Signed |
+|-------|--------|-----------|-----------|--------|
+| **session_id** | ✅ | ✅ | ✅ | ✅ |
+| **phase** | ✅ | ✅ | ✅ | ✅ |
+| **round** | ✅ | ✅ | ✅ | ✅ |
+| **timestamp** | ✅ | ✅ | ✅ | ✅ |
+| **vectors (scores)** | ✅ | ✅ | ✅ | ✅ |
+| **vectors (rationales)** | ❌ | ❌ | ✅ | ❌ |
+| **overall_confidence** | ✅ | ✅ | ✅ | ✅ |
+| **meta (high-level)** | ✅ | ✅ | ✅ | ✅ |
+| **reasoning_transcript** | ❌ | ❌ | ✅ | ❌ |
+| **tool_execution_logs** | ❌ | ❌ | ✅ | ❌ |
+| **evidence_lists** | ❌ | ❌ | ✅ | ❌ |
+
+---
+
+## API Examples
+
+### Dashboard: Show Current Epistemic State
+
+```python
+def get_current_state(session_id: str) -> Dict:
+    """For live dashboards - use git notes (fast)"""
+    logger = GitEnhancedReflexLogger(session_id=session_id)
+    latest = logger.get_last_checkpoint()
+    
+    return {
+        "phase": latest['phase'],
+        "confidence": latest['overall_confidence'],
+        "vectors": latest['vectors'],
+        "updated": latest['timestamp']
+    }
+```
+
+### Dashboard: Show Learning Curve
+
+```python
+def get_learning_curve(session_id: str) -> List[Dict]:
+    """For analytics - use SQL (structured queries)"""
+    db = SessionDatabase()
+    rows = db.conn.execute("""
+        SELECT phase, round, timestamp, know, do, uncertainty
+        FROM reflexes
+        WHERE session_id = ?
+        ORDER BY timestamp ASC
+    """, (session_id,)).fetchall()
+    
+    return [dict(row) for row in rows]
+```
+
+### Dashboard: Show Calibration Report
+
+```python
+def get_calibration_report(session_id: str) -> Dict:
+    """Compare PREFLIGHT prediction vs POSTFLIGHT actual"""
+    checkpoints = logger.list_checkpoints(session_id=session_id)
+    
+    preflight = next(c for c in checkpoints if c['phase'] == 'PREFLIGHT')
+    postflight = next(c for c in checkpoints if c['phase'] == 'POSTFLIGHT')
+    
+    return {
+        "predicted_know": preflight['vectors']['know'],
+        "actual_know": postflight['vectors']['know'],
+        "delta": postflight['vectors']['know'] - preflight['vectors']['know'],
+        "calibration": "well_calibrated" if abs(delta) < 0.15 else "miscalibrated"
+    }
+```
+
+---
+
+**This is the complete storage architecture.** All three layers serve different purposes and can be queried independently based on dashboard needs.

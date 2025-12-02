@@ -1,11 +1,19 @@
-"""Test Reflex Frame data structures and canonical weights."""
+"""
+DEPRECATED: Test Reflex Frame data structures and canonical weights.
+These tests are for OLD schema classes (EpistemicAssessment, ReflexFrame) which have been removed.
+New schema uses EpistemicAssessmentSchema from empirica.core.schemas.epistemic_assessment.
+Keeping file for reference but skipping all tests.
+"""
 
 import pytest
-from datetime import datetime, UTC
-from empirica.core.canonical.reflex_frame import (
-    VectorState, EpistemicAssessment, ReflexFrame, Action, 
-    CANONICAL_WEIGHTS, ENGAGEMENT_THRESHOLD, CRITICAL_THRESHOLDS
-)
+
+pytestmark = pytest.mark.skip(reason="OLD schema classes removed - use EpistemicAssessmentSchema")
+
+# OLD imports removed:
+# from empirica.core.canonical.reflex_frame import (
+#     VectorState, EpistemicAssessment, ReflexFrame, Action, 
+#     CANONICAL_WEIGHTS, ENGAGEMENT_THRESHOLD, CRITICAL_THRESHOLDS
+# )
 
 
 class TestVectorState:

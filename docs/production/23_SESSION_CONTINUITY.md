@@ -81,6 +81,57 @@ prev = result['sessions'][0]
 
 ---
 
+## Storage Architecture
+
+Empirica uses **multiple storage layers** for different purposes:
+
+### 1. Git Notes (PRIMARY for Drift Detection)
+
+**Dual-Tier Architecture:**
+
+#### PRIMARY Tier: checkpoint_manager
+- **Storage:** `refs/notes/empirica/checkpoints`
+- **Size:** ~450 tokens per checkpoint (~85% reduction)
+- **Purpose:** Lightweight drift detection via MirrorDriftMonitor
+- **Automatic:** Created by CASCADE workflow
+- **Use case:** Temporal comparison, long-running sessions
+
+#### SECONDARY Tier: git_enhanced_reflex_logger
+- **Storage:** `empirica/session/{session_id}`
+- **Size:** ~2-3KB per checkpoint (80-90% compression)
+- **Purpose:** Complete session reconstruction, debugging
+- **Optional:** Can be disabled for minimal footprint
+- **Use case:** Manual analysis, detailed session history
+
+**Why two tiers?** The drift monitor needs frequent, lightweight checkpoints for temporal comparison (PRIMARY), while debugging needs complete assessments (SECONDARY). They complement each other.
+
+See [09_DRIFT_MONITOR.md](./09_DRIFT_MONITOR.md) for drift detection details.
+
+### 2. Database (Session Metadata + Handoffs)
+
+- **Storage:** SQLite (`empirica_sessions.db`)
+- **Size:** ~2MB per 100 sessions
+- **Purpose:** Session metadata, handoff reports, queryable history
+- **Use case:** Cross-session continuity, multi-agent coordination
+
+### 3. Handoff Reports (Semantic Context)
+
+- **Storage:** Database table `handoff_reports`
+- **Size:** ~400-1,250 tokens per report
+- **Purpose:** Semantic learning context (what changed, not just vectors)
+- **Use case:** Efficient session resumption, inter-agent handoff
+
+**Storage Layer Comparison:**
+
+| Layer | Size | Purpose | Use Case |
+|-------|------|---------|----------|
+| Git checkpoints (PRIMARY) | ~200 bytes | Drift detection | Automated monitoring |
+| Git reflex logs (SECONDARY) | ~2-3KB | Debugging | Manual analysis |
+| Database metadata | ~20KB | Session tracking | Query/search |
+| Handoff reports | ~400-1.2K tokens | Semantic context | Resume/coordinate |
+
+---
+
 ## Understanding Epistemic Snapshots
 
 **What is an Epistemic Snapshot?**

@@ -16,7 +16,7 @@ def test_all_tools_have_schemas():
         return await list_tools()
     
     tools = asyncio.run(_get_tools())
-    assert len(tools) == 23, f"Expected 23 tools, found {len(tools)}"
+    assert len(tools) == 29, f"Expected 29 tools, found {len(tools)}"
     
     for tool in tools:
         assert hasattr(tool, 'inputSchema'), f"{tool.name} missing inputSchema"
@@ -43,7 +43,7 @@ def test_all_schemas_have_required_fields():
         assert isinstance(schema['properties'], dict), f"{tool.name}: properties should be dict, got {type(schema['properties'])}"
         
         # Stateless tools can have empty properties
-        stateless_tools = ['get_empirica_introduction', 'get_workflow_guidance', 'cli_help']
+        stateless_tools = ['get_empirica_introduction', 'get_workflow_guidance', 'cli_help', 'list_identities']
         if tool.name not in stateless_tools:
             assert len(schema['properties']) > 0, f"{tool.name}: properties should not be empty (except stateless tools)"
         
@@ -139,18 +139,19 @@ class TestSchemaCompleteness:
         """Ensure no tool has an empty or minimal schema"""
         async def _get_tools():
             return await list_tools()
-        
+
         tools = asyncio.run(_get_tools())
-        
+
         for tool in tools:
             schema = tool.inputSchema
-            
+
             # Should have at least one property (except stateless tools)
             if len(schema['properties']) == 0:
                 assert tool.name in [
-                    'get_empirica_introduction', 
-                    'get_workflow_guidance', 
-                    'cli_help'
+                    'get_empirica_introduction',
+                    'get_workflow_guidance',
+                    'cli_help',
+                    'list_identities'
                 ], f"{tool.name}: stateless tools should have no properties"
     
     def test_consistent_naming(self):

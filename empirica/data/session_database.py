@@ -17,7 +17,14 @@ Design:
 - Temporal logging (prevents recursion)
 - Session continuity (load previous session context)
 
-Location: .empirica/sessions/sessions.db
+Location (Canonical):
+- Project-local: ./.empirica/sessions/sessions.db (relative to CWD)
+- NOT home directory: ~/ (config/credentials are global, data is project-scoped)
+- See: docs/reference/STORAGE_LOCATIONS.md for rationale
+
+Storage Architecture:
+- Global (~/.empirica/): config.yaml, credentials.yaml, calibration/
+- Project-local (./.empirica/): sessions.db (this file)
 """
 
 import sqlite3
@@ -489,6 +496,40 @@ class SessionDatabase:
             )
         """)
 
+        # Table 15: reflexes (NEW - for checkpoint system)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS reflexes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                cascade_id TEXT,
+                phase TEXT NOT NULL,
+                round INTEGER DEFAULT 1,
+                timestamp REAL NOT NULL,
+
+                -- 13 epistemic vectors
+                engagement REAL,
+                know REAL,
+                do REAL,
+                context REAL,
+                clarity REAL,
+                coherence REAL,
+                signal REAL,
+                density REAL,
+                state REAL,
+                change REAL,
+                completion REAL,
+                impact REAL,
+                uncertainty REAL,
+
+                -- Metadata
+                reflex_data TEXT,
+                reasoning TEXT,
+                evidence TEXT,
+
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+            )
+        """)
+
         # Create indexes for performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_ai ON sessions(ai_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time)")
@@ -503,6 +544,8 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_ai ON epistemic_snapshots(ai_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_cascade ON epistemic_snapshots(cascade_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_created ON epistemic_snapshots(created_at)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflexes_session ON reflexes(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflexes_phase ON reflexes(phase)")
 
         self.conn.commit()
     
@@ -1445,6 +1488,100 @@ class SessionDatabase:
         
         return None
     
+    def store_vectors(self, session_id: str, phase: str, vectors: Dict[str, float], cascade_id: Optional[str] = None, round_num: int = 1):
+        """
+        Store epistemic vectors in the reflexes table
+
+        Args:
+            session_id: Session identifier
+            phase: Current phase (PREFLIGHT, CHECK, ACT, POSTFLIGHT)
+            vectors: Dictionary of 13 epistemic vectors
+            cascade_id: Optional cascade identifier
+            round_num: Current round number
+        """
+        cursor = self.conn.cursor()
+
+        # Extract the 13 vectors, providing default values if not present
+        vector_names = [
+            'engagement', 'know', 'do', 'context',
+            'clarity', 'coherence', 'signal', 'density',
+            'state', 'change', 'completion', 'impact', 'uncertainty'
+        ]
+
+        vector_values = []
+        for name in vector_names:
+            value = vectors.get(name, 0.5)  # Default to 0.5 if not provided
+            vector_values.append(value if isinstance(value, (int, float)) else 0.5)
+
+        # Create a reflex data entry
+        reflex_data = {
+            'session_id': session_id,
+            'phase': phase,
+            'round': round_num,
+            'vectors': vectors,
+            'timestamp': time.time()
+        }
+
+        cursor.execute("""
+            INSERT INTO reflexes (
+                session_id, cascade_id, phase, round, timestamp,
+                engagement, know, do, context,
+                clarity, coherence, signal, density,
+                state, change, completion, impact, uncertainty,
+                reflex_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            session_id, cascade_id, phase, round_num, time.time(),
+            *vector_values,  # Unpack the 13 vector values
+            json.dumps(reflex_data)
+        ))
+
+        self.conn.commit()
+
+    def get_latest_vectors(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict[str, float]]:
+        """
+        Get the latest epistemic vectors for a session from the reflexes table
+
+        Args:
+            session_id: Session identifier
+            phase: Optional phase filter
+
+        Returns:
+            Dictionary of vectors or None if not found
+        """
+        cursor = self.conn.cursor()
+
+        query = """
+            SELECT * FROM reflexes
+            WHERE session_id = ?
+        """
+        params = [session_id]
+
+        if phase:
+            query += " AND phase = ?"
+            params.append(phase)
+
+        query += " ORDER BY timestamp DESC LIMIT 1"
+
+        cursor.execute(query, params)
+        result = cursor.fetchone()
+
+        if result:
+            # Extract the 13 vector values from the result
+            vectors = {}
+            for vector_name in ['engagement', 'know', 'do', 'context',
+                               'clarity', 'coherence', 'signal', 'density',
+                               'state', 'change', 'completion', 'impact', 'uncertainty']:
+                if vector_name in result.keys():
+                    value = result[vector_name]
+                    if value is not None:
+                        vectors[vector_name] = float(value)
+                    else:
+                        vectors[vector_name] = 0.5  # Default value if null
+            return vectors
+
+        return None
+
     def close(self):
         """Close database connection"""
         self.conn.close()

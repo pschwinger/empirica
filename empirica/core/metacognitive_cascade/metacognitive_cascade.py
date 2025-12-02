@@ -59,25 +59,19 @@ try:
 except ImportError:
     SESSION_DB_AVAILABLE = False
 
-# Bayesian belief tracking for CHECK phase
-try:
-    from empirica.calibration.adaptive_uncertainty_calibration.bayesian_belief_tracker import (
-        BayesianBeliefTracker,
-        Evidence,
-        DomainClassifier
-    )
-    BAYESIAN_AVAILABLE = True
-except ImportError:
-    BAYESIAN_AVAILABLE = False
-    logger.warning("Bayesian belief tracker not available")
+# Bayesian belief tracking for CHECK phase - DEPRECATED
+# Replaced by MirrorDriftMonitor (see below)
+BAYESIAN_AVAILABLE = False
+# Note: BayesianBeliefTracker was deprecated - use MirrorDriftMonitor instead
 
-# Parallel reasoning and drift monitoring
+# Drift monitoring - NEW: MirrorDriftMonitor (no heuristics, temporal comparison only)
 try:
-    from empirica.calibration.parallel_reasoning import ParallelReasoningSystem, DriftMonitor
-    PARALLEL_REASONING_AVAILABLE = True
+    from empirica.core.drift import MirrorDriftMonitor
+    DRIFT_MONITOR_AVAILABLE = True
 except ImportError:
-    PARALLEL_REASONING_AVAILABLE = False
-    logger.warning("Parallel reasoning not available")
+    DRIFT_MONITOR_AVAILABLE = False
+    MirrorDriftMonitor = None
+    logger.warning("MirrorDriftMonitor not available")
 
 # Action hooks for tmux dashboard real-time updates
 try:
@@ -195,7 +189,8 @@ class CanonicalEpistemicCascade:
         cache_ttl: int = 300,  # Phase 2: Cache TTL in seconds
         enable_session_db: bool = True,  # Session database tracking
         enable_git_notes: bool = True,  # Phase 1.5: Git-enhanced checkpoints
-        session_id: Optional[str] = None  # Phase 1.5: Session ID for git notes
+        session_id: Optional[str] = None,  # Phase 1.5: Session ID for git notes
+        epistemic_bus: Optional['EpistemicBus'] = None  # Optional event bus for external observers
     ):
         """
         Initialize canonical cascade
@@ -220,8 +215,9 @@ class CanonicalEpistemicCascade:
             enable_perspective_caching: Enable Phase 2 optimization - cache perspectives (default: True)
             cache_ttl: Phase 2 cache time-to-live in seconds (default: 300)
             enable_session_db: Enable session database for epistemic tracking (default: True)
-            enable_git_notes: Enable Phase 1.5 git-enhanced checkpoints (97.5% token reduction) (default: True)
+            enable_git_notes: Enable Phase 1.5 git-enhanced checkpoints (~85% token reduction) (default: True)
             session_id: Session ID for git notes tracking (default: auto-generated)
+            epistemic_bus: Optional EpistemicBus for publishing epistemic events to external observers (default: None)
         """
         # Load investigation profile
         from empirica.config.profile_loader import select_profile, get_profile_loader
@@ -261,6 +257,9 @@ class CanonicalEpistemicCascade:
 
         self.agent_id = agent_id
         self.tmux_extension = tmux_extension
+        
+        # Optional epistemic bus for external observers (Sentinels, MCO, etc.)
+        self.epistemic_bus = epistemic_bus
 
         # Initialize canonical assessor (LLM-powered, no heuristics)
         self.assessor = CanonicalEpistemicAssessor(agent_id=agent_id)
@@ -314,24 +313,23 @@ class CanonicalEpistemicCascade:
             logger.warning(f"Parallel reasoning initialization failed: {e}")
             logger.info("Continuing with direct assessment mode")
 
-        # Bayesian Guardian (CHECK phase - evidence-based belief tracking)
-        self.enable_bayesian = enable_bayesian and BAYESIAN_AVAILABLE
-        self.bayesian_tracker = BayesianBeliefTracker() if self.enable_bayesian else None
+        # Bayesian Guardian (CHECK phase - evidence-based belief tracking) - DEPRECATED
+        self.enable_bayesian = False
+        self.bayesian_tracker = None
         self.current_context_key = None
         self.current_domain = None
-        if self.enable_bayesian:
-            logger.info("Bayesian Guardian enabled")
+        if enable_bayesian:
+            logger.warning("Bayesian Guardian is deprecated and has been disabled.")
 
-        # Drift Monitor (behavioral drift detection via parallel reasoning)
-        # Requires parallel_reasoner to be initialized
+        # Drift Monitor - NEW: MirrorDriftMonitor (temporal self-validation, no heuristics)
+        # Compares current epistemic state to git checkpoint history
         try:
-            self.enable_drift_monitor = enable_drift_monitor and PARALLEL_REASONING_AVAILABLE and self.parallel_reasoner is not None
-            self.drift_monitor = DriftMonitor() if self.enable_drift_monitor else None
-            # Note: synthesis_history is tracked in self.parallel_reasoner.synthesis_history
+            self.enable_drift_monitor = enable_drift_monitor and DRIFT_MONITOR_AVAILABLE
+            self.drift_monitor = MirrorDriftMonitor() if self.enable_drift_monitor else None
             if self.enable_drift_monitor:
-                logger.info("Drift Monitor enabled")
+                logger.info("🔍 MirrorDriftMonitor enabled (temporal self-validation, no heuristics)")
             elif enable_drift_monitor:
-                logger.warning("Drift monitoring requested but parallel reasoning unavailable")
+                logger.warning("Drift monitoring requested but MirrorDriftMonitor unavailable")
         except Exception as e:
             self.drift_monitor = None
             self.enable_drift_monitor = False
@@ -446,7 +444,7 @@ class CanonicalEpistemicCascade:
                 phase="preflight"
             )
         
-        # Phase 1.5: Create git checkpoint (compressed, 97.5% token reduction)
+        # Phase 1.5: Create git checkpoint (compressed, ~85% token reduction)
         if self.enable_git_notes and self.git_logger:
             try:
                 vectors_dict = {
@@ -480,6 +478,32 @@ class CanonicalEpistemicCascade:
         logger.info(f"   Comprehension (CLARITY/COHERENCE): {preflight_assessment.comprehension_confidence:.2f}")
         logger.info(f"   Execution Readiness: {preflight_assessment.execution_confidence:.2f}")
         logger.info(f"   Explicit Uncertainty: {preflight_assessment.uncertainty.score:.2f}")
+        
+        # Publish to epistemic bus (optional, for external observers)
+        if self.epistemic_bus:
+            from empirica.core.epistemic_bus import EpistemicEvent, EventTypes
+            self.epistemic_bus.publish(EpistemicEvent(
+                event_type=EventTypes.PREFLIGHT_COMPLETE,
+                agent_id=self.agent_id,
+                session_id=self.session_id,
+                data={
+                    'task_id': task_id,
+                    'overall_confidence': preflight_assessment.overall_confidence,
+                    'foundation_confidence': preflight_assessment.foundation_confidence,
+                    'comprehension_confidence': preflight_assessment.comprehension_confidence,
+                    'execution_confidence': preflight_assessment.execution_confidence,
+                    'uncertainty': preflight_assessment.uncertainty.score,
+                    'vectors': {
+                        'know': preflight_assessment.know.score,
+                        'do': preflight_assessment.do.score,
+                        'context': preflight_assessment.context.score,
+                        'clarity': preflight_assessment.clarity.score,
+                        'coherence': preflight_assessment.coherence.score,
+                        'signal': preflight_assessment.signal.score,
+                        'density': preflight_assessment.density.score
+                    }
+                }
+            ))
         
         # Action hooks: Log PREFLIGHT
         if self.enable_action_hooks:
@@ -548,6 +572,105 @@ class CanonicalEpistemicCascade:
         logger.info(f"   Rationale: {assessment.engagement.rationale}")
 
         # ================================================================
+        # GOAL CREATION DECISION CHECK
+        # ================================================================
+        # Simple check: Should we create a goal now, or investigate first?
+        from empirica.core.goals.decision_logic import decide_goal_creation, format_decision_for_ai
+        
+        goal_decision = decide_goal_creation(
+            clarity=assessment.clarity.score,
+            signal=assessment.signal.score,
+            know=assessment.know.score,
+            context=assessment.context.score
+        )
+        
+        logger.info(f"\n{format_decision_for_ai(goal_decision)}")
+        
+        # Store decision for later use (AI can access this)
+        context['goal_decision'] = {
+            'should_create_goal_now': goal_decision.should_create_goal_now,
+            'suggested_action': goal_decision.suggested_action,
+            'reasoning': goal_decision.reasoning,
+            'confidence': goal_decision.confidence,
+            'clarity': goal_decision.clarity_score,
+            'signal': goal_decision.signal_score,
+            'know': goal_decision.know_score,
+            'context': goal_decision.context_score
+        }
+        
+        # Publish goal decision to epistemic bus (external observers can act on this)
+        if self.epistemic_bus:
+            from empirica.core.epistemic_bus import EpistemicEvent
+            self.epistemic_bus.publish(EpistemicEvent(
+                event_type='goal_decision_made',
+                agent_id=self.agent_id,
+                session_id=self.session_id,
+                data={
+                    'task_id': task_id,
+                    'task': task[:100] if task else '',
+                    'should_create_goal_now': goal_decision.should_create_goal_now,
+                    'suggested_action': goal_decision.suggested_action,
+                    'reasoning': goal_decision.reasoning,
+                    'confidence': goal_decision.confidence,
+                    'assessment': {
+                        'clarity': goal_decision.clarity_score,
+                        'signal': goal_decision.signal_score,
+                        'know': goal_decision.know_score,
+                        'context': goal_decision.context_score
+                    }
+                }
+            ))
+        
+        # Optional: Auto-create goal if decision says so
+        # This is GUIDANCE - actual implementation can be in goal orchestrator
+        # or handled externally by observing the epistemic bus
+        goal_id = None
+        if goal_decision.should_create_goal_now:
+            logger.info("✅ Decision: Ready to create goal (comprehension + foundation sufficient)")
+            
+            # Attempt to create goal via orchestrator bridge
+            try:
+                from empirica.core.canonical.goal_orchestrator_bridge import create_orchestrator_with_bridge
+                
+                bridge = create_orchestrator_with_bridge(use_placeholder=True)
+                goal_id = bridge.create_goal_from_decision(
+                    task_description=task if isinstance(task, str) else str(task),
+                    session_id=self.session_id,
+                    epistemic_assessment=assessment,
+                    goal_decision=context['goal_decision']
+                )
+                
+                if goal_id:
+                    logger.info(f"✅ Goal created: {goal_id[:8]}")
+                    context['goal_id'] = goal_id
+                    
+                    # Publish goal_created event
+                    if self.epistemic_bus:
+                        from empirica.core.epistemic_bus import EpistemicEvent, EventTypes
+                        self.epistemic_bus.publish(EpistemicEvent(
+                            event_type=EventTypes.GOAL_CREATED,
+                            agent_id=self.agent_id,
+                            session_id=self.session_id,
+                            data={
+                                'goal_id': goal_id,
+                                'task': task if isinstance(task, str) else str(task),
+                                'created_from': 'decision_logic'
+                            }
+                        ))
+                
+                bridge.close()
+            except Exception as e:
+                logger.warning(f"Could not create goal automatically: {e}")
+                # Continue without goal - not fatal
+            
+        elif goal_decision.suggested_action == 'investigate_first':
+            logger.info("🔍 Decision: Should investigate before creating goal")
+            # Investigation will be triggered if confidence is low
+        else:  # ask_clarification
+            logger.info("❓ Decision: Should ask for clarification before proceeding")
+            # CASCADE may route to CLARIFY action
+
+        # ================================================================
         # PHASE 2: THINK continues - Identify knowledge gaps
         # ================================================================
         # Knowledge gap identification is part of THINK phase
@@ -566,42 +689,42 @@ class CanonicalEpistemicCascade:
         # Already logged in THINK phase above
         
         # ================================================================
-        # BAYESIAN GUARDIAN: Initialize beliefs from initial assessment
+        # BAYESIAN GUARDIAN: Initialize beliefs from initial assessment (DEPRECATED)
         # ================================================================
-        if self.enable_bayesian and self.bayesian_tracker:
-            # Determine domain and decide if Bayesian should activate
-            self.current_domain = DomainClassifier.classify_domain(task, context)
-            self.current_context_key = f"task:{task_id}:{int(time.time())}"
+        # if self.enable_bayesian and self.bayesian_tracker:
+        #     # Determine domain and decide if Bayesian should activate
+        #     self.current_domain = DomainClassifier.classify_domain(task, context)
+        #     self.current_context_key = f"task:{task_id}:{int(time.time())}"
             
-            should_activate = DomainClassifier.should_activate_bayesian(
-                self.current_domain,
-                clarity_index=assessment.clarity.score,
-                discrepancies_found=0
-            )
+        #     should_activate = DomainClassifier.should_activate_bayesian(
+        #         self.current_domain,
+        #         clarity_index=assessment.clarity.score,
+        #         discrepancies_found=0
+        #     )
             
-            if should_activate:
-                self.bayesian_tracker.activate(f"Domain: {self.current_domain}")
+        #     if should_activate:
+        #         self.bayesian_tracker.activate(f"Domain: {self.current_domain}")
                 
-                # Initialize Bayesian beliefs from initial assessment
-                initial_beliefs = {
-                    'know': assessment.know.score,
-                    'do': assessment.do.score,
-                    'context': assessment.context.score,
-                    'clarity': assessment.clarity.score,
-                    'coherence': assessment.coherence.score,
-                    'state': assessment.state.score,
-                    'completion': assessment.completion.score,
-                    'impact': assessment.impact.score
-                }
+        #         # Initialize Bayesian beliefs from initial assessment
+        #         initial_beliefs = {
+        #             'know': assessment.know.score,
+        #             'do': assessment.do.score,
+        #             'context': assessment.context.score,
+        #             'clarity': assessment.clarity.score,
+        #             'coherence': assessment.coherence.score,
+        #             'state': assessment.state.score,
+        #             'completion': assessment.completion.score,
+        #             'impact': assessment.impact.score
+        #         }
                 
-                self.bayesian_tracker.initialize_beliefs(
-                    self.current_context_key,
-                    initial_beliefs,
-                    initial_variance=0.3
-                )
+        #         self.bayesian_tracker.initialize_beliefs(
+        #             self.current_context_key,
+        #             initial_beliefs,
+        #             initial_variance=0.3
+        #         )
                 
-                logger.info(f"\n   🧮 Bayesian Guardian activated for {self.current_domain} domain")
-                logger.info(f"      Initialized beliefs from assessment")
+        #         logger.info(f"\n   🧮 Bayesian Guardian activated for {self.current_domain} domain")
+        #         logger.info(f"      Initialized beliefs from assessment")
         
         # Action hooks: Log 12D state and UNCERTAINTY phase
         if self.enable_action_hooks:
@@ -956,6 +1079,23 @@ class CanonicalEpistemicCascade:
         logger.info(f"   PREFLIGHT confidence: {calibration_check['preflight_confidence']:.2f}")
         logger.info(f"   POSTFLIGHT confidence: {calibration_check['postflight_confidence']:.2f}")
         logger.info(f"   Learning occurred: {'Yes' if calibration_check['confidence_delta'] > 0 else 'No change' if calibration_check['confidence_delta'] == 0 else 'Decreased'}")
+        
+        # Publish to epistemic bus (optional, for external observers)
+        if self.epistemic_bus:
+            from empirica.core.epistemic_bus import EpistemicEvent, EventTypes
+            self.epistemic_bus.publish(EpistemicEvent(
+                event_type=EventTypes.POSTFLIGHT_COMPLETE,
+                agent_id=self.agent_id,
+                session_id=self.session_id,
+                data={
+                    'task_id': task_id,
+                    'overall_confidence': postflight_assessment.overall_confidence,
+                    'epistemic_delta': epistemic_delta,
+                    'calibration': calibration_check,
+                    'investigation_rounds': investigation_rounds,
+                    'action_taken': final_decision.get('action', 'unknown')
+                }
+            ))
         
         # Action hooks: Log POSTFLIGHT
         if self.enable_action_hooks:
@@ -1332,10 +1472,9 @@ class CanonicalEpistemicCascade:
                     'rationale': vector_state.rationale
                 })
 
-        # Sort by priority: critical > high > medium > low
-        priority_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
-        gaps.sort(key=lambda g: priority_order.get(g['priority'], 2))
-
+        # Return gaps in AI's assessment order (implicit priority)
+        # No sorting - respects AI's implicit ordering and agency
+        # If AI wanted explicit ordering, it would have provided it
         return gaps
 
     async def _conduct_investigation(
@@ -1695,48 +1834,12 @@ class CanonicalEpistemicCascade:
         strength: float = 0.7
     ) -> Dict[str, Any]:
         """
-        Update Bayesian beliefs when LLM executes a tool and reports results
-        
-        This allows evidence-based belief tracking without Empirica executing tools.
-        LLM decides to use a tool, executes it, and reports back the outcome.
-        
-        Args:
-            tool_name: Name of tool that was executed
-            success: Whether the tool execution succeeded
-            vector_addressed: Which epistemic vector this addresses
-            strength: Evidence strength (0.0-1.0)
-        
-        Returns:
-            Dict with update status and new belief state
+        DEPRECATED: This function was part of the Bayesian Guardian feature.
+        It is no longer active.
         """
-        if not self.bayesian_tracker or not self.bayesian_tracker.active:
-            return {
-                'updated': False,
-                'reason': 'Bayesian Guardian not active'
-            }
-        
-        # Create evidence from tool execution
-        evidence = Evidence(
-            outcome=success,
-            strength=strength,
-            timestamp=time.time(),
-            source=tool_name,
-            vector_addressed=vector_addressed
-        )
-        
-        # Update belief
-        belief_key = f"{self.current_context_key}:{vector_addressed}"
-        updated_belief = self.bayesian_tracker.update_belief(belief_key, evidence)
-        
-        logger.info(f"   🧮 Bayesian: Updated {vector_addressed} → {updated_belief.mean:.2f} (variance: {updated_belief.variance:.2f})")
-        
         return {
-            'updated': True,
-            'vector': vector_addressed,
-            'new_belief': updated_belief.mean,
-            'variance': updated_belief.variance,
-            'confidence_interval': updated_belief.confidence_interval(),
-            'evidence_count': updated_belief.evidence_count
+            'updated': False,
+            'reason': 'Bayesian Guardian is deprecated and not active'
         }
     
     def _verify_readiness(self, assessment: EpistemicAssessmentSchema) -> Dict[str, Any]:
@@ -1776,75 +1879,82 @@ class CanonicalEpistemicCascade:
                     logger.info(f"         - {flag}")
         
         # ================================================================
-        # BAYESIAN GUARDIAN: Discrepancy Detection
+        # BAYESIAN GUARDIAN: Discrepancy Detection (DEPRECATED)
         # ================================================================
-        if self.bayesian_tracker and self.bayesian_tracker.active:
-            logger.info(f"\n   🧮 Bayesian Guardian: Checking belief calibration...")
+        # if self.bayesian_tracker and self.bayesian_tracker.active:
+        #     logger.info(f"\n   🧮 Bayesian Guardian: Checking belief calibration...")
             
-            # Get intuitive beliefs from current assessment
-            intuitive_beliefs = {
-                'know': assessment.know.score,
-                'do': assessment.do.score,
-                'context': assessment.context.score,
-                'clarity': assessment.clarity.score,
-                'coherence': assessment.coherence.score,
-                'state': assessment.state.score,
-                'completion': assessment.completion.score,
-                'impact': assessment.impact.score
-            }
+        #     # Get intuitive beliefs from current assessment
+        #     intuitive_beliefs = {
+        #         'know': assessment.know.score,
+        #         'do': assessment.do.score,
+        #         'context': assessment.context.score,
+        #         'clarity': assessment.clarity.score,
+        #         'coherence': assessment.coherence.score,
+        #         'state': assessment.state.score,
+        #         'completion': assessment.completion.score,
+        #         'impact': assessment.impact.score
+        #     }
             
-            # Detect discrepancies between intuition and evidence
-            discrepancies = self.bayesian_tracker.detect_discrepancies(
-                self.current_context_key,
-                intuitive_beliefs,
-                threshold_std_devs=2.0
-            )
+        #     # Detect discrepancies between intuition and evidence
+        #     discrepancies = self.bayesian_tracker.detect_discrepancies(
+        #         self.current_context_key,
+        #         intuitive_beliefs,
+        #         threshold_std_devs=2.0
+        #     )
             
-            if discrepancies:
-                logger.info(f"   ⚠️  Detected {len(discrepancies)} belief discrepancies:")
-                for d in discrepancies:
-                    logger.info(f"      • {d['type'].upper()}: {d['vector']}")
-                    logger.info(f"        Intuitive: {d['intuitive']:.2f} | Evidence-based: {d['bayesian_mean']:.2f}")
-                    logger.info(f"        Gap: {d['gap']:.2f} (severity: {d['severity']:.2f})")
+        #     if discrepancies:
+        #         logger.info(f"   ⚠️  Detected {len(discrepancies)} belief discrepancies:")
+        #         for d in discrepancies:
+        #             logger.info(f"      • {d['type'].upper()}: {d['vector']}")
+        #             logger.info(f"        Intuitive: {d['intuitive']:.2f} | Evidence-based: {d['bayesian_mean']:.2f}")
+        #             logger.info(f"        Gap: {d['gap']:.2f} (severity: {d['severity']:.2f})")
                     
-                    if d['type'] == 'overconfidence':
-                        logger.info(f"        ⚠️  You may be overconfident about {d['vector']}")
-                    else:
-                        logger.info(f"        💡 You may be underconfident about {d['vector']}")
-            else:
-                logger.info(f"   ✅ Beliefs aligned with accumulated evidence")
+        #             if d['type'] == 'overconfidence':
+        #                 logger.info(f"        ⚠️  You may be overconfident about {d['vector']}")
+        #             else:
+        #                 logger.info(f"        💡 You may be underconfident about {d['vector']}")
+        #     else:
+        #         logger.info(f"   ✅ Beliefs aligned with accumulated evidence")
             
-            # Add to readiness check
-            readiness_check['bayesian_discrepancies'] = discrepancies
-            readiness_check['bayesian_summary'] = self.bayesian_tracker.get_calibration_summary(
-                self.current_context_key
-            )
+        #     # Add to readiness check
+        #     readiness_check['bayesian_discrepancies'] = discrepancies
+        #     readiness_check['bayesian_summary'] = self.bayesian_tracker.get_calibration_summary(
+        #         self.current_context_key
+        #     )
         
         # ================================================================
-        # DRIFT MONITOR: Behavioral Drift Analysis
+        # DRIFT MONITOR: Epistemic Drift Analysis (Temporal Self-Validation)
         # ================================================================
-        if self.enable_drift_monitor and self.drift_monitor and self.parallel_reasoner and len(self.parallel_reasoner.synthesis_history) >= 10:
-            logger.info(f"\n   📊 Drift Monitor: Analyzing behavioral patterns...")
+        if self.enable_drift_monitor and self.drift_monitor:
+            logger.info(f"\n   📊 Drift Monitor: Analyzing epistemic state...")
 
-            drift_analysis = self.drift_monitor.analyze_drift(self.parallel_reasoner.synthesis_history)
-            
-            if drift_analysis['sycophancy_drift']['detected']:
-                severity = drift_analysis['sycophancy_drift']['severity']
-                evidence = drift_analysis['sycophancy_drift']['evidence']
-                logger.info(f"   ⚠️  Sycophancy drift detected (severity: {severity:.2f})")
-                logger.info(f"      Evidence: {evidence}")
-                logger.info(f"      Recommendation: Increase trustee weight or activate skeptic mode")
-            
-            if drift_analysis['tension_avoidance']['detected']:
-                evidence = drift_analysis['tension_avoidance']['evidence']
-                logger.info(f"   ⚠️  Tension avoidance detected")
-                logger.info(f"      Evidence: {evidence}")
-                logger.info(f"      Recommendation: Force tension analysis in synthesizer")
-            
-            if not drift_analysis['sycophancy_drift']['detected'] and not drift_analysis['tension_avoidance']['detected']:
-                logger.info(f"   ✅ No behavioral drift detected - maintaining intellectual honesty")
-            
-            readiness_check['drift_analysis'] = drift_analysis
+            try:
+                # NEW: MirrorDriftMonitor compares current state to git checkpoint history
+                # No heuristics, no behavioral analysis, just temporal comparison
+                drift_report = self.drift_monitor.detect_drift(
+                    current_assessment=readiness_check,
+                    session_id=self.session_id
+                )
+                
+                if drift_report.drift_detected:
+                    logger.info(f"   ⚠️  Epistemic drift detected (severity: {drift_report.severity})")
+                    logger.info(f"      Recommended action: {drift_report.recommended_action}")
+                    if drift_report.drifted_vectors:
+                        vector_names = [v['name'] for v in drift_report.drifted_vectors]
+                        logger.info(f"      Drifted vectors: {', '.join(vector_names)}")
+                else:
+                    logger.info(f"   ✅ No epistemic drift detected")
+                
+                readiness_check['drift_analysis'] = {
+                    'detected': drift_report.drift_detected,
+                    'severity': drift_report.severity,
+                    'vectors': drift_report.drifted_vectors,
+                    'action': drift_report.recommended_action
+                }
+            except Exception as e:
+                logger.warning(f"   ⚠️  Drift analysis failed: {e}")
+                readiness_check['drift_analysis'] = {'error': str(e)}
         
         # Action hook for CHECK phase
         if self.enable_action_hooks:
@@ -1863,10 +1973,9 @@ class CanonicalEpistemicCascade:
             
             # Add drift info if detected
             if readiness_check.get('drift_analysis'):
-                if readiness_check['drift_analysis'].get('sycophancy_drift', {}).get('detected'):
-                    check_thoughts.append("⚠️ Sycophancy drift detected")
-                if readiness_check['drift_analysis'].get('tension_avoidance', {}).get('detected'):
-                    check_thoughts.append("⚠️ Tension avoidance detected")
+                if readiness_check['drift_analysis'].get('detected'):
+                    severity = readiness_check['drift_analysis'].get('severity', 'unknown')
+                    check_thoughts.append(f"⚠️ Epistemic drift detected (severity: {severity})")
             
             log_thought("\n".join(check_thoughts), "CHECK", "")
             log_cascade_phase("CHECK", "", {

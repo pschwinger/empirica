@@ -105,9 +105,21 @@ class Goal:
         scope: ScopeVector = None,
         **kwargs
     ) -> 'Goal':
-        """Convenience factory method"""
+        """Convenience factory method with validation"""
+        from .validation import validate_objective, validate_success_criteria, validate_complexity, validate_scope_vector
+        
+        # Validate inputs before creating
+        validate_objective(objective)
+        validate_success_criteria(success_criteria)
+        
         if scope is None:
             scope = ScopeVector(breadth=0.3, duration=0.2, coordination=0.1)  # Default: narrow, short, solo
+        validate_scope_vector(scope)
+        
+        complexity = kwargs.get('estimated_complexity')
+        if complexity is not None:
+            validate_complexity(complexity)
+        
         return Goal(
             id=str(uuid.uuid4()),
             objective=objective,
@@ -184,3 +196,113 @@ class Goal:
             completed_timestamp=data.get('completed_timestamp'),
             is_completed=data.get('is_completed', False)
         )
+    
+    def get_subtasks(self):
+        """
+        Get all subtasks for this goal
+        
+        Returns list of SubTask objects from database
+        
+        Note: Creates its own repository connection for simplicity.
+        For bulk operations, use TaskRepository directly.
+        """
+        from empirica.core.tasks.repository import TaskRepository
+        repo = TaskRepository()
+        try:
+            subtasks = repo.get_goal_subtasks(self.id)
+            return subtasks
+        finally:
+            repo.close()
+    
+    def calculate_progress(self) -> Dict[str, Any]:
+        """
+        Calculate goal progress based on subtasks
+        
+        Returns:
+            {
+                'total_subtasks': int,
+                'completed': int,
+                'in_progress': int,
+                'pending': int,
+                'blocked': int,
+                'skipped': int,
+                'completion_percentage': float
+            }
+        """
+        from empirica.core.tasks.types import TaskStatus
+        
+        subtasks = self.get_subtasks()
+        
+        if not subtasks:
+            # No subtasks - use success criteria or is_completed flag
+            if self.is_completed:
+                return {
+                    'total_subtasks': 0,
+                    'completed': 0,
+                    'in_progress': 0,
+                    'pending': 0,
+                    'blocked': 0,
+                    'skipped': 0,
+                    'completion_percentage': 100.0,
+                    'note': 'No subtasks, marked as complete'
+                }
+            else:
+                return {
+                    'total_subtasks': 0,
+                    'completed': 0,
+                    'in_progress': 0,
+                    'pending': 0,
+                    'blocked': 0,
+                    'skipped': 0,
+                    'completion_percentage': 0.0,
+                    'note': 'No subtasks created yet'
+                }
+        
+        # Count by status
+        status_counts = {
+            TaskStatus.COMPLETED: 0,
+            TaskStatus.IN_PROGRESS: 0,
+            TaskStatus.PENDING: 0,
+            TaskStatus.BLOCKED: 0,
+            TaskStatus.SKIPPED: 0
+        }
+        
+        for subtask in subtasks:
+            status_counts[subtask.status] = status_counts.get(subtask.status, 0) + 1
+        
+        total = len(subtasks)
+        completed = status_counts[TaskStatus.COMPLETED] + status_counts[TaskStatus.SKIPPED]
+        
+        return {
+            'total_subtasks': total,
+            'completed': status_counts[TaskStatus.COMPLETED],
+            'in_progress': status_counts[TaskStatus.IN_PROGRESS],
+            'pending': status_counts[TaskStatus.PENDING],
+            'blocked': status_counts[TaskStatus.BLOCKED],
+            'skipped': status_counts[TaskStatus.SKIPPED],
+            'completion_percentage': (completed / total * 100.0) if total > 0 else 0.0
+        }
+    
+    def is_ready_for_completion(self) -> bool:
+        """
+        Check if goal is ready to be marked complete
+        
+        Checks:
+        1. All subtasks completed or skipped (if subtasks exist)
+        2. Falls back to is_completed flag if no subtasks
+        
+        Returns:
+            True if ready for completion, False otherwise
+        """
+        progress = self.calculate_progress()
+        
+        # If no subtasks, rely on is_completed flag
+        if progress['total_subtasks'] == 0:
+            return self.is_completed
+        
+        # If subtasks exist, check if all are done
+        all_done = (
+            progress['completed'] + progress['skipped'] == progress['total_subtasks']
+        )
+        
+        return all_done

@@ -272,6 +272,46 @@ empirica/config/
 from empirica.config.profile_loader import select_profile, load_profile
 ```
 
+**Note:** v2.0 introduces **MCO Architecture** (Meta-Agent Configuration Object) which replaces Investigation Profiles with dynamic YAML-based configuration. See MCO section below.
+
+---
+
+#### 3a. **MCO Architecture (v2.0)** (`empirica/config/mco/`)
+
+**Purpose:** Dynamic configuration via YAML files
+
+```
+empirica/config/mco/
+├── personas.yaml                      # 6 AI personas (researcher, implementer, etc.)
+├── cascade_styles.yaml                # CASCADE workflow styles
+├── goal_scopes.yaml                   # Goal scope recommendations
+├── model_profiles.yaml                # Model-specific bias corrections
+├── protocols.yaml                     # Communication protocols
+├── goal_scope_loader.py               # Scope recommendation logic
+└── mco_loader.py                      # MCO loading logic
+```
+
+**6 MCO Personas** (in `personas.yaml`):
+1. `researcher` - High uncertainty tolerance, deep investigation
+2. `implementer` - Balanced, action-oriented
+3. `reviewer` - High precision, quality focus
+4. `coordinator` - Multi-agent orchestration
+5. `learner` - Maximum exploration
+6. `expert` - Minimal investigation, high confidence
+
+**Key Features:**
+- **Dynamic Thresholds**: Persona-specific confidence gates
+- **Scope Recommendations**: AI-driven goal scoping based on epistemic state
+- **Model Profiles**: Bias correction for different AI models (GPT-4, Claude, etc.)
+- **CASCADE Styles**: Different workflow patterns per persona
+- **Backward Compatible**: Falls back to Investigation Profiles if MCO not available
+
+**Import Paths:**
+```python
+from empirica.config.mco.mco_loader import load_mco_persona
+from empirica.config.goal_scope_loader import get_scope_recommendations
+```
+
 ---
 
 #### 4. **Data Management** (`empirica/data/`)

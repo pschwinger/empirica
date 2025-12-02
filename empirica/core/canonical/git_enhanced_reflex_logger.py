@@ -179,6 +179,10 @@ class GitEnhancedReflexLogger(ReflexLogger):
         - Use compact field names
         - Calculate overall confidence from vectors
         
+        Phase 2.5 Enhancement:
+        - Capture git state (commits since last checkpoint)
+        - Calculate learning delta (if previous checkpoint exists)
+        
         Returns:
             Compressed checkpoint dictionary
         """
@@ -196,6 +200,11 @@ class GitEnhancedReflexLogger(ReflexLogger):
             "overall_confidence": round(overall_confidence, 3),
             "meta": metadata or {}
         }
+        
+        # Phase 2.5: Capture git state
+        if self.enable_git_notes and self.git_repo_path:
+            checkpoint["git_state"] = self._capture_git_state()
+            checkpoint["learning_delta"] = self._calculate_learning_delta(vectors)
         
         # Add token count (self-measurement)
         checkpoint["token_count"] = self._estimate_token_count(checkpoint)
@@ -218,6 +227,216 @@ class GitEnhancedReflexLogger(ReflexLogger):
         text = json.dumps(data)
         word_count = len(text.split())
         return int(word_count * 1.3)
+    
+    def _capture_git_state(self) -> Dict[str, Any]:
+        """
+        Capture current git state at checkpoint time.
+        
+        Phase 2.5: Enables correlation of epistemic deltas to code changes.
+        
+        Returns:
+            Dictionary containing:
+            - head_commit: Current HEAD SHA
+            - commits_since_last_checkpoint: List of commits since last checkpoint
+            - uncommitted_changes: Working directory changes
+        """
+        try:
+            # Get HEAD commit SHA
+            head_result = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path,
+                timeout=5
+            )
+            
+            if head_result.returncode != 0:
+                logger.warning("Failed to get HEAD commit")
+                return {}
+            
+            head_commit = head_result.stdout.strip()
+            
+            # Get commits since last checkpoint
+            commits_since_last = self._get_commits_since_last_checkpoint()
+            
+            # Get uncommitted changes
+            uncommitted_changes = self._get_uncommitted_changes()
+            
+            return {
+                "head_commit": head_commit,
+                "commits_since_last_checkpoint": commits_since_last,
+                "uncommitted_changes": uncommitted_changes
+            }
+            
+        except Exception as e:
+            logger.warning(f"Failed to capture git state: {e}")
+            return {}
+    
+    def _get_commits_since_last_checkpoint(self) -> List[Dict[str, Any]]:
+        """
+        Get commits made since last checkpoint.
+        
+        Returns:
+            List of commit dictionaries with sha, message, author, timestamp, files_changed
+        """
+        try:
+            # Get last checkpoint to find timestamp
+            last_checkpoint = self.get_last_checkpoint()
+            if not last_checkpoint:
+                # No previous checkpoint - return empty list
+                return []
+            
+            since_time = last_checkpoint.get('timestamp')
+            if not since_time:
+                return []
+            
+            # Get commits since last checkpoint timestamp
+            log_result = subprocess.run(
+                ["git", "log", f"--since={since_time}", "--format=%H|%s|%an|%aI", "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path,
+                timeout=10
+            )
+            
+            if log_result.returncode != 0:
+                return []
+            
+            commits = []
+            for line in log_result.stdout.strip().split('\n'):
+                if not line:
+                    continue
+                
+                parts = line.split('|', 3)
+                if len(parts) < 4:
+                    continue
+                
+                sha, message, author, timestamp = parts
+                
+                # Get files changed in this commit
+                files_result = subprocess.run(
+                    ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", sha],
+                    capture_output=True,
+                    text=True,
+                    cwd=self.git_repo_path,
+                    timeout=5
+                )
+                
+                files_changed = [f for f in files_result.stdout.strip().split('\n') if f]
+                
+                commits.append({
+                    "sha": sha,
+                    "message": message,
+                    "author": author,
+                    "timestamp": timestamp,
+                    "files_changed": files_changed
+                })
+            
+            return commits
+            
+        except Exception as e:
+            logger.warning(f"Failed to get commits since last checkpoint: {e}")
+            return []
+    
+    def _get_uncommitted_changes(self) -> Dict[str, Any]:
+        """
+        Get uncommitted working directory changes.
+        
+        Returns:
+            Dictionary with files_modified, files_added, files_deleted, diff_stat
+        """
+        try:
+            # Get status (porcelain format for easy parsing)
+            status_result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path,
+                timeout=5
+            )
+            
+            if status_result.returncode != 0:
+                return {}
+            
+            modified = []
+            added = []
+            deleted = []
+            
+            for line in status_result.stdout.split('\n'):
+                if not line:
+                    continue
+                
+                status = line[:2]
+                filepath = line[3:] if len(line) > 3 else ""
+                
+                if 'M' in status:
+                    modified.append(filepath)
+                elif 'A' in status:
+                    added.append(filepath)
+                elif 'D' in status:
+                    deleted.append(filepath)
+            
+            # Get diff stats
+            diff_result = subprocess.run(
+                ["git", "diff", "--stat"],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path,
+                timeout=5
+            )
+            
+            diff_stat = diff_result.stdout.strip() if diff_result.returncode == 0 else ""
+            
+            return {
+                "files_modified": modified,
+                "files_added": added,
+                "files_deleted": deleted,
+                "diff_stat": diff_stat
+            }
+            
+        except Exception as e:
+            logger.warning(f"Failed to get uncommitted changes: {e}")
+            return {}
+    
+    def _calculate_learning_delta(self, current_vectors: Dict[str, float]) -> Dict[str, Any]:
+        """
+        Calculate epistemic delta since last checkpoint.
+        
+        Phase 2.5: Enables attribution analysis (what caused learning increase).
+        
+        Args:
+            current_vectors: Current epistemic vectors
+        
+        Returns:
+            Dictionary mapping vector names to {prev, curr, delta} for each vector
+        """
+        try:
+            last_checkpoint = self.get_last_checkpoint()
+            if not last_checkpoint:
+                return {}
+            
+            prev_vectors = last_checkpoint.get('vectors', {})
+            if not prev_vectors:
+                return {}
+            
+            deltas = {}
+            for key in current_vectors:
+                if key in prev_vectors:
+                    prev_val = prev_vectors[key]
+                    curr_val = current_vectors[key]
+                    delta = curr_val - prev_val
+                    
+                    deltas[key] = {
+                        "prev": round(prev_val, 3),
+                        "curr": round(curr_val, 3),
+                        "delta": round(delta, 3)
+                    }
+            
+            return deltas
+            
+        except Exception as e:
+            logger.warning(f"Failed to calculate learning delta: {e}")
+            return {}
     
     def _save_checkpoint_to_sqlite(self, checkpoint: Dict[str, Any]):
         """
@@ -259,12 +478,14 @@ class GitEnhancedReflexLogger(ReflexLogger):
             checkpoint_json = json.dumps(checkpoint)
             json.loads(checkpoint_json)  # Validate it's parseable
             
-            # Create session-specific notes ref for agent isolation
-            note_ref = f"empirica/session/{self.session_id}"
-            
-            # Add note to HEAD commit with session-specific namespace
+            # Create unique notes ref using phase/round to prevent overwrites
+            phase = checkpoint.get('phase', 'UNKNOWN')
+            round_num = checkpoint.get('round', 1)
+            note_ref = f"empirica/session/{self.session_id}/{phase}/{round_num}"
+
+            # Add note to HEAD commit with unique ref per checkpoint (no -f flag needed)
             result = subprocess.run(
-                ["git", "notes", "--ref", note_ref, "add", "-f", "-m", checkpoint_json, "HEAD"],
+                ["git", "notes", "--ref", note_ref, "add", "-m", checkpoint_json, "HEAD"],
                 capture_output=True,
                 timeout=5,
                 cwd=self.git_repo_path,
@@ -322,50 +543,183 @@ class GitEnhancedReflexLogger(ReflexLogger):
     
     def _git_get_latest_note(self, phase: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
-        Retrieve latest checkpoint from session-specific git notes.
-        
+        Retrieve latest checkpoint from git notes (new hierarchical structure).
+
         Args:
             phase: Filter by phase (optional)
-        
+
         Returns:
             Checkpoint dictionary or None
         """
         try:
-            # Create session-specific notes ref
-            note_ref = f"empirica/session/{self.session_id}"
-            
-            # Get note from HEAD using session-specific ref
-            result = subprocess.run(
-                ["git", "notes", "--ref", note_ref, "show", "HEAD"],
-                capture_output=True,
-                timeout=2,
-                cwd=self.git_repo_path,
-                text=True
-            )
-            
-            if result.returncode != 0:
-                logger.debug(f"No session-specific git note found for session {self.session_id}")
-                return None
-            
-            # Parse JSON
-            checkpoint = json.loads(result.stdout)
-            
-            # Filter by phase if requested
-            if phase and checkpoint.get("phase") != phase:
-                return None
-            
-            # Session validation is implicit since we're reading from session-specific ref
-            # but we can still validate for extra safety
-            if checkpoint.get("session_id") != self.session_id:
-                logger.warning("Session ID mismatch in session-specific git note - this should not happen!")
-                return None
-            
-            logger.debug(f"Retrieved session-specific checkpoint: phase={checkpoint.get('phase')}, session={self.session_id}")
-            return checkpoint
-            
-        except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError) as e:
-            logger.debug(f"Failed to retrieve session-specific git note: {e}")
+            # We now need to look for notes in the hierarchical namespace
+            # For backward compatibility and to get the 'latest', we'll list notes and pick the most recent
+            # First try to find the latest checkpoint for the specific phase, if specified
+            if phase:
+                # Look for the latest round for this specific phase
+                result = subprocess.run(
+                    ["git", "notes", "list", f"refs/notes/empirica/session/{self.session_id}/{phase}"],
+                    capture_output=True,
+                    timeout=2,
+                    cwd=self.git_repo_path,
+                    text=True
+                )
+
+                if result.returncode == 0 and result.stdout.strip():
+                    # Get the note with the highest round number
+                    lines = result.stdout.strip().split('\n')
+                    latest_commit = None
+                    highest_round = 0
+
+                    for line in lines:
+                        if line.strip():
+                            parts = line.split()
+                            if len(parts) >= 2:
+                                note_sha, commit_sha = parts[0], parts[1]
+                                # Extract round number from ref path (by getting round from the ref name)
+                                # We'll check what refs exist
+                                # For now, let's find the one with the highest round number in the ref path
+                                pass  # We'll handle this later
+
+                    # For now, just try HEAD for the specific phase
+                    note_refs = [
+                        f"empirica/session/{self.session_id}/{phase}/3",
+                        f"empirica/session/{self.session_id}/{phase}/2",
+                        f"empirica/session/{self.session_id}/{phase}/1"
+                    ]
+
+                    for note_ref in note_refs:
+                        result = subprocess.run(
+                            ["git", "notes", "--ref", note_ref, "show", "HEAD"],
+                            capture_output=True,
+                            timeout=2,
+                            cwd=self.git_repo_path,
+                            text=True
+                        )
+
+                        if result.returncode == 0:
+                            checkpoint = json.loads(result.stdout)
+                            if checkpoint.get("session_id") != self.session_id:
+                                logger.warning(f"Session ID mismatch in git note: {checkpoint.get('session_id')} vs {self.session_id}")
+                                continue
+                            return checkpoint
+                else:
+                    # If no notes with specific phase exist, try generic search
+                    pass
+
+            # If no specific phase requested or no notes found with that phase,
+            # search for any checkpoint from this session
+            # We'll list through most recent phases/rounds in priority order
+            possible_refs = [
+                f"empirica/session/{self.session_id}/POSTFLIGHT/1",
+                f"empirica/session/{self.session_id}/POSTFLIGHT/2",
+                f"empirica/session/{self.session_id}/POSTFLIGHT/3",
+                f"empirica/session/{self.session_id}/ACT/1",
+                f"empirica/session/{self.session_id}/ACT/2",
+                f"empirica/session/{self.session_id}/CHECK/1",
+                f"empirica/session/{self.session_id}/CHECK/2",
+                f"empirica/session/{self.session_id}/PREFLIGHT/1",
+                f"empirica/session/{self.session_id}/PREFLIGHT/2"
+            ]
+
+            for note_ref in possible_refs:
+                result = subprocess.run(
+                    ["git", "notes", "--ref", note_ref, "show", "HEAD"],
+                    capture_output=True,
+                    timeout=2,
+                    cwd=self.git_repo_path,
+                    text=True
+                )
+
+                if result.returncode == 0:
+                    checkpoint = json.loads(result.stdout)
+                    if checkpoint.get("session_id") != self.session_id:
+                        logger.warning(f"Session ID mismatch in git note: {checkpoint.get('session_id')} vs {self.session_id}")
+                        continue
+                    if phase and checkpoint.get("phase") != phase:
+                        continue
+                    return checkpoint
+
+            logger.debug(f"No git note found for session {self.session_id}")
             return None
+
+        except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError) as e:
+            logger.debug(f"Failed to retrieve git note: {e}")
+            return None
+
+    def get_last_checkpoint(
+        self,
+        max_age_hours: int = 24,
+        phase: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Load most recent checkpoint (git notes preferred, SQLite fallback).
+
+        Args:
+            max_age_hours: Maximum age of checkpoint to consider (default: 24 hours)
+            phase: Filter by specific phase (optional)
+
+        Returns:
+            Compressed checkpoint (~450 tokens) or None if not found
+        """
+        # Try git notes first - updated for hierarchical namespace
+        if self.enable_git_notes and self.git_available:
+            checkpoint = self._git_get_latest_note_new(phase=phase)
+            if checkpoint and self._is_fresh(checkpoint, max_age_hours):
+                return checkpoint
+
+        # Fallback to SQLite
+        return self._load_checkpoint_from_sqlite(phase=phase, max_age_hours=max_age_hours)
+
+    def _git_get_latest_note_new(self, phase: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve most recent checkpoint from hierarchical git notes structure.
+
+        Args:
+            phase: Filter by phase (optional)
+
+        Returns:
+            Checkpoint dictionary or None
+        """
+        try:
+            # Search for the most recent checkpoint across rounds and phases
+            phases_to_check = ["POSTFLIGHT", "ACT", "CHECK", "INVESTIGATE", "PLAN", "THINK", "PREFLIGHT"]
+            if phase:
+                # Only check the specific phase requested
+                phases_to_check = [phase]
+
+            # Start checking from the highest round numbers downwards
+            for round_num in range(10, 0, -1):  # Check rounds 10 to 1
+                for ph in phases_to_check:
+                    note_ref = f"empirica/session/{self.session_id}/{ph}/{round_num}"
+
+                    result = subprocess.run(
+                        ["git", "notes", "show", f"--ref={note_ref}", "HEAD"],
+                        capture_output=True,
+                        timeout=2,
+                        cwd=self.git_repo_path,
+                        text=True
+                    )
+
+                    if result.returncode == 0:
+                        checkpoint = json.loads(result.stdout)
+
+                        if checkpoint.get("session_id") != self.session_id:
+                            logger.warning(f"Session ID mismatch: {checkpoint.get('session_id')} vs {self.session_id}")
+                            continue
+
+                        if phase and checkpoint.get("phase") != phase:
+                            continue
+
+                        logger.debug(f"Retrieved latest checkpoint: {checkpoint.get('phase', 'N/A')}")
+                        return checkpoint
+
+        except (subprocess.TimeoutExpired, json.JSONDecodeError) as e:
+            logger.debug(f"Failed to retrieve latest git note: {e}")
+            return None
+
+        logger.debug(f"No git note found for session {self.session_id}")
+        return None
     
     def _load_checkpoint_from_sqlite(
         self,
@@ -421,11 +775,11 @@ class GitEnhancedReflexLogger(ReflexLogger):
     def _is_fresh(self, checkpoint: Dict[str, Any], max_age_hours: int) -> bool:
         """
         Check if checkpoint is within acceptable age.
-        
+
         Args:
             checkpoint: Checkpoint dictionary
             max_age_hours: Maximum age in hours
-        
+
         Returns:
             True if checkpoint is fresh enough
         """
@@ -435,7 +789,95 @@ class GitEnhancedReflexLogger(ReflexLogger):
             return checkpoint_time >= cutoff_time
         except (KeyError, ValueError):
             return False
-    
+
+    def list_checkpoints(
+        self,
+        session_id: Optional[str] = None,
+        limit: Optional[int] = None,
+        phase: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        List checkpoints from git notes (using hierarchical namespace).
+        
+        Uses git for-each-ref to discover all checkpoints automatically.
+        
+        Args:
+            session_id: Filter by session (optional, defaults to self.session_id)
+            limit: Maximum number to return (optional)
+            phase: Filter by phase (PREFLIGHT, CHECK, ACT, POSTFLIGHT) (optional)
+        
+        Returns:
+            List of checkpoint metadata dicts, sorted newest first
+        """
+        checkpoints = []
+        filter_session_id = session_id or self.session_id
+        
+        # Use git for-each-ref to discover all refs in session's namespace
+        # This automatically finds all phase/round combinations
+        refs_result = subprocess.run(
+            ["git", "for-each-ref", f"refs/notes/empirica/session/{filter_session_id}", "--format=%(refname)"],
+            capture_output=True,
+            text=True,
+            cwd=self.git_repo_path
+        )
+        
+        if refs_result.returncode != 0 or not refs_result.stdout.strip():
+            logger.debug(f"No checkpoints found for session: {filter_session_id}")
+            return []
+        
+        # Parse all refs (one per line)
+        refs = [line.strip() for line in refs_result.stdout.strip().split('\n') if line.strip()]
+        
+        for ref in refs:
+            # Extract phase from ref path
+            # Example: refs/notes/empirica/session/abc-123/PREFLIGHT/1
+            #          0    1     2        3       4       5          6
+            ref_parts = ref.split('/')
+            if len(ref_parts) < 7:
+                logger.warning(f"Unexpected ref format: {ref}")
+                continue
+            
+            ref_phase = ref_parts[5]  # PREFLIGHT, CHECK, ACT, POSTFLIGHT
+            
+            # Apply phase filter
+            if phase and ref_phase != phase:
+                continue
+            
+            # Strip "refs/notes/" prefix for git notes command
+            note_ref = ref[11:]  # "refs/notes/" is 11 characters
+            
+            # Get the note content for HEAD
+            # CRITICAL: Correct syntax is: git notes --ref <ref> show <commit>
+            show_result = subprocess.run(
+                ["git", "notes", "--ref", note_ref, "show", "HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=self.git_repo_path
+            )
+            
+            if show_result.returncode == 0:
+                try:
+                    checkpoint = json.loads(show_result.stdout)
+                    
+                    # Double-check session filter
+                    if session_id and checkpoint.get("session_id") != session_id:
+                        logger.warning(f"Session mismatch in checkpoint: {checkpoint.get('session_id')} != {session_id}")
+                        continue
+                    
+                    checkpoints.append(checkpoint)
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse checkpoint from ref {ref}: {e}")
+                    continue
+        
+        # Sort by timestamp descending (newest first)
+        checkpoints.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        
+        # Apply limit
+        if limit and limit > 0:
+            checkpoints = checkpoints[:limit]
+        
+        return checkpoints
+
     def get_vector_diff(
         self,
         since_checkpoint: Dict[str, Any],
@@ -443,29 +885,29 @@ class GitEnhancedReflexLogger(ReflexLogger):
     ) -> Dict[str, Any]:
         """
         Compute vector delta since last checkpoint.
-        
+
         Returns differential update (~400 tokens vs ~3,500 for full assessment).
-        
+
         Args:
             since_checkpoint: Baseline checkpoint
             current_vectors: Current epistemic vectors
-        
+
         Returns:
             Vector diff dictionary with delta and significant changes
         """
         baseline_vectors = since_checkpoint.get("vectors", {})
-        
+
         # Calculate deltas
         delta = {}
         significant_changes = []
-        
+
         for key in current_vectors:
             baseline_value = baseline_vectors.get(key, 0.5)
             current_value = current_vectors[key]
             change = current_value - baseline_value
-            
+
             delta[key] = round(change, 3)
-            
+
             # Flag significant changes (>0.15 threshold)
             if abs(change) > 0.15:
                 significant_changes.append({
@@ -474,7 +916,7 @@ class GitEnhancedReflexLogger(ReflexLogger):
                     "current": round(current_value, 3),
                     "delta": round(change, 3)
                 })
-        
+
         diff = {
             "baseline_phase": since_checkpoint.get("phase"),
             "baseline_round": since_checkpoint.get("round", 0),
@@ -483,8 +925,8 @@ class GitEnhancedReflexLogger(ReflexLogger):
             "significant_changes": significant_changes,
             "timestamp": datetime.now(UTC).isoformat()
         }
-        
+
         # Add token count
         diff["token_count"] = self._estimate_token_count(diff)
-        
+
         return diff

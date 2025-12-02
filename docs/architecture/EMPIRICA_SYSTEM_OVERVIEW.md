@@ -1,5 +1,7 @@
 # Empirica System Overview: Privacy-First Epistemic AI
 
+> **Future Vision:** See [EPISTEMIC_TRAJECTORY_VISUALIZATION.md](./EPISTEMIC_TRAJECTORY_VISUALIZATION.md) for the 4D flight path visualization concept - watch AIs think in real-time!
+
 **Version:** 3.0  
 **Date:** 2025-11-07  
 **Purpose:** Complete system orientation for AI agents  

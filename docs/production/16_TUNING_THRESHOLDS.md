@@ -10,6 +10,14 @@
 
 Empirica's canonical weights and thresholds work well out-of-the-box for general tasks, but domain-specific calibration can significantly improve assessment accuracy. This guide covers threshold tuning, domain calibration, and validation strategies.
 
+> [!IMPORTANT]
+> **MCO Architecture (v2.0)**: Empirica now uses **YAML-based configuration** via the MCO (Meta-Agent Configuration Object) system. Instead of manually tuning thresholds, you can:
+> 1. **Select a persona** (`researcher`, `implementer`, `reviewer`, etc.) - see [24_MCO_ARCHITECTURE.md](file:///home/yogapad/empirical-ai/empirica/docs/production/24_MCO_ARCHITECTURE.md)
+> 2. **Edit YAML configs** in `/empirica/config/mco/personas.yaml` for custom personas
+> 3. **Use model profiles** for AI-specific bias correction
+>
+> This guide covers **manual threshold tuning** for advanced use cases. For most users, **MCO personas are recommended** instead.
+
 ---
 
 ## Understanding Canonical Weights

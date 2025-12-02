@@ -22,8 +22,7 @@ def handle_decision_command(args):
     """Handle decision-making command with uncertainty assessment"""
     try:
         from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
-        from empirica.calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
-        
+
         print(f"⚖️ Analyzing decision: {args.decision}")
         
         context = parse_json_safely(getattr(args, 'context', None))

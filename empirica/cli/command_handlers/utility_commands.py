@@ -124,30 +124,35 @@ def handle_goal_analysis_command(args):
 def handle_calibration_command(args):
     """Handle calibration command"""
     try:
-        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
-        
-        print(f"🎯 Running calibration analysis...")
-        
-        analyzer = AdaptiveUncertaintyCalibration()
-        
+        # DEPRECATED: AdaptiveUncertaintyCalibration removed (used heuristics)
+        # from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
+
+        print(f"⚠️  Calibration feature deprecated (used heuristics)")
+        print(f"   Use mirror-drift monitoring instead")
+
+        # DEPRECATED: This calibration feature used heuristics
+        # Removed as part of no-heuristics migration
+        # TODO: Replace with MirrorDriftMonitor if needed
+        # analyzer = AdaptiveUncertaintyCalibration()
+
         # Get calibration data
-        if hasattr(args, 'data_file') and args.data_file:
-            with open(args.data_file, 'r') as f:
-                calibration_data = json.load(f)
-        else:
-            # Use default calibration assessment
-            calibration_data = analyzer.get_default_calibration_data()
-        
-        result = analyzer.analyze_calibration(calibration_data)
-        
+        # if hasattr(args, 'data_file') and args.data_file:
+        #     with open(args.data_file, 'r') as f:
+        #         calibration_data = json.load(f)
+        # else:
+        #     # Use default calibration assessment
+        #     calibration_data = analyzer.get_default_calibration_data()
+
+        # result = analyzer.analyze_calibration(calibration_data)
+
         # Prepare result for output
         output_result = {
             "ok": True,
-            "message": "Calibration analysis completed",
-            "calibration_score": result.get('calibration_score', 0),
-            "accuracy": result.get('accuracy', 0),
-            "trend": result.get('trend', 'stable'),
-            "detailed_metrics": result.get('detailed_metrics', {}),
+            "message": "Calibration feature deprecated (use mirror-drift monitoring)",
+            "calibration_score": 0,  # N/A
+            "accuracy": 0,  # N/A
+            "trend": "N/A",  # N/A
+            "detailed_metrics": {},
             "timestamp": "2024-01-01T12:00:00Z"
         }
         
@@ -155,16 +160,14 @@ def handle_calibration_command(args):
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(output_result, indent=2))
         else:
-            print(f"✅ Calibration analysis complete")
-            print(f"   📊 Overall calibration score: {result.get('calibration_score', 0):.2f}")
-            print(f"   🎯 Accuracy: {result.get('accuracy', 0):.2f}")
-            print(f"   📈 Trend: {result.get('trend', 'stable')}")
-            
+            print("⚠️  Calibration analysis complete (feature deprecated)")
+            print("   📊 Overall calibration score: N/A (feature deprecated)")
+            print("   🎯 Accuracy: N/A (feature deprecated)")
+            print("   📈 Trend: N/A (feature deprecated)")
+
             if getattr(args, 'verbose', False):
-                print("🔍 Detailed calibration metrics:")
-                for metric, value in result.get('detailed_metrics', {}).items():
-                    print(f"   • {metric}: {value}")
-        
+                print("🔍 Detailed calibration metrics: N/A (feature deprecated)")
+
     except Exception as e:
         handle_cli_error(e, "Calibration", getattr(args, 'verbose', False))
 
@@ -172,31 +175,41 @@ def handle_calibration_command(args):
 def handle_uvl_command(args):
     """Handle UVL (Uncertainty Vector Learning) command"""
     try:
-        from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
-        
-        print(f"🧠 Running UVL analysis...")
-        
-        analyzer = AdaptiveUncertaintyCalibration()
-        
+        # DEPRECATED: AdaptiveUncertaintyCalibration removed (used heuristics)
+        # from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
+
+        print(f"⚠️  UVL feature deprecated (used heuristics)")
+        print(f"   Use mirror-drift monitoring instead")
+
+        # DEPRECATED: This UVL feature used heuristics
+        # Removed as part of no-heuristics migration
+        # TODO: Replace with MirrorDriftMonitor if needed
+        # analyzer = AdaptiveUncertaintyCalibration()
+
         # Parse context if provided
         context = parse_json_safely(getattr(args, 'context', None))
-        
-        # Run UVL analysis
-        result = analyzer.run_uvl_analysis(
-            task=args.task if hasattr(args, 'task') else "General UVL analysis",
-            context=context
-        )
-        
-        print(f"✅ UVL analysis complete")
+
+        # # Run UVL analysis
+        # result = analyzer.run_uvl_analysis(
+        #     task=args.task if hasattr(args, 'task') else "General UVL analysis",
+        #     context=context
+        # )
+
+        # Simulate result for deprecated function
+        result = {
+            "task": args.task if hasattr(args, 'task') else "General UVL analysis",
+            "confidence": 0,  # N/A
+            "vectors": []  # N/A
+        }
+
+        print(f"⚠️  UVL analysis skipped (feature deprecated)")
         print(f"   🎯 Task: {result.get('task', 'Unknown')}")
-        print(f"   📊 Confidence: {result.get('confidence', 0):.2f}")
-        print(f"   🧠 Learning vectors: {len(result.get('vectors', []))}")
-        
-        if getattr(args, 'verbose', False) and result.get('vectors'):
-            print("🔍 Uncertainty vectors:")
-            for vector in result['vectors']:
-                print(f"   • {vector.get('name', 'Unknown')}: {vector.get('value', 0):.2f}")
-        
+        print(f"   📊 Confidence: N/A (feature deprecated)")
+        print(f"   🧠 Learning vectors: 0 (feature deprecated)")
+
+        if getattr(args, 'verbose', False):
+            print("🔍 Uncertainty vectors: N/A (feature deprecated)")
+
     except Exception as e:
         handle_cli_error(e, "UVL analysis", getattr(args, 'verbose', False))
 

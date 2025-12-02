@@ -76,7 +76,8 @@ class GitGoalStore:
         session_id: str,
         ai_id: str,
         goal_data: Dict[str, Any],
-        epistemic_state: Optional[Dict[str, float]] = None
+        epistemic_state: Optional[Dict[str, float]] = None,
+        lineage: Optional[List[Dict[str, str]]] = None
     ) -> bool:
         """
         Store goal in git notes
@@ -87,6 +88,7 @@ class GitGoalStore:
             ai_id: AI that created goal
             goal_data: Complete goal data (from database)
             epistemic_state: Current epistemic vectors
+            lineage: Goal lineage (if None, creates initial lineage)
             
         Returns:
             bool: Success
@@ -104,7 +106,7 @@ class GitGoalStore:
                 'created_at': datetime.now(UTC).isoformat(),
                 'goal_data': goal_data,
                 'epistemic_state': epistemic_state or {},
-                'lineage': [
+                'lineage': lineage or [
                     {
                         'ai_id': ai_id,
                         'timestamp': datetime.now(UTC).isoformat(),
@@ -206,9 +208,10 @@ class GitGoalStore:
             return []
         
         try:
-            # List all goal notes
+            # List all goal note refs using for-each-ref
+            # This properly handles custom refs like refs/notes/empirica/goals/*
             result = subprocess.run(
-                ['git', 'notes', 'list'],
+                ['git', 'for-each-ref', 'refs/notes/empirica/goals/'],
                 cwd=self.workspace_root,
                 capture_output=True,
                 text=True
@@ -219,20 +222,21 @@ class GitGoalStore:
             
             goals = []
             
-            # Parse notes list and filter
+            # Parse for-each-ref output
+            # Format: <commit-hash> commit\trefs/notes/empirica/goals/<goal-id>
             for line in result.stdout.strip().split('\n'):
                 if not line:
                     continue
                 
-                # Format: <commit-hash> refs/notes/empirica/goals/<goal-id>
-                parts = line.split()
+                parts = line.split('\t')
                 if len(parts) < 2:
                     continue
                 
-                ref = parts[1] if len(parts) > 1 else parts[0]
-                if not ref.startswith('empirica/goals/'):
+                ref = parts[1]  # refs/notes/empirica/goals/<goal-id>
+                if not ref.startswith('refs/notes/empirica/goals/'):
                     continue
                 
+                # Extract goal ID from ref path
                 goal_id = ref.split('/')[-1]
                 goal_data = self.load_goal(goal_id)
                 
@@ -281,11 +285,12 @@ class GitGoalStore:
             'action': action
         })
         
-        # Re-store
+        # Re-store with updated lineage
         return self.store_goal(
             goal_id=goal_id,
             session_id=goal_data['session_id'],
             ai_id=goal_data['ai_id'],  # Keep original creator
             goal_data=goal_data['goal_data'],
-            epistemic_state=goal_data.get('epistemic_state')
+            epistemic_state=goal_data.get('epistemic_state'),
+            lineage=goal_data['lineage']  # Pass updated lineage
         )
