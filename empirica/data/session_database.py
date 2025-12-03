@@ -1591,40 +1591,72 @@ class SessionDatabase:
 
         return None
 
+    def get_findings_by_file(self, filename: str, session_id: Optional[str] = None) -> List[Dict]:
+        """Get all findings mentioning a specific file"""
+        import json
+        
+        cursor = self.conn.cursor()
+        
+        if session_id:
+            query = "SELECT findings, session_id, check_id FROM check_phase_assessments WHERE session_id = ? AND findings IS NOT NULL"
+            cursor.execute(query, (session_id,))
+        else:
+            query = "SELECT findings, session_id, check_id FROM check_phase_assessments WHERE findings IS NOT NULL"
+            cursor.execute(query)
+        
+        results = []
+        for row in cursor.fetchall():
+            findings_json = row[0]
+            if not findings_json:
+                continue
+                
+            findings = json.loads(findings_json)
+            for finding in findings:
+                # Check if filename appears in any file ref
+                for ref in finding.get("refs", {}).get("files", []):
+                    if filename in ref.get("file", ""):
+                        results.append({
+                            "finding": finding,
+                            "session_id": row[1],
+                            "check_id": row[2]
+                        })
+                        break
+        
+        return results
+    
+    def get_findings_by_commit(self, commit_sha: str) -> List[Dict]:
+        """Get all findings from a specific git commit"""
+        import json
+        
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT findings, session_id, check_id FROM check_phase_assessments WHERE findings IS NOT NULL")
+        
+        results = []
+        for row in cursor.fetchall():
+            findings_json = row[0]
+            if not findings_json:
+                continue
+                
+            findings = json.loads(findings_json)
+            for finding in findings:
+                if finding.get("commit", "").startswith(commit_sha[:7]):  # Match short SHA
+                    results.append({
+                        "finding": finding,
+                        "session_id": row[1],
+                        "check_id": row[2]
+                    })
+        
+        return results
+
     def close(self):
         """Close database connection"""
         self.conn.close()
 
 
+
 if __name__ == "__main__":
     # Test the database
     logger.info("🧪 Testing Session Database...")
-    
     db = SessionDatabase()
-    
-    # Create test session
-    session_id = db.create_session("test_claude", bootstrap_level=2, components_loaded=30)
-    logger.info(f"✅ Created session: {session_id}")
-    
-    # Create test cascade
-    cascade_id = db.create_cascade(session_id, "Test task", {"test": True})
-    logger.info(f"✅ Created cascade: {cascade_id}")
-    
-    # Mark phases complete
-    for phase in ['think', 'uncertainty', 'investigate', 'check', 'act']:
-        db.update_cascade_phase(cascade_id, phase, True)
-    logger.info(f"✅ Updated cascade phases")
-    
-    # Complete cascade
-    db.complete_cascade(cascade_id, "proceed", 0.85, 2, 5000, True, True, True)
-    logger.info(f"✅ Completed cascade")
-    
-    # Query back
-    session = db.get_session(session_id)
-    logger.info(f"✅ Retrieved session: {session['ai_id']}")
-    
-    cascades = db.get_session_cascades(session_id)
-    logger.info(f"✅ Retrieved {len(cascades)} cascades")
-    
     db.close()
-    logger.info("\n🎉 Session Database tests passed!")
+    logger.info("✅ Session Database ready")
