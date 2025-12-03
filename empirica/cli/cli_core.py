@@ -549,7 +549,7 @@ def _add_checkpoint_parsers(subparsers):
     # Handoff create command
     handoff_create_parser = subparsers.add_parser(
         'handoff-create',
-        help='Create epistemic handoff report (~90%% token reduction)'
+        help='Create handoff report: epistemic (with CASCADE deltas) or planning (documentation-only)'
     )
     handoff_create_parser.add_argument('--session-id', required=True, help='Session UUID')
     handoff_create_parser.add_argument('--task-summary', required=True, help='What was accomplished (2-3 sentences)')
@@ -557,6 +557,7 @@ def _add_checkpoint_parsers(subparsers):
     handoff_create_parser.add_argument('--remaining-unknowns', help='JSON array of unknowns (optional)')
     handoff_create_parser.add_argument('--next-session-context', required=True, help='Critical context for next session')
     handoff_create_parser.add_argument('--artifacts', help='JSON array of files created (optional)')
+    handoff_create_parser.add_argument('--planning-only', action='store_true', help='Create planning handoff (no CASCADE workflow required) instead of epistemic handoff')
     handoff_create_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
     
     # Handoff query command

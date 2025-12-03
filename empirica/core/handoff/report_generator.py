@@ -164,9 +164,107 @@ class EpistemicHandoffReportGenerator:
         report['compressed_json'] = self._compress_report(report)
         
         logger.info(f"✅ Handoff report generated ({len(report['compressed_json'])} chars)")
-        
+
         return report
-    
+
+    def generate_planning_handoff(
+        self,
+        session_id: str,
+        task_summary: str,
+        key_findings: List[str],
+        remaining_unknowns: List[str],
+        next_session_context: str,
+        artifacts_created: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Generate planning handoff (documentation without CASCADE workflow assessments)
+
+        Used for:
+        - Multi-session planning (no PREFLIGHT/POSTFLIGHT yet)
+        - Architecture/design phase handoffs
+        - Documentation of progress without epistemic measurements
+
+        Args: Same as generate_handoff_report
+
+        Returns: Dictionary with same structure but no epistemic_deltas
+        """
+        logger.info(f"📋 Generating planning handoff for session {session_id[:8]}...")
+
+        # Get session metadata
+        session_meta = self._get_session_metadata(session_id)
+
+        # Calculate duration
+        duration = self._calculate_duration(session_id)
+
+        # Build planning handoff (no epistemic deltas)
+        report = {
+            'session_id': session_id,
+            'ai_id': session_meta.get('ai_id', 'unknown'),
+            'timestamp': datetime.now().isoformat(),
+            'task_summary': task_summary,
+            'duration_seconds': duration,
+            'epistemic_deltas': {},  # Empty - no CASCADE workflow
+            'key_findings': key_findings,
+            'knowledge_gaps_filled': [],  # Can't measure without assessments
+            'remaining_unknowns': remaining_unknowns,
+            'investigation_tools': [],  # Not tracked in planning mode
+            'next_session_context': next_session_context,
+            'recommended_next_steps': [],  # Can't recommend without epistemic data
+            'artifacts_created': artifacts_created or [],
+            'calibration_status': 'planning-only (no CASCADE workflow)',
+            'overall_confidence_delta': 0.0,
+            'handoff_type': 'planning'  # Mark as planning handoff
+        }
+
+        # Generate markdown for planning handoff
+        markdown_lines = [
+            f"# Planning Handoff: {session_meta.get('ai_id', 'Unknown')}",
+            f"",
+            f"**Session:** {session_id[:8]}...",
+            f"**Type:** Planning (documentation, no CASCADE workflow)",
+            f"**Time:** {report['timestamp']}",
+            f"**Duration:** {duration:.1f}s",
+            f"",
+            f"## Task Summary",
+            f"{task_summary}",
+            f"",
+            f"## Key Findings",
+        ]
+
+        for finding in key_findings:
+            markdown_lines.append(f"- {finding}")
+
+        markdown_lines.extend([
+            f"",
+            f"## Remaining Unknowns",
+        ])
+
+        for unknown in remaining_unknowns:
+            markdown_lines.append(f"- {unknown}")
+
+        markdown_lines.extend([
+            f"",
+            f"## Context for Next Session",
+            f"{next_session_context}",
+            f"",
+            f"## Artifacts Created",
+        ])
+
+        if artifacts_created:
+            for artifact in artifacts_created:
+                markdown_lines.append(f"- {artifact}")
+        else:
+            markdown_lines.append("- (none)")
+
+        report['markdown'] = '\n'.join(markdown_lines)
+
+        # Generate compressed JSON
+        report['compressed_json'] = self._compress_planning_handoff(report)
+
+        logger.info(f"✅ Planning handoff generated ({len(report['compressed_json'])} chars)")
+
+        return report
+
     def _get_preflight_assessment(self, session_id: str) -> Optional[Dict]:
         """Fetch PREFLIGHT assessment from database"""
         try:
@@ -764,4 +862,25 @@ class EpistemicHandoffReportGenerator:
             'cal': report['calibration_status']
         }
         
+        return json.dumps(compressed, separators=(',', ':'))
+
+    def _compress_planning_handoff(self, report: Dict) -> str:
+        """
+        Generate minimal JSON for planning handoff storage
+
+        Similar to epistemic handoff but without deltas/calibration
+        """
+        compressed = {
+            's': report['session_id'][:8],  # Short session ID
+            'ai': report['ai_id'],
+            'ts': report['timestamp'],
+            'task': report['task_summary'][:200],  # Truncate
+            'dur': round(report['duration_seconds'], 1),
+            'type': 'planning',  # Mark as planning
+            'findings': [f[:150] for f in report['key_findings'][:5]],  # Top 5, truncate
+            'unknowns': [u[:100] for u in report['remaining_unknowns'][:5]],
+            'next': report['next_session_context'][:300],
+            'artifacts': [a[:100] for a in report['artifacts_created'][:10]],
+        }
+
         return json.dumps(compressed, separators=(',', ':'))

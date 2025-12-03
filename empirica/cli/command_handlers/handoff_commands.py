@@ -13,38 +13,84 @@ logger = logging.getLogger(__name__)
 
 
 def handle_handoff_create_command(args):
-    """Handle handoff-create command"""
+    """Handle handoff-create command
+
+    Supports two modes:
+    1. Epistemic handoff (requires PREFLIGHT/POSTFLIGHT assessments)
+    2. Planning handoff (documentation-only, no CASCADE workflow needed)
+    """
     try:
         from empirica.core.handoff.report_generator import EpistemicHandoffReportGenerator
         from empirica.core.handoff.storage import HybridHandoffStorage
+        from empirica.data.session_database import SessionDatabase
 
         # Parse arguments
         session_id = args.session_id
         task_summary = args.task_summary
-        
+        planning_only = getattr(args, 'planning_only', False)
+
         # Parse JSON arrays
         key_findings = json.loads(args.key_findings) if isinstance(args.key_findings, str) else args.key_findings
         remaining_unknowns = json.loads(args.remaining_unknowns) if args.remaining_unknowns and isinstance(args.remaining_unknowns, str) else (args.remaining_unknowns or [])
         artifacts = json.loads(args.artifacts) if args.artifacts and isinstance(args.artifacts, str) else (args.artifacts or [])
-        
+
         next_session_context = args.next_session_context
+
+        # Check if CASCADE workflow assessments exist
+        db = SessionDatabase()
+        preflight = db.get_preflight_assessment(session_id)
+        postflight = db.get_postflight_assessment(session_id)
+        has_assessments = bool(preflight) and bool(postflight)
+
+        if not has_assessments and not planning_only:
+            # User didn't provide --planning-only, but no assessments exist
+            print("⚠️  No CASCADE workflow assessments found for this session")
+            print()
+            print("Two options:")
+            print()
+            print("Option 1: Create a PLANNING HANDOFF (documentation, no epistemic deltas)")
+            print("  $ empirica handoff-create --session-id ... --planning-only [other args]")
+            print("  → Stores documentation handoff for multi-session planning")
+            print()
+            print("Option 2: Create an EPISTEMIC HANDOFF (requires CASCADE workflow)")
+            print("  $ empirica preflight --prompt '...'")
+            print("  $ [do your work: investigate, act, etc.]")
+            print("  $ empirica postflight --prompt '...'")
+            print("  $ empirica handoff-create --session-id ... [other args]")
+            print("  → Stores epistemic deltas (before/after vectors)")
+            print()
+            return None
 
         # Generate handoff report
         generator = EpistemicHandoffReportGenerator()
 
-        handoff = generator.generate_handoff_report(
-            session_id=session_id,
-            task_summary=task_summary,
-            key_findings=key_findings,
-            remaining_unknowns=remaining_unknowns,
-            next_session_context=next_session_context,
-            artifacts_created=artifacts
-        )
+        if planning_only or not has_assessments:
+            # Create planning handoff (no epistemic deltas)
+            handoff = generator.generate_planning_handoff(
+                session_id=session_id,
+                task_summary=task_summary,
+                key_findings=key_findings,
+                remaining_unknowns=remaining_unknowns,
+                next_session_context=next_session_context,
+                artifacts_created=artifacts
+            )
+            handoff_type = "📋 Planning Handoff (documentation)"
+        else:
+            # Create epistemic handoff (with vector deltas)
+            handoff = generator.generate_handoff_report(
+                session_id=session_id,
+                task_summary=task_summary,
+                key_findings=key_findings,
+                remaining_unknowns=remaining_unknowns,
+                next_session_context=next_session_context,
+                artifacts_created=artifacts
+            )
+            handoff_type = "📊 Epistemic Handoff (with deltas)"
 
         # Store in BOTH git notes AND database
         storage = HybridHandoffStorage()
         sync_result = storage.store_handoff(session_id, handoff)
-        
+
         # Warn if partial storage
         if not sync_result['fully_synced']:
             logger.warning(
@@ -58,22 +104,24 @@ def handle_handoff_create_command(args):
                 "ok": True,
                 "session_id": session_id,
                 "handoff_id": handoff['session_id'],
-                "token_count": len(handoff['compressed_json']) // 4,  # Rough estimate
+                "handoff_type": "planning" if (planning_only or not has_assessments) else "epistemic",
+                "token_count": len(handoff.get('compressed_json', '')) // 4,  # Rough estimate
                 "storage": f"git:refs/notes/empirica/handoff/{session_id}",
-                "compression_ratio": 0.98,
-                "epistemic_deltas": handoff['epistemic_deltas'],
-                "calibration_status": handoff['calibration_status'],
-                # NEW: Add sync status
+                "has_epistemic_deltas": has_assessments and not planning_only,
+                "epistemic_deltas": handoff.get('epistemic_deltas', {}),
+                "calibration_status": handoff.get('calibration_status', 'N/A'),
                 "storage_sync": sync_result
             }
             print(json.dumps(result, indent=2))
         else:
-            print("✅ Handoff report created successfully")
+            print(f"✅ {handoff_type} created successfully")
             print(f"   Session: {session_id[:8]}...")
-            print(f"   Token count: ~{len(handoff['compressed_json']) // 4} tokens")
-            print(f"   Compression: 98% (vs 20,000 baseline)")
+            print(f"   Token count: ~{len(handoff.get('compressed_json', '')) // 4} tokens")
             print(f"   Storage: git notes (refs/notes/empirica/handoff/)")
-            print(f"   Calibration: {handoff['calibration_status']}")
+            if has_assessments and not planning_only:
+                print(f"   Calibration: {handoff.get('calibration_status', 'N/A')}")
+            else:
+                print(f"   Type: Documentation-only (no CASCADE workflow assessments)")
 
         return handoff
 
