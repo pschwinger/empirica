@@ -359,7 +359,7 @@ def handle_sessions_show_command(args):
         if output_json:
             # Get cascades for JSON
             cursor.execute("""
-                SELECT cascade_id, task, started_at, ended_at
+                SELECT cascade_id, task, started_at, completed_at
                 FROM cascades
                 WHERE session_id = ?
                 ORDER BY started_at DESC
