@@ -44,7 +44,8 @@ from empirica.core.canonical import (
 # NEW SCHEMA (this is now THE schema)
 from empirica.core.schemas.epistemic_assessment import (
     EpistemicAssessmentSchema,
-    CascadePhase as NewCascadePhase
+    CascadePhase as NewCascadePhase,
+    AssessmentType  # Phase 1: New enum for explicit assessment tracking
 )
 # Converters removed - using EpistemicAssessmentSchema directly
 
@@ -88,7 +89,19 @@ except ImportError:
 
 
 class CascadePhase(Enum):
-    """Enhanced 7-phase cascade workflow"""
+    """
+    DEPRECATED: Use AssessmentType from epistemic_assessment.py instead.
+    
+    Enhanced 7-phase cascade workflow. This enum is deprecated in favor of 
+    AssessmentType which distinguishes explicit assessment checkpoints 
+    (PRE/CHECK/POST) from implicit workflow guidance (think/investigate/act).
+    
+    Migration:
+    - PREFLIGHT → AssessmentType.PRE
+    - CHECK → AssessmentType.CHECK  
+    - POSTFLIGHT → AssessmentType.POST
+    - THINK, PLAN, INVESTIGATE, ACT → No longer tracked as explicit states
+    """
     PREFLIGHT = "preflight"     # Baseline epistemic assessment
     THINK = "think"             # Initial understanding
     PLAN = "plan"               # Optional: Complex task breakdown
@@ -99,10 +112,14 @@ class CascadePhase(Enum):
 
 
 @dataclass
-@dataclass
 class CanonicalCascadeState:
-    """Current state in the canonical 7-phase epistemic cascade"""
-    current_phase: CascadePhase
+    """
+    Current state in the canonical epistemic cascade.
+    
+    Phase 1 Migration: Both old (current_phase) and new (current_assessment) fields
+    are maintained for backward compatibility. New code should use current_assessment.
+    """
+    current_phase: CascadePhase  # DEPRECATED: Use current_assessment instead
     assessment: Optional[EpistemicAssessmentSchema]
     engagement_gate_passed: bool
     knowledge_gaps: List[str]
@@ -112,6 +129,10 @@ class CanonicalCascadeState:
     preflight_assessment: Optional[EpistemicAssessmentSchema] = None  # Baseline
     postflight_assessment: Optional[EpistemicAssessmentSchema] = None  # Final
     epistemic_delta: Optional[Dict[str, float]] = None  # Learning measurement
+    
+    # Phase 1: New field for explicit assessment tracking
+    current_assessment: Optional['AssessmentType'] = None  # Tracks PRE/CHECK/POST only
+    work_context: Optional[str] = None  # Optional: "thinking", "investigating", "acting" (not enforced)
 
     def to_json(self) -> Dict[str, Any]:
         """Export for tmux display or logging"""

@@ -233,3 +233,8 @@ metadata={
 - Integration guide: `14_CUSTOM_PLUGINS.md`
 - API reference: `19_API_REFERENCE.md`
 
+
+
+---
+
+**Note:** Empirica uses goals (with vectorial scope and subtasks) and git notes (checkpoints, goals, handoffs) for automatic session continuity and cross-AI coordination. See [Storage Architecture](../architecture/STORAGE_ARCHITECTURE_COMPLETE.md) and [Cross-AI Coordination](26_CROSS_AI_COORDINATION.md).

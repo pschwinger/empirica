@@ -16,16 +16,56 @@ Format: Nested structure with foundation/comprehension/execution tiers
 from dataclasses import dataclass, field, asdict
 from typing import Dict, Optional, Any
 from enum import Enum
+import warnings
+
+
+class AssessmentType(Enum):
+    """
+    Explicit epistemic assessment checkpoints.
+    
+    These represent the three explicit assessment moments in the CASCADE workflow:
+    - PRE: Baseline epistemic state at session start (was PREFLIGHT)
+    - CHECK: Decision point assessment (can occur 0-N times during workflow)
+    - POST: Final calibration assessment at session end (was POSTFLIGHT)
+    
+    Note: CASCADE workflow phases (think, investigate, act) are implicit guidance,
+    not tracked as explicit states. Only these assessment checkpoints are tracked.
+    """
+    PRE = "pre"
+    CHECK = "check"
+    POST = "post"
 
 
 class CascadePhase(Enum):
-    """CASCADE workflow phases"""
+    """
+    DEPRECATED: Use AssessmentType instead.
+    
+    CASCADE workflow phases. This enum is deprecated in favor of AssessmentType
+    which distinguishes explicit assessment checkpoints (PRE/CHECK/POST) from
+    implicit workflow guidance (think/investigate/act).
+    
+    Migration:
+    - PREFLIGHT → AssessmentType.PRE
+    - CHECK → AssessmentType.CHECK
+    - POSTFLIGHT → AssessmentType.POST
+    - THINK, INVESTIGATE, ACT → No longer tracked as explicit states
+    """
     PREFLIGHT = "preflight"
     THINK = "think"
     INVESTIGATE = "investigate"
     CHECK = "check"
     ACT = "act"
     POSTFLIGHT = "postflight"
+    
+    def __init__(self, value):
+        super().__init__()
+        warnings.warn(
+            f"CascadePhase is deprecated. Use AssessmentType instead. "
+            f"For assessment tracking, use AssessmentType.PRE/CHECK/POST. "
+            f"Workflow phases (think/investigate/act) should not be tracked as states.",
+            DeprecationWarning,
+            stacklevel=2
+        )
 
 
 @dataclass

@@ -6,7 +6,22 @@
 
 ## Overview
 
-The Investigation System provides **strategic guidance** for filling knowledge gaps. It's **Approach B** - suggestive, not controlling.
+The Investigation System provides **strategic guidance** for filling knowledge gaps within Empirica's implicit CASCADE workflow.
+
+### Context: Investigation in CASCADE
+
+**Two Separate Systems:**
+1. **Explicit Assessments:** PRE/CHECK/POST (tracked)
+2. **Implicit CASCADE:** think → **investigate** → act (natural workflow, guidance only)
+
+Investigation is part of the implicit CASCADE - AI self-assesses "do I need to investigate?" based on uncertainty, not enforced thresholds.
+
+**With Goals & Git:**
+- Investigation work tracked via subtasks
+- Progress stored in git checkpoints (automatic)
+- Cross-AI: AI-2 can resume AI-1's investigation via goal discovery
+
+**Approach:** Strategic guidance (Approach B) - suggestive, not controlling. Configurable thresholds via `thresholds.yaml`, `goal_scopes.yaml`.
 
 **Key Principle:** Recommend tools, don't execute them. Let the AI decide.
 

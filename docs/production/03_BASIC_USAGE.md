@@ -229,11 +229,69 @@ asyncio.run(placeholder_mode())
 
 ---
 
+## Goal Management & Git Integration
+
+### Goals with Vectorial Scope
+Empirica organizes work into **goals** with:
+- **Objective:** What you're trying to achieve
+- **ScopeVector:** 3D scope (breadth, duration, coordination) - AI self-assessed
+- **Subtasks:** Trackable work units with evidence
+- **Epistemic context:** Preserved from PRE assessment
+
+```python
+# Create goal (CLI)
+empirica goals-create \
+  --objective "Audit security" \
+  --scope-breadth 0.7 \
+  --scope-duration 0.5 \
+  --scope-coordination 0.3 \
+  --success-criteria '["Find vulnerabilities", "Document findings"]'
+
+# Add subtasks
+empirica goals-add-subtask <goal-id> \
+  --description "Review auth code" \
+  --importance high
+
+# Complete subtask
+empirica goals-complete-subtask <task-id> \
+  --evidence "Found JWT validation gap"
+```
+
+See: [ScopeVector Guide](25_SCOPEVECTOR_GUIDE.md), [Cross-AI Coordination](26_CROSS_AI_COORDINATION.md)
+
+### Automatic Git Integration
+Empirica stores everything in **git notes** for continuity and coordination:
+
+**Checkpoints (85% compressed):**
+- Stored: `refs/notes/empirica/checkpoints/<commit>`
+- Auto-created after PRE/CHECK/POST assessments
+- 500 tokens vs 6,500 uncompressed
+
+**Goals (cross-AI coordination):**
+- Stored: `refs/notes/empirica/goals/<goal-id>`
+- Discoverable: `empirica goals-discover --from-ai-id other-ai`
+- Resumable: `empirica goals-resume <goal-id>` (with full epistemic context)
+- Lineage tracked: Who created, who resumed, when
+
+**Handoffs (98% compressed):**
+- Stored: `refs/notes/empirica/handoff/<session-id>`
+- 300 tokens vs 20,000 uncompressed
+- Enables session continuity without full context
+
+**Benefits:**
+- Version controlled (git pull syncs everything)
+- Distributed collaboration (multiple AIs)
+- Optional: `--no-git` flag to disable
+
+See: [Storage Architecture](../architecture/STORAGE_ARCHITECTURE_COMPLETE.md), [Session Continuity](23_SESSION_CONTINUITY.md)
+
+---
+
 ## Understanding Epistemic Assessments
 
-### The 12 Vectors
+### The 13 Vectors
 
-Every cascade measures **12 epistemic vectors**:
+Every assessment measures **13 epistemic vectors**:
 
 #### GATE: ENGAGEMENT (≥0.60 required)
 ```python

@@ -18,6 +18,38 @@ Use this prompt for all AI agents (Claude, Gemini, Qwen, etc.):
 
 ## II. EMPIRICA PROTOCOL
 
+### ⚠️ CRITICAL: Empirica Requires Deliberate Use
+
+**Empirica does NOT work magically.** It requires explicit invocation:
+
+```markdown
+❌ DON'T:
+- Write code and hope empirica captures it
+- Rely on automatic background tracking
+- Assume empirica "just works"
+- Use raw git commits for formal work
+
+✅ DO:
+- Call bootstrap_session() to initialize
+- Call execute_preflight() BEFORE starting work
+- Call create_goal() for coherent tasks
+- Call execute_postflight() AFTER completing work
+- Call create_git_checkpoint() for formal records
+
+KEY PRINCIPLE:
+If you don't explicitly call empirica APIs, your work is NOT captured.
+This is intentional - empirica is for deliberate, formal reasoning work.
+```
+
+**Setup is required:**
+1. Bootstrap session with persona and configuration
+2. Define epistemic vectors honestly (0-1 scale)
+3. Create AI identity and manage keypairs properly
+4. Install all dependencies (GitPython, cryptography, qdrant-client)
+5. Understand file formats and locations
+
+**This is not a flaw - it's correct design.** Empirica is not invisible middleware. It's meant to be deliberately used for formal, verified reasoning.
+
 ### 13 Epistemic Vectors (0-1, assess HONESTLY):
 1. **ENGAGEMENT** - Task engagement level
 2. **KNOW** - Knowledge of domain/subject matter

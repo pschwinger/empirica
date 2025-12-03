@@ -510,6 +510,286 @@ empirica identity-verify --sha $NOTE_SHA --signature $SIG --ai-id copilot
 
 ---
 
+## Goal Storage System
+
+### Purpose
+Goals organize work with **epistemic context** and enable **cross-AI coordination** via git notes.
+
+### Storage Location
+```
+.git/notes/empirica/goals/<goal-id>/
+```
+
+### Goal Data Structure
+```json
+{
+  "goal_id": "uuid-v4",
+  "session_id": "abc123",
+  "ai_id": "claude-code",
+  "created_at": "2025-01-29T10:00:00Z",
+  
+  "goal_data": {
+    "objective": "Audit authentication system",
+    "scope": {
+      "breadth": 0.7,      // 0-1: codebase span
+      "duration": 0.6,     // 0-1: time commitment
+      "coordination": 0.4  // 0-1: multi-agent needs
+    },
+    "success_criteria": [
+      "Identify vulnerabilities",
+      "Document findings",
+      "Propose fixes"
+    ],
+    "estimated_complexity": 0.65,
+    "subtasks": [
+      {
+        "task_id": "uuid-1",
+        "description": "Review authentication code",
+        "importance": "high",
+        "status": "complete",
+        "evidence": "Found JWT validation gap",
+        "completed_at": "2025-01-29T10:15:00Z"
+      },
+      {
+        "task_id": "uuid-2",
+        "description": "Analyze session management",
+        "importance": "high",
+        "status": "pending"
+      }
+    ]
+  },
+  
+  "epistemic_state": {
+    "know": 0.6,
+    "do": 0.7,
+    "context": 0.5,
+    "uncertainty": 0.4,
+    "clarity": 0.7,
+    "coherence": 0.8
+    // ... all 13 vectors from PRE assessment
+  },
+  
+  "lineage": [
+    {
+      "ai_id": "claude-code",
+      "action": "created",
+      "timestamp": "2025-01-29T10:00:00Z"
+    },
+    {
+      "ai_id": "minimax-agent",
+      "action": "resumed",
+      "timestamp": "2025-01-29T11:30:00Z"
+    }
+  ]
+}
+```
+
+### Cross-AI Coordination Workflow
+
+#### Goal Discovery
+```bash
+# AI-2 discovers goals from AI-1
+empirica goals-discover --from-ai-id claude-code
+
+# Output:
+# Found 3 goals:
+# - abc123: "Audit authentication system" (in-progress, 50% complete)
+# - def456: "Refactor database layer" (complete)
+# - ghi789: "Add rate limiting" (pending)
+```
+
+#### Goal Resume with Epistemic Handoff
+```bash
+# AI-2 resumes AI-1's goal
+empirica goals-resume abc123 --ai-id minimax-agent
+
+# System:
+# 1. Loads goal from git notes
+# 2. Retrieves epistemic context (AI-1's PRE assessment)
+# 3. AI-2 does own PRE assessment
+# 4. Compares: AI-2's vectors vs AI-1's vectors
+# 5. AI-2 continues with full context
+# 6. Adds to lineage: AI-2 resumed AI-1's goal
+```
+
+#### Lineage Tracking
+```
+Goal created by: claude-code (10:00)
+Goal resumed by: minimax-agent (11:30)
+  → Epistemic handoff: KNOW 0.6→0.7, UNCERTAINTY 0.4→0.3
+  → Subtask completed: "Analyze session management"
+Goal completed: minimax-agent (12:00)
+```
+
+### Benefits
+- **Distributed collaboration:** Goals in git notes (pull to sync)
+- **Epistemic context:** AI-2 knows what AI-1 understood
+- **Progress tracking:** Subtasks completed by either AI
+- **Provenance:** Full lineage of who did what
+
+---
+
+## Handoff Report System
+
+### Purpose
+Enable **session continuity** without transferring full context (98% compression).
+
+### Dual Storage Strategy
+```
+1. Git Notes (distributed):  .git/notes/empirica/handoff/<session-id>/
+2. SQLite (fast queries):    .empirica/sessions/handoffs.db
+```
+
+### Handoff Data Structure
+```json
+{
+  "session_id": "abc123",
+  "ai_id": "claude-code",
+  "timestamp": "2025-01-29T14:00:00Z",
+  
+  "task_summary": "Audited authentication system. Found 3 vulnerabilities...",
+  
+  "epistemic_deltas": {
+    "know": "+0.4 (0.6 → 1.0)",
+    "context": "+0.5 (0.5 → 1.0)",
+    "uncertainty": "-0.3 (0.4 → 0.1)"
+  },
+  
+  "key_findings": [
+    "JWT tokens not validated on every request",
+    "Session timeout too long (24h)",
+    "Secrets logged in debug mode"
+  ],
+  
+  "remaining_unknowns": [
+    "Rate limiting implementation",
+    "Secret rotation policy"
+  ],
+  
+  "next_session_context": "Next: Implement fixes for JWT validation...",
+  
+  "artifacts_created": [
+    "docs/security_audit.md",
+    "fixes/jwt_validation.patch"
+  ]
+}
+```
+
+### Compression Achievement
+- **Full context:** ~20,000 tokens (session DB + reflex logs)
+- **Handoff report:** ~300 tokens
+- **Reduction:** 98% (66x smaller)
+
+### Session Continuity Workflow
+
+#### Create Handoff (End of Session)
+```bash
+empirica handoff-create \
+  --session-id abc123 \
+  --summary "Audited auth system..." \
+  --findings '["JWT gap", "Long timeout", ...]' \
+  --unknowns '["Rate limiting", "Secret rotation"]'
+
+# Stored in:
+# - Git notes: .git/notes/empirica/handoff/abc123/
+# - SQLite: handoffs.db
+# - Format: JSON + markdown (both)
+```
+
+#### Resume Work (Next Session)
+```bash
+# AI retrieves handoff
+empirica handoff-load --session-id abc123
+
+# Output: 300-token summary with:
+# - What was learned (epistemic deltas)
+# - What was found (key findings)
+# - What's still unknown
+# - What to do next
+# - What artifacts were created
+```
+
+#### Benefits
+- **Lightweight:** 300 tokens vs 20,000 (fits in any context window)
+- **Actionable:** Next steps clear
+- **Verifiable:** Artifacts listed
+- **Distributed:** Git pull syncs handoffs
+
+---
+
+## Cross-AI Coordination Architecture
+
+### Git-Enabled Distributed Collaboration
+
+Empirica uses **git notes** as a distributed coordination layer:
+
+```
+.git/notes/empirica/
+├── checkpoints/         # Session continuity (85% compressed)
+├── goals/              # Work coordination (full context)
+└── handoff/            # Session transfer (98% compressed)
+```
+
+### Multi-AI Collaboration Patterns
+
+#### Pattern 1: Sequential Work
+```
+AI-1: Create goal → Work 50% → Store in git
+       ↓ (git push)
+AI-2: Discover goal → Resume with context → Complete
+       ↓ (git push)
+AI-3: Review lineage → Verify completion
+```
+
+#### Pattern 2: Parallel Work
+```
+AI-1: Goal A (authentication)  ─┐
+AI-2: Goal B (database)        ─┼─→ git notes (independent)
+AI-3: Goal C (rate limiting)   ─┘
+```
+
+#### Pattern 3: Coordinated Handoff
+```
+AI-1: Session → Create handoff → git push
+       ↓
+AI-2: Load handoff → Continue with 300-token context
+       ↓
+AI-2: Complete → Create new handoff
+```
+
+### Discovery Mechanism
+```bash
+# Find all goals in repo
+empirica goals-discover
+
+# Find goals by specific AI
+empirica goals-discover --from-ai-id claude-code
+
+# Find goals by session
+empirica goals-discover --session-id abc123
+
+# Find goals by status
+empirica goals-discover --status in-progress
+```
+
+### Lineage & Provenance
+Every goal/handoff tracks:
+- **Who created:** Original AI
+- **Who resumed:** Subsequent AIs (with timestamps)
+- **Epistemic shifts:** How understanding changed
+- **Work completed:** Subtasks by each AI
+
+### Synchronization
+```bash
+# Standard git workflow
+git pull    # Sync all goals, checkpoints, handoffs
+git push    # Share your contributions
+
+# All in git notes (doesn't touch working tree)
+```
+
+---
+
 ## Summary Table: Where Each Field Lives
 
 | Field | SQLite | Git Notes | JSON Logs | Signed |
