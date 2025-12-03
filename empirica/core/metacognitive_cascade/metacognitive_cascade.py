@@ -101,6 +101,8 @@ class CascadePhase(Enum):
     - CHECK → AssessmentType.CHECK  
     - POSTFLIGHT → AssessmentType.POST
     - THINK, PLAN, INVESTIGATE, ACT → No longer tracked as explicit states
+    
+    Note: Deprecation is documented here. Usage-site warnings will be added in Phase 2.
     """
     PREFLIGHT = "preflight"     # Baseline epistemic assessment
     THINK = "think"             # Initial understanding

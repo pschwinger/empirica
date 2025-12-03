@@ -16,7 +16,6 @@ Format: Nested structure with foundation/comprehension/execution tiers
 from dataclasses import dataclass, field, asdict
 from typing import Dict, Optional, Any
 from enum import Enum
-import warnings
 
 
 class AssessmentType(Enum):
@@ -49,6 +48,8 @@ class CascadePhase(Enum):
     - CHECK → AssessmentType.CHECK
     - POSTFLIGHT → AssessmentType.POST
     - THINK, INVESTIGATE, ACT → No longer tracked as explicit states
+    
+    Note: Deprecation is documented here. Usage-site warnings will be added in Phase 2.
     """
     PREFLIGHT = "preflight"
     THINK = "think"
@@ -56,16 +57,6 @@ class CascadePhase(Enum):
     CHECK = "check"
     ACT = "act"
     POSTFLIGHT = "postflight"
-    
-    def __init__(self, value):
-        super().__init__()
-        warnings.warn(
-            f"CascadePhase is deprecated. Use AssessmentType instead. "
-            f"For assessment tracking, use AssessmentType.PRE/CHECK/POST. "
-            f"Workflow phases (think/investigate/act) should not be tracked as states.",
-            DeprecationWarning,
-            stacklevel=2
-        )
 
 
 @dataclass
