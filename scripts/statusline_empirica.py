@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
-Empirica Statusline for Claude Code
+Empirica Statusline - Multi-AI Architecture
 
-Displays Empirica session state in Claude Code's statusline.
+Displays Empirica session state per AI agent using MCO (Meta-Agent Configuration Object).
+Each AI queries only its own epistemic state, determined by:
+  1. EMPIRICA_AI_ID environment variable (if set)
+  2. System prompt AI_ID declaration (fallback)
+
 Supports 4 display modes: minimal, balanced, learning-focused, full
 
 Configuration:
@@ -13,11 +17,14 @@ Configuration:
   - full: Everything (identity, vectors, deltas, scope, checkpoints)
 
 Usage:
-  python statusline_empirica.py
+  python statusline_empirica.py                    # Uses EMPIRICA_AI_ID or default
+  EMPIRICA_AI_ID=claude-code python statusline_empirica.py    # Show Claude Code's state
+  EMPIRICA_AI_ID=claude-sonnet python statusline_empirica.py  # Show Sonnet's state
+  EMPIRICA_AI_ID=qwen-code python statusline_empirica.py      # Show Qwen's state
 
-Author: Claude Code
-Date: 2025-12-03
-Version: 1.0.0
+Author: Claude Code (Multi-AI Version)
+Date: 2025-12-04
+Version: 2.0.0 (MCO-Based Multi-AI)
 """
 
 import os
@@ -59,34 +66,62 @@ class Colors:
     BRIGHT_CYAN = '\033[96m'
 
 
-def get_latest_active_session(db: SessionDatabase) -> dict:
-    """Get the active session, prioritizing claude-code AI."""
+def get_my_ai_id() -> str:
+    """
+    Determine which AI is running this statusline.
+
+    Priority:
+    1. EMPIRICA_AI_ID environment variable (explicit override)
+    2. Fallback to 'claude-code' (legacy compatibility)
+    3. Return 'unknown' if all else fails
+
+    MCO Configuration Note:
+    Each AI should declare AI_ID in their system prompt (Section I).
+    This function checks environment first for flexibility.
+    """
+    ai_id = os.getenv('EMPIRICA_AI_ID', '').strip()
+    if ai_id:
+        return ai_id
+
+    # Fallback: try 'claude-code' (legacy)
+    return 'claude-code'
+
+
+def get_latest_active_session(db: SessionDatabase, ai_id: str = None) -> dict:
+    """
+    Get the active session for a specific AI agent.
+
+    Args:
+        db: SessionDatabase instance
+        ai_id: AI identifier (defaults to current AI)
+
+    Returns:
+        Session dict with session_id, ai_id, start_time, or None
+
+    MCO Integration:
+    Each AI queries only its own sessions (filtered by ai_id).
+    This ensures per-AI epistemic state tracking.
+    """
+    if not ai_id:
+        ai_id = get_my_ai_id()
+
     cursor = db.conn.cursor()
 
-    # First, try to find an active session for claude-code (this is Claude Code's AI)
+    # Query active sessions for THIS AI specifically
+    # (not all AIs, not hardcoded claude-code priority)
     cursor.execute("""
         SELECT session_id, ai_id, start_time
         FROM sessions
         WHERE end_time IS NULL
-        AND ai_id = 'claude-code'
+        AND ai_id = ?
         ORDER BY start_time DESC
         LIMIT 1
-    """)
+    """, (ai_id,))
     row = cursor.fetchone()
     if row:
         return dict(row)
 
-    # Fallback: get the most recent active session (for testing/other AIs)
-    cursor.execute("""
-        SELECT session_id, ai_id, start_time
-        FROM sessions
-        WHERE end_time IS NULL
-        ORDER BY start_time DESC
-        LIMIT 1
-    """)
-    row = cursor.fetchone()
-    if row:
-        return dict(row)
+    # No active session found for this AI
     return None
 
 
@@ -98,15 +133,22 @@ def get_session_goals(db: SessionDatabase, session_id: str) -> list:
 
 
 def get_latest_vectors(db: SessionDatabase, session_id: str) -> dict:
-    """Get the most recent epistemic vectors for a session."""
+    """
+    Get the most recent epistemic vectors for a session.
+
+    MCO Integration: Filters by session_id to ensure per-AI epistemic state tracking.
+    """
     cursor = db.conn.cursor()
+
+    # Query uses assessed_at per reflexes table schema
+    # The reflexes table stores phase, vectors, and assessment timestamp
     cursor.execute("""
         SELECT phase, engagement, know, do, context,
                clarity, coherence, signal, density,
                state, change, completion, impact, uncertainty
         FROM reflexes
         WHERE session_id = ?
-        ORDER BY timestamp DESC
+        ORDER BY assessed_at DESC
         LIMIT 1
     """, (session_id,))
     row = cursor.fetchone()
@@ -133,29 +175,33 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> dict:
 
 
 def calculate_deltas(db: SessionDatabase, session_id: str) -> dict:
-    """Calculate epistemic deltas from PREFLIGHT to latest assessment."""
+    """
+    Calculate epistemic deltas from PREFLIGHT to latest assessment.
+
+    MCO Integration: Calculates per-session learning progression.
+    """
     cursor = db.conn.cursor()
 
-    # Get PREFLIGHT vectors
+    # Get PREFLIGHT vectors (earliest PREFLIGHT assessment)
     cursor.execute("""
         SELECT engagement, know, do, context,
                clarity, coherence, signal, density,
                state, change, completion, impact, uncertainty
         FROM reflexes
         WHERE session_id = ? AND phase = 'PREFLIGHT'
-        ORDER BY timestamp ASC
+        ORDER BY assessed_at ASC
         LIMIT 1
     """, (session_id,))
     preflight_row = cursor.fetchone()
 
-    # Get latest vectors
+    # Get latest vectors (most recent assessment, any phase)
     cursor.execute("""
         SELECT engagement, know, do, context,
                clarity, coherence, signal, density,
                state, change, completion, impact, uncertainty
         FROM reflexes
         WHERE session_id = ?
-        ORDER BY timestamp DESC
+        ORDER BY assessed_at DESC
         LIMIT 1
     """, (session_id,))
     latest_row = cursor.fetchone()
@@ -358,10 +404,10 @@ def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vecto
 
         # Get recent DENSITY values to detect trend
         cursor.execute("""
-            SELECT density, timestamp
+            SELECT density, assessed_at
             FROM reflexes
             WHERE session_id = ?
-            ORDER BY timestamp DESC
+            ORDER BY assessed_at DESC
             LIMIT 5
         """, (session_id,))
 
@@ -814,20 +860,23 @@ def format_full(session: dict, goals: list, vectors: dict, deltas: dict, warning
 
 
 def main():
-    """Main statusline generation."""
+    """Main statusline generation (MCO-Based Multi-AI)."""
     try:
         # Get mode from environment
         mode = os.getenv('EMPIRICA_STATUS_MODE', 'balanced').lower()
 
+        # Determine which AI this is (MCO Configuration)
+        ai_id = get_my_ai_id()
+
         # Get database
         db = SessionDatabase()
 
-        # Get latest active session
-        session = get_latest_active_session(db)
+        # Get latest active session for THIS AI (not all AIs, not hardcoded)
+        session = get_latest_active_session(db, ai_id=ai_id)
 
         if not session:
-            # No active session - show minimal indicator
-            print(f"{Colors.GRAY}[empirica:inactive]{Colors.RESET}")
+            # No active session for this AI
+            print(f"{Colors.GRAY}[empirica:{ai_id}:inactive]{Colors.RESET}")
             return
 
         session_id = session['session_id']
