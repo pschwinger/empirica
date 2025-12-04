@@ -181,15 +181,19 @@ def handle_check_command(args):
             VALUES (?, ?, ?, ?)
         """, (cascade_id, session_id, f"CHECK assessment - {len(findings)} findings", now))
 
+        # Calculate overall confidence and determine decision
+        uncertainty = 1.0 - confidence
+        recommended_action = "proceed" if confidence >= 0.7 else "investigate" if confidence <= 0.3 else "proceed_with_caution"
+
         # Create epistemic assessment record
         db.conn.execute("""
             INSERT INTO epistemic_assessments
             (assessment_id, cascade_id, phase, engagement, know, do, context, clarity,
              coherence, signal, density, state, change, completion, impact, uncertainty,
              overall_confidence, recommended_action, assessed_at)
-            VALUES (?, ?, 'CHECK', 0.75, 0.7, 0.75, 0.75, 0.75, 0.75, 0.75, 0.5, 0.5, 0.3, 0.5, 0.7, ?,
-                    ?, 'continue', ?)
-        """, (str(uuid.uuid4()), cascade_id, confidence, "proceed" if confidence >= 0.7 else "investigate", now))
+            VALUES (?, ?, 'CHECK', 0.75, 0.7, 0.75, 0.75, 0.75, 0.75, 0.75, 0.5, 0.5, 0.3, 0.5, ?, ?,
+                    ?, ?)
+        """, (str(uuid.uuid4()), cascade_id, uncertainty, confidence, recommended_action, now))
 
         db.conn.commit()
 
