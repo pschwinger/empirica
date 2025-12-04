@@ -140,7 +140,7 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> dict:
     """
     cursor = db.conn.cursor()
 
-    # Query uses assessed_at per reflexes table schema
+    # Query uses timestamp column from reflexes table schema
     # The reflexes table stores phase, vectors, and assessment timestamp
     cursor.execute("""
         SELECT phase, engagement, know, do, context,
@@ -148,7 +148,7 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> dict:
                state, change, completion, impact, uncertainty
         FROM reflexes
         WHERE session_id = ?
-        ORDER BY assessed_at DESC
+        ORDER BY timestamp DESC
         LIMIT 1
     """, (session_id,))
     row = cursor.fetchone()
@@ -189,7 +189,7 @@ def calculate_deltas(db: SessionDatabase, session_id: str) -> dict:
                state, change, completion, impact, uncertainty
         FROM reflexes
         WHERE session_id = ? AND phase = 'PREFLIGHT'
-        ORDER BY assessed_at ASC
+        ORDER BY timestamp ASC
         LIMIT 1
     """, (session_id,))
     preflight_row = cursor.fetchone()
@@ -201,7 +201,7 @@ def calculate_deltas(db: SessionDatabase, session_id: str) -> dict:
                state, change, completion, impact, uncertainty
         FROM reflexes
         WHERE session_id = ?
-        ORDER BY assessed_at DESC
+        ORDER BY timestamp DESC
         LIMIT 1
     """, (session_id,))
     latest_row = cursor.fetchone()
@@ -404,10 +404,10 @@ def calculate_cognitive_load(db: SessionDatabase, session_id: str, current_vecto
 
         # Get recent DENSITY values to detect trend
         cursor.execute("""
-            SELECT density, assessed_at
+            SELECT density, timestamp
             FROM reflexes
             WHERE session_id = ?
-            ORDER BY assessed_at DESC
+            ORDER BY timestamp DESC
             LIMIT 5
         """, (session_id,))
 
