@@ -2,6 +2,7 @@
 Bootstrap Commands - System initialization and bootstrap functionality
 """
 
+import json
 import time
 import asyncio
 import logging
@@ -273,8 +274,7 @@ def handle_profile_list_command(args):
     """Handle profile list command"""
     try:
         verbose = getattr(args, 'verbose', False)
-        
-        print("📋 Available Profiles:")
+        output_format = getattr(args, 'output', 'default')
         
         # Mock profile list - in real implementation, this would read from profile storage
         profiles = {
@@ -295,15 +295,25 @@ def handle_profile_list_command(args):
             }
         }
         
-        for name, config in profiles.items():
-            print(f"  • {name}")
+        if output_format == 'json':
+            result = {
+                "ok": True,
+                "profiles": profiles,
+                "count": len(profiles)
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            print("📋 Available Profiles:")
+            
+            for name, config in profiles.items():
+                print(f"  • {name}")
+                if verbose:
+                    print(f"    Description: {config['description']}")
+                    print(f"    AI Model: {config['ai_model']}")
+                    print(f"    Domain: {config['domain']}")
+            
             if verbose:
-                print(f"    Description: {config['description']}")
-                print(f"    AI Model: {config['ai_model']}")
-                print(f"    Domain: {config['domain']}")
-        
-        if verbose:
-            print(f"\n📊 Total profiles: {len(profiles)}")
+                print(f"\n📊 Total profiles: {len(profiles)}")
         
     except Exception as e:
         handle_cli_error(e, "Profile list", getattr(args, 'verbose', False))

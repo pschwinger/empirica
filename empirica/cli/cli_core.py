@@ -20,12 +20,11 @@ def create_argument_parser():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  empirica bootstrap              # Bootstrap the framework
-  empirica assess "my question"   # Run uncertainty assessment
-  empirica cascade "should I?"    # Run metacognitive cascade
-  empirica investigate ./code     # Investigate code/directory
-  empirica benchmark              # Run performance benchmark
-  empirica list --details        # List all components with details
+  empirica session-create --ai-id myai          # Create session
+  empirica preflight --session-id xyz           # Execute PREFLIGHT
+  empirica check --session-id xyz               # Execute CHECK gate
+  empirica postflight --session-id xyz          # Execute POSTFLIGHT
+  empirica goals-create --session-id xyz        # Create goal
         """
     )
     
@@ -87,55 +86,12 @@ Examples:
 def _add_bootstrap_parsers(subparsers):
     """Add bootstrap command parsers"""
     # Main bootstrap command (consolidates bootstrap, bootstrap-system, onboard)
-    bootstrap_parser = subparsers.add_parser('bootstrap', help='Bootstrap the Empirica framework')
-    bootstrap_parser.add_argument('--level',
-                                choices=['0', '1', '2', '3', '4', 'minimal', 'standard', 'extended', 'complete'],
-                                default='standard',
-                                help='Bootstrap level (0-4 or minimal/standard/extended/complete). Use "extended" for advanced system bootstrap.')
-    bootstrap_parser.add_argument('--onboard', action='store_true', help='Run interactive onboarding wizard (intro to Empirica for new users)')
-    bootstrap_parser.add_argument('--test', action='store_true', help='Run tests after bootstrap')
-    bootstrap_parser.add_argument('--verbose', action='store_true', help='Show detailed bootstrap info')
-    # Profile-related arguments
-    bootstrap_parser.add_argument('--profile', help='Optional profile for session configuration')
-    bootstrap_parser.add_argument('--ai-model', help='Optional AI model specification')
-    bootstrap_parser.add_argument('--domain', help='Optional domain context')
-    bootstrap_parser.add_argument('--ai-id', default='empirica_cli', help='AI identifier for session tracking (used with --onboard)')
-
-    # Cognitive Vault integration
-    bootstrap_parser.add_argument('--use-cognitive-vault', action='store_true',
-                                help='Use Cognitive Vault for key management and identity verification (requires COGNITIVE_VAULT_URL and COGNITIVE_VAULT_API_KEY env vars)')
-
-    # CASCADE phase enforcement
-    bootstrap_parser.add_argument('--enforce-cascade-phases', action='store_true',
-                                help='Enforce CASCADE phase ordering and validation (PREFLIGHT → INVESTIGATE → CHECK → ACT → POSTFLIGHT)')
-
-    # REMOVED: bootstrap-system and onboard commands - now consolidated into bootstrap
-    # Use: bootstrap --level=extended (instead of bootstrap-system)
-    # Use: bootstrap --onboard (instead of onboard)
-
 
 def _add_assessment_parsers(subparsers):
     """Add assessment command parsers"""
     # Main assess command
-    assess_parser = subparsers.add_parser('assess', help='Run uncertainty assessment')
-    assess_parser.add_argument('query', help='Query or question to assess')
-    assess_parser.add_argument('--context', help='JSON context data')
-    assess_parser.add_argument('--detailed', action='store_true', help='Show detailed assessment')
-    assess_parser.add_argument('--verbose', action='store_true', help='Show verbose output')
-    
-    # Self-awareness assessment
-    self_aware_parser = subparsers.add_parser('self-awareness', help='Assess self-awareness')
-    self_aware_parser.add_argument('--vectors', action='store_true', default=True, help='Include vector breakdown')
-    self_aware_parser.add_argument('--detailed', action='store_true', help='Show detailed metrics')
-    self_aware_parser.add_argument('--verbose', action='store_true', help='Show insights')
     
     # Metacognitive assessment
-    metacog_parser = subparsers.add_parser('metacognitive', help='Run metacognitive evaluation')
-    metacog_parser.add_argument('task', help='Task to evaluate metacognitively')
-    metacog_parser.add_argument('--context', help='JSON context data')
-    metacog_parser.add_argument('--reasoning', action='store_true', default=True, help='Include reasoning chain')
-    metacog_parser.add_argument('--verbose', action='store_true', help='Show detailed reasoning')
-
 
 def _add_cascade_parsers(subparsers):
     """Add cascade command parsers (DEPRECATED - use MCP tools instead)
@@ -152,41 +108,6 @@ def _add_cascade_parsers(subparsers):
     pass
     
     # Enhanced decision analysis command with ModalitySwitcher
-    decision_parser = subparsers.add_parser('decision', help='Epistemic decision-making with ModalitySwitcher')
-    decision_parser.add_argument('decision', help='Decision query to analyze')
-    
-    # Epistemic state input options
-    decision_parser.add_argument('--epistemic-state', help='Path to JSON file with epistemic state')
-    
-    # Individual vector flags
-    decision_parser.add_argument('--know', type=float, help='KNOW vector (0.0-1.0)')
-    decision_parser.add_argument('--do', type=float, help='DO vector (0.0-1.0)')
-    decision_parser.add_argument('--context-vec', type=float, dest='context', help='CONTEXT vector (0.0-1.0)')
-    decision_parser.add_argument('--uncertainty', type=float, help='UNCERTAINTY vector (0.0-1.0)')
-    
-    # Routing options
-    decision_parser.add_argument('--strategy', choices=['epistemic', 'cost', 'latency', 'quality', 'balanced'],
-                                default='epistemic', help='Routing strategy')
-    decision_parser.add_argument('--adapter', choices=['minimax', 'qwen', 'rovodev', 'gemini', 'qodo', 'openrouter', 'copilot', 'local'],
-                                help='Force specific adapter')
-    decision_parser.add_argument('--model', type=str, help='Model to use (e.g., qwen-coder-turbo, gpt-5, claude-sonnet-4)')
-    decision_parser.add_argument('--list-models', action='store_true', help='List available models for selected adapter')
-    decision_parser.add_argument('--max-cost', type=float, default=1.0, help='Maximum cost in USD')
-    decision_parser.add_argument('--max-latency', type=float, default=30.0, help='Maximum latency in seconds')
-    decision_parser.add_argument('--min-quality', type=float, default=0.7, help='Minimum quality score')
-    decision_parser.add_argument('--no-fallback', action='store_true', help='Disable fallback adapters')
-    
-    # Output options
-    decision_parser.add_argument('--verbose', action='store_true', help='Show detailed epistemic vectors')
-    decision_parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation prompt')
-    
-    # Batch processing
-    decision_batch_parser = subparsers.add_parser('decision-batch', 
-                                                   help='Batch decision processing from JSON file')
-    decision_batch_parser.add_argument('batch_file', help='Path to JSON file with batch decisions')
-    decision_batch_parser.add_argument('--output', help='Output file for results (default: input_results.json)')
-    decision_batch_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
-    
     # Preflight command
     preflight_parser = subparsers.add_parser('preflight', help='Execute preflight epistemic assessment')
     preflight_parser.add_argument('prompt', help='Task description to assess')
@@ -297,31 +218,11 @@ def _add_performance_parsers(subparsers):
 def _add_component_parsers(subparsers):
     """Add component command parsers"""
     # List components command
-    list_parser = subparsers.add_parser('list', help='List semantic components')
-    list_parser.add_argument('--filter', help='Filter components by name')
-    list_parser.add_argument('--tier', help='Filter by tier')
-    list_parser.add_argument('--details', action='store_true', help='Show detailed component info')
-    
     # Explain component command
-    explain_parser = subparsers.add_parser('explain', help='Explain component functionality')
-    explain_parser.add_argument('component', help='Component name to explain')
-    explain_parser.add_argument('--verbose', action='store_true', help='Show API methods')
-    
     # Demo component command
-    demo_parser = subparsers.add_parser('demo', help='Run component demonstration')
-    demo_parser.add_argument('component', nargs='?', default='random', help='Component to demo (or "random")')
-    demo_parser.add_argument('--interactive', action='store_true', help='Run interactive demo')
-    demo_parser.add_argument('--verbose', action='store_true', help='Show demo steps')
-
-
 def _add_utility_parsers(subparsers):
     """Add utility command parsers"""
     # Feedback command
-    feedback_parser = subparsers.add_parser('feedback', help='Provide decision feedback')
-    feedback_parser.add_argument('decision_id', help='Decision ID for feedback')
-    feedback_parser.add_argument('--success', action='store_true', help='Mark as successful')
-    feedback_parser.add_argument('--notes', help='Additional feedback notes')
-    
     # Goal analysis command
     goal_parser = subparsers.add_parser('goal-analysis', help='Analyze goal feasibility')
     goal_parser.add_argument('goal', help='Goal to analyze')
@@ -329,18 +230,7 @@ def _add_utility_parsers(subparsers):
     goal_parser.add_argument('--verbose', action='store_true', help='Show detailed analysis')
     
     # Calibration command
-    calibration_parser = subparsers.add_parser('calibration', help='Run calibration analysis')
-    calibration_parser.add_argument('--data-file', help='Calibration data file')
-    calibration_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
-    calibration_parser.add_argument('--verbose', action='store_true', help='Show detailed metrics')
-    
     # UVL command
-    uvl_parser = subparsers.add_parser('uvl', help='Run UVL (Uncertainty Vector Learning)')
-    uvl_parser.add_argument('--task', help='Task for UVL analysis')
-    uvl_parser.add_argument('--context', help='JSON context data')
-    uvl_parser.add_argument('--verbose', action='store_true', help='Show uncertainty vectors')
-
-
 def _add_config_parsers(subparsers):
     """Add configuration command parsers"""
     # Unified config command (consolidates config-init, config-show, config-validate, config-get, config-set)
@@ -656,6 +546,13 @@ def _add_checkpoint_parsers(subparsers):
     sessions_resume_parser.add_argument('--detail-level', choices=['summary', 'detailed', 'full'], default='summary', help='Detail level')
     sessions_resume_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
+    # Session create command (replaces bootstrap)
+    session_create_parser = subparsers.add_parser('session-create', help='Create new session')
+    session_create_parser.add_argument('--ai-id', required=True, help='AI agent identifier')
+    session_create_parser.add_argument('--user-id', help='User identifier')
+    session_create_parser.add_argument('--bootstrap-level', type=int, default=1, help='Bootstrap level (0-4)')
+    session_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+
 
 def _add_profile_parsers(subparsers):
     """Add profile management command parsers"""
@@ -738,12 +635,8 @@ def main(args=None):
         # Route to appropriate command handler
         command_map = {
             # Bootstrap commands (consolidated: bootstrap-system and onboard removed)
-            'bootstrap': handle_bootstrap_command,  # Now handles --level=extended and --onboard
 
             # Assessment commands
-            'assess': handle_assess_command,
-            'self-awareness': handle_self_awareness_command,
-            'metacognitive': handle_metacognitive_command,
             
             # Cascade commands (core workflow via MCP)
             # 'cascade': removed - use MCP tools: execute_preflight, execute_check, execute_postflight
@@ -776,10 +669,7 @@ def main(args=None):
             'demo': handle_demo_command,
             
             # Utility commands
-            'feedback': handle_feedback_command,
             'goal-analysis': handle_goal_analysis_command,
-            'calibration': handle_calibration_command,
-            'uvl': handle_uvl_command,
             
             # Config commands (consolidated: 5 commands → 1)
             'config': handle_config_command,  # Handles --init, --validate, KEY, KEY VALUE
@@ -819,6 +709,7 @@ def main(args=None):
             'identity-export': handle_identity_export_command,
             'identity-verify': handle_identity_verify_command,
             'sessions-resume': handle_sessions_resume_command,
+            'session-create': handle_session_create_command,
             
             # Checkpoint commands (Phase 2)
             'checkpoint-create': handle_checkpoint_create_command,

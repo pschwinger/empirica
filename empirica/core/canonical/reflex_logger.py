@@ -1,6 +1,11 @@
 """
 Reflex Frame Logger
 
+Basic JSON logging for epistemic assessments.
+
+Note: For production with 3-layer storage (SQLite + Git Notes + JSON),
+use GitEnhancedReflexLogger instead.
+
 Provides temporal logging of epistemic assessments to prevent self-referential recursion.
 
 Key Principle: Temporal Separation
@@ -30,10 +35,12 @@ logger = logging.getLogger(__name__)
 
 class ReflexLogger:
     """
-    Temporal logger for Reflex Frames
+    Temporal logger for Reflex Frames - JSON logging only.
 
     Logs epistemic assessments to JSON files, enabling temporal separation
     between current reasoning and historical analysis.
+    
+    For 3-layer storage, use GitEnhancedReflexLogger.
     """
 
     def __init__(self, base_log_dir: str = ".empirica_reflex_logs"):

@@ -205,10 +205,10 @@ def _investigate_directory(dir_path: str, verbose: bool = False) -> dict:
 def _investigate_concept(concept: str, context: str = None, verbose: bool = False) -> dict:
     """Investigate a concept or abstract idea"""
     try:
-        from empirica.core.metacognition_12d_monitor.metacognition_12d_monitor import MetacognitionMonitor
+        from empirica.core.canonical.canonical_epistemic_assessment import CanonicalEpistemicAssessor
         
-        # Use mode='llm' to ensure NO heuristics are used
-        evaluator = MetacognitionMonitor(mode='llm')
+        # Use canonical assessor (LLM-based, no heuristics)
+        evaluator = CanonicalEpistemicAssessor(agent_id="concept-investigation")
         context_data = parse_json_safely(context)
         
         # Use available method or create mock result

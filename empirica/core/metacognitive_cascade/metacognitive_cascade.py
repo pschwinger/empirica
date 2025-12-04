@@ -287,32 +287,31 @@ class CanonicalEpistemicCascade:
         # Initialize canonical assessor (LLM-powered, no heuristics)
         self.assessor = CanonicalEpistemicAssessor(agent_id=agent_id)
 
-        # Initialize Reflex Frame logger for temporal separation
-        self.reflex_logger = ReflexLogger()
-        
-        # Phase 1.5: Initialize Git-Enhanced Reflex Logger for compressed checkpoints
+        # Initialize Git-Enhanced Logger for 3-layer storage (no more dual loggers!)
         self.enable_git_notes = enable_git_notes
         self.session_id = session_id or f"cascade-{agent_id}-{int(time.time())}"
         
-        if self.enable_git_notes:
-            try:
-                from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
-                from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
-                
-                self.git_logger = GitEnhancedReflexLogger(
-                    session_id=self.session_id,
-                    enable_git_notes=True
-                )
+        try:
+            from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+            from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
+            
+            # Always use git_logger (works with or without git notes)
+            self.git_logger = GitEnhancedReflexLogger(
+                session_id=self.session_id,
+                enable_git_notes=self.enable_git_notes  # True = 3-layer, False = JSON only
+            )
+            
+            if self.enable_git_notes:
                 self.token_metrics = TokenEfficiencyMetrics(session_id=self.session_id)
                 logger.info(f"Git-enhanced checkpoints enabled (session: {self.session_id})")
-            except Exception as e:
-                logger.warning(f"Git integration unavailable: {e}")
-                self.git_logger = None
+            else:
                 self.token_metrics = None
-                self.enable_git_notes = False
-        else:
+                logger.info(f"JSON-only logging enabled (session: {self.session_id})")
+        except Exception as e:
+            logger.error(f"Failed to initialize GitEnhancedReflexLogger: {e}")
             self.git_logger = None
             self.token_metrics = None
+            self.enable_git_notes = False
 
         # Track cascade state
         self.current_state: Optional[CanonicalCascadeState] = None
@@ -1458,10 +1457,9 @@ class CanonicalEpistemicCascade:
         if investigation_results:
             frame_dict['investigation_results'] = investigation_results
 
-        # Log to JSON file (temporal separation)
-        log_path = await self.reflex_logger.log_frame(frame_dict, agent_id=self.agent_id)
-
-        logger.info(f"   📝 Logged to: {log_path}")
+        # Logging handled by git_logger.add_checkpoint() calls elsewhere
+        # (Removed redundant reflex_logger.log_frame() call)
+        logger.debug(f"   📝 Frame created: {frame_dict['frameId']}")
 
     def _identify_knowledge_gaps(self, assessment: EpistemicAssessmentSchema) -> List[Dict[str, Any]]:
         """

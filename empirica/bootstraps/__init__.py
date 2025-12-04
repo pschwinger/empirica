@@ -1,16 +1,21 @@
 """
-Empirica Bootstrap Module
+Simplified Bootstrap - Session creation only
 
-Provides bootstrap classes for initializing the Empirica framework
-with different levels of metacognitive capability.
+Components (assessor, cascade, orchestrator) created on-demand by MCP/CLI tools.
 """
 
-from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
-from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
-from empirica.bootstraps.onboarding_wizard import EmpericaOnboardingWizard
+from .bootstrap import (
+    bootstrap_session,
+    bootstrap_metacognition,
+    OptimalMetacognitiveBootstrap,
+    ExtendedMetacognitiveBootstrap
+)
+from .onboarding_wizard import EmpericaOnboardingWizard
 
 __all__ = [
-    'ExtendedMetacognitiveBootstrap',
+    'bootstrap_session',
+    'bootstrap_metacognition',
     'OptimalMetacognitiveBootstrap',
+    'ExtendedMetacognitiveBootstrap',
     'EmpericaOnboardingWizard',
 ]

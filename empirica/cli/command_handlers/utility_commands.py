@@ -11,7 +11,6 @@ from ..cli_utils import print_component_status, handle_cli_error, parse_json_saf
 # Set up logging for utility commands
 logger = logging.getLogger(__name__)
 
-
 def _get_utility_profile_thresholds():
     """Get utility command thresholds from investigation profiles"""
     try:
@@ -44,43 +43,6 @@ def _get_utility_profile_thresholds():
             'engagement_gate': 0.6,
             'coherence_min': 0.5,
         }
-
-
-def handle_feedback_command(args):
-    """Handle feedback command"""
-    try:
-        from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
-        
-        logger.info(f"Processing feedback for decision: {args.decision_id}")
-        print(f"📝 Processing feedback for decision: {args.decision_id}")
-        
-        # Create outcome dictionary
-        outcome = {
-            'success': args.success,
-            'timestamp': time.time()
-        }
-        
-        if args.notes:
-            outcome['notes'] = args.notes
-        
-        # Process feedback via epistemic cascade
-        thresholds = _get_utility_profile_thresholds()
-        feedback_result = run_epistemic_cascade(
-            task=f"Process feedback for decision {args.decision_id}: {'success' if args.success else 'failure'}",
-            context={'outcome': outcome, 'decision_id': args.decision_id},
-            confidence_threshold=thresholds['confidence_low']
-        )
-        
-        
-        logger.info(f"Feedback processed successfully for decision: {args.decision_id}")
-        print(f"✅ Feedback processed for decision: {args.decision_id}")
-        print(f"   📊 Outcome: {'Success' if args.success else 'Failure'}")
-        print(f"   📝 Notes: {args.notes if args.notes else 'None'}")
-        print(f"   🧠 Learning confidence: {feedback_result.get('confidence', 0.0):.2f}")
-        
-    except Exception as e:
-        handle_cli_error(e, "Feedback processing", getattr(args, 'verbose', False))
-
 
 def handle_goal_analysis_command(args):
     """Handle goal analysis command"""
@@ -119,100 +81,6 @@ def handle_goal_analysis_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Goal analysis", getattr(args, 'verbose', False))
-
-
-def handle_calibration_command(args):
-    """Handle calibration command"""
-    try:
-        # DEPRECATED: AdaptiveUncertaintyCalibration removed (used heuristics)
-        # from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
-
-        print(f"⚠️  Calibration feature deprecated (used heuristics)")
-        print(f"   Use mirror-drift monitoring instead")
-
-        # DEPRECATED: This calibration feature used heuristics
-        # Removed as part of no-heuristics migration
-        # TODO: Replace with MirrorDriftMonitor if needed
-        # analyzer = AdaptiveUncertaintyCalibration()
-
-        # Get calibration data
-        # if hasattr(args, 'data_file') and args.data_file:
-        #     with open(args.data_file, 'r') as f:
-        #         calibration_data = json.load(f)
-        # else:
-        #     # Use default calibration assessment
-        #     calibration_data = analyzer.get_default_calibration_data()
-
-        # result = analyzer.analyze_calibration(calibration_data)
-
-        # Prepare result for output
-        output_result = {
-            "ok": True,
-            "message": "Calibration feature deprecated (use mirror-drift monitoring)",
-            "calibration_score": 0,  # N/A
-            "accuracy": 0,  # N/A
-            "trend": "N/A",  # N/A
-            "detailed_metrics": {},
-            "timestamp": "2024-01-01T12:00:00Z"
-        }
-        
-        # Output based on format
-        if hasattr(args, 'output') and args.output == 'json':
-            print(json.dumps(output_result, indent=2))
-        else:
-            print("⚠️  Calibration analysis complete (feature deprecated)")
-            print("   📊 Overall calibration score: N/A (feature deprecated)")
-            print("   🎯 Accuracy: N/A (feature deprecated)")
-            print("   📈 Trend: N/A (feature deprecated)")
-
-            if getattr(args, 'verbose', False):
-                print("🔍 Detailed calibration metrics: N/A (feature deprecated)")
-
-    except Exception as e:
-        handle_cli_error(e, "Calibration", getattr(args, 'verbose', False))
-
-
-def handle_uvl_command(args):
-    """Handle UVL (Uncertainty Vector Learning) command"""
-    try:
-        # DEPRECATED: AdaptiveUncertaintyCalibration removed (used heuristics)
-        # from empirica.calibration.adaptive_uncertainty_calibration.adaptive_uncertainty_calibration import AdaptiveUncertaintyCalibration
-
-        print(f"⚠️  UVL feature deprecated (used heuristics)")
-        print(f"   Use mirror-drift monitoring instead")
-
-        # DEPRECATED: This UVL feature used heuristics
-        # Removed as part of no-heuristics migration
-        # TODO: Replace with MirrorDriftMonitor if needed
-        # analyzer = AdaptiveUncertaintyCalibration()
-
-        # Parse context if provided
-        context = parse_json_safely(getattr(args, 'context', None))
-
-        # # Run UVL analysis
-        # result = analyzer.run_uvl_analysis(
-        #     task=args.task if hasattr(args, 'task') else "General UVL analysis",
-        #     context=context
-        # )
-
-        # Simulate result for deprecated function
-        result = {
-            "task": args.task if hasattr(args, 'task') else "General UVL analysis",
-            "confidence": 0,  # N/A
-            "vectors": []  # N/A
-        }
-
-        print(f"⚠️  UVL analysis skipped (feature deprecated)")
-        print(f"   🎯 Task: {result.get('task', 'Unknown')}")
-        print(f"   📊 Confidence: N/A (feature deprecated)")
-        print(f"   🧠 Learning vectors: 0 (feature deprecated)")
-
-        if getattr(args, 'verbose', False):
-            print("🔍 Uncertainty vectors: N/A (feature deprecated)")
-
-    except Exception as e:
-        handle_cli_error(e, "UVL analysis", getattr(args, 'verbose', False))
-
 
 def handle_sessions_list_command(args):
     """List all sessions"""
@@ -315,7 +183,6 @@ def handle_sessions_list_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Listing sessions", getattr(args, 'verbose', False))
-
 
 def handle_sessions_show_command(args):
     """Show detailed session information"""
@@ -456,7 +323,6 @@ def handle_sessions_show_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Showing session", getattr(args, 'verbose', False))
-
 
 def handle_sessions_export_command(args):
     """Export session to JSON file"""

@@ -49,20 +49,19 @@ except ImportError:
 
 class SessionDatabase:
     """Central SQLite database for all session data"""
-    
+
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
-            # Default to .empirica/sessions/sessions.db (in current working directory)
-            base_dir = Path.cwd() / '.empirica' / 'sessions'
-            base_dir.mkdir(parents=True, exist_ok=True)
-            db_path = base_dir / 'sessions.db'
-        
+            # Use path resolver for consistent database location
+            from empirica.config.path_resolver import get_session_db_path
+            db_path = get_session_db_path()
+
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         self.conn = sqlite3.connect(str(self.db_path))
         self.conn.row_factory = sqlite3.Row  # Return rows as dicts
-        
+
         self._create_tables()
         logger.info(f"📊 Session Database initialized: {self.db_path}")
     
@@ -549,9 +548,20 @@ class SessionDatabase:
 
         self.conn.commit()
     
-    def create_session(self, ai_id: str, bootstrap_level: int, components_loaded: int, 
+    def create_session(self, ai_id: str, bootstrap_level: int = 0, components_loaded: int = 0, 
                       user_id: Optional[str] = None) -> str:
-        """Create new session, return session_id"""
+        """
+        Create new session, return session_id.
+        
+        Args:
+            ai_id: AI identifier (required)
+            bootstrap_level: Bootstrap level (0-4 or minimal/standard/complete) - default 0
+            components_loaded: Number of components loaded - default 0 (components created on-demand)
+            user_id: Optional user identifier
+            
+        Returns:
+            session_id: UUID string
+        """
         session_id = str(uuid.uuid4())
         
         cursor = self.conn.cursor()

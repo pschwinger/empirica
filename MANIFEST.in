@@ -6,7 +6,11 @@ include setup.py
 include pyproject.toml
 recursive-include empirica *.py *.json *.yaml
 recursive-include mcp_local *.py
-recursive-include docs *.md *.txt
+# Only include essential docs (must explicitly include each file)
+include docs/skills/SKILL.md
+include docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md
+include docs/installation.md
+include docs/getting-started.md
 recursive-exclude empirica __pycache__
 recursive-exclude empirica *.pyc
 recursive-exclude empirica *.pyo
@@ -26,12 +30,24 @@ global-exclude .DS_Store
 global-exclude Thumbs.db
 global-exclude .git*
 
-# 🛑 RELEASE HYGIENE: Exclude internal dev docs
-prune docs/current_work
-prune docs/vision
-prune docs/metrics
+# 🛑 RELEASE HYGIENE: Exclude internal dev docs and non-essential directories
+prune docs
+# Re-include only essential docs
+graft docs/skills
+graft docs/system-prompts
 prune tests/coordination/archive
 prune mcp_local/archive
+prune empirica-dev
+prune forgejo-plugin-empirica
+prune website
+prune scripts
+prune tests
+prune .github
+prune examples
+
+# 🛑 Exclude optional/experimental components
+exclude mcp_local/empirica_tmux_mcp_server.py
+# NOTE: modality_switcher is REQUIRED by decision_commands.py - do not prune
 
 # 🛑 Exclude logs and temp files
 global-exclude *.log

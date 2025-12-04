@@ -94,7 +94,7 @@ async def list_tools() -> List[types.Tool]:
                 "properties": {
                     "ai_id": {"type": "string", "description": "AI agent identifier"},
                     "session_type": {"type": "string", "description": "Session type (development, production, testing)"},
-                    "bootstrap_level": {"type": "integer", "description": "Bootstrap level 0-2 (0=minimal, 1=standard, 2=full)"}
+                    "bootstrap_level": {"type": ["integer", "string"], "description": "Bootstrap level: 0-4, 'minimal', 'standard', 'extended', 'complete', 'optimal', or 'extended_metacognitive'"}
                 },
                 "required": ["ai_id"]
             }
@@ -496,6 +496,8 @@ async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
         # Category 2: Direct Python handlers (AI-centric, no CLI conversion)
         elif name == "create_goal":
             return await handle_create_goal_direct(arguments)
+        elif name == "get_calibration_report":
+            return await handle_get_calibration_report(arguments)
 
         # Category 3: All other tools (route to CLI)
         else:
@@ -638,6 +640,128 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
                 "error": str(e),
                 "tool": "create_goal",
                 "suggestion": "Check scope format: {\"breadth\": 0.7, \"duration\": 0.3, \"coordination\": 0.8}"
+            }, indent=2)
+        )]
+
+async def handle_get_calibration_report(arguments: dict) -> List[types.TextContent]:
+    """Handle get_calibration_report by querying SQLite reflexes directly
+    
+    Note: CLI 'empirica calibration' is deprecated (used heuristics).
+    This handler queries session reflexes for genuine calibration data.
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        
+        session_id = arguments.get("session_id")
+        if not session_id:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({"ok": False, "error": "session_id required"}, indent=2)
+            )]
+        
+        # Query reflexes for PREFLIGHT and POSTFLIGHT
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+        
+        # Get PREFLIGHT assessment
+        cursor.execute("""
+            SELECT engagement, know, do, context, clarity, coherence, signal, density,
+                   state, change, completion, impact, uncertainty, reasoning
+            FROM reflexes
+            WHERE session_id = ? AND phase = 'PREFLIGHT'
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
+        preflight = cursor.fetchone()
+        
+        # Get POSTFLIGHT assessment
+        cursor.execute("""
+            SELECT engagement, know, do, context, clarity, coherence, signal, density,
+                   state, change, completion, impact, uncertainty, reasoning
+            FROM reflexes
+            WHERE session_id = ? AND phase = 'POSTFLIGHT'
+            ORDER BY timestamp DESC LIMIT 1
+        """, (session_id,))
+        postflight = cursor.fetchone()
+        
+        db.close()
+        
+        if not preflight:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "ok": False,
+                    "error": "No PREFLIGHT assessment found",
+                    "session_id": session_id,
+                    "suggestion": "Execute PREFLIGHT first using execute_preflight and submit_preflight_assessment"
+                }, indent=2)
+            )]
+        
+        # Build calibration report
+        vector_names = ["engagement", "know", "do", "context", "clarity", "coherence", 
+                       "signal", "density", "state", "change", "completion", "impact", "uncertainty"]
+        
+        preflight_vectors = {name: preflight[i] for i, name in enumerate(vector_names)}
+        preflight_reasoning = preflight[13]
+        
+        result = {
+            "ok": True,
+            "session_id": session_id,
+            "preflight": {
+                "vectors": preflight_vectors,
+                "reasoning": preflight_reasoning,
+                "overall_confidence": sum([v for k, v in preflight_vectors.items() if k != 'uncertainty']) / 12
+            }
+        }
+        
+        # Add POSTFLIGHT if available
+        if postflight:
+            postflight_vectors = {name: postflight[i] for i, name in enumerate(vector_names)}
+            postflight_reasoning = postflight[13]
+            
+            # Calculate deltas
+            deltas = {
+                name: round(postflight_vectors[name] - preflight_vectors[name], 3)
+                for name in vector_names
+            }
+            
+            result["postflight"] = {
+                "vectors": postflight_vectors,
+                "reasoning": postflight_reasoning,
+                "overall_confidence": sum([v for k, v in postflight_vectors.items() if k != 'uncertainty']) / 12
+            }
+            result["epistemic_delta"] = deltas
+            result["learning_growth"] = {
+                "know_growth": deltas["know"],
+                "do_growth": deltas["do"],
+                "uncertainty_reduction": -deltas["uncertainty"]  # Negative means reduced uncertainty (good!)
+            }
+            
+            # Calibration assessment
+            know_improved = deltas["know"] > 0
+            do_improved = deltas["do"] > 0
+            uncertainty_reduced = deltas["uncertainty"] < 0
+            
+            if know_improved and do_improved and uncertainty_reduced:
+                result["calibration"] = "well_calibrated"
+            elif deltas["know"] < -0.1 or deltas["do"] < -0.1:
+                result["calibration"] = "underconfident_initially"
+            elif deltas["uncertainty"] > 0.1:
+                result["calibration"] = "overconfident_initially"
+            else:
+                result["calibration"] = "moderate_calibration"
+        else:
+            result["postflight"] = None
+            result["message"] = "POSTFLIGHT not yet completed - run execute_postflight to enable calibration"
+        
+        return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+        
+    except Exception as e:
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "ok": False,
+                "error": str(e),
+                "tool": "get_calibration_report"
             }, indent=2)
         )]
 
@@ -830,10 +954,11 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "session_type": "session-type",  # Not used by CLI - will be ignored
         "bootstrap_level": "level",  # MCP uses bootstrap_level, CLI uses level
         "task_id": "task-id",  # MCP uses task_id, CLI uses task-id (for goals-complete-subtask)
-        "remaining_unknowns": "unknowns",  # MCP uses remaining_unknowns, CLI uses unknowns (for handoff-create)
+        "round_num": "round",  # MCP uses round_num, CLI uses round (for checkpoint-create)
+        "remaining_unknowns": "remaining-unknowns",  # MCP uses remaining_unknowns, CLI uses remaining-unknowns (for handoff-create)
         "confidence_to_proceed": "confidence",  # MCP uses confidence_to_proceed, CLI uses confidence (for check command)
         "investigation_cycle": "cycle",  # MCP uses investigation_cycle, CLI uses cycle (for check-submit)
-        "task_summary": "summary",  # MCP uses task_summary, CLI uses summary (for postflight)
+        "task_summary": "task-summary",  # MCP uses task_summary, CLI uses task-summary (for handoff-create and postflight)
         "reasoning": "reasoning",  # MCP uses reasoning, CLI uses reasoning (unified: preflight-submit and postflight-submit)
         "key_findings": "key-findings",  # MCP uses key_findings, CLI uses key-findings (for handoff-create)
         "next_session_context": "next-session-context",  # MCP uses next_session_context, CLI uses next-session-context
@@ -843,6 +968,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
     # Arguments to skip per command (not supported by CLI)
     skip_args = {
         "check-submit": ["confidence_to_proceed"],  # check-submit doesn't use confidence_to_proceed
+        "checkpoint-create": ["vectors"],  # checkpoint-create doesn't accept --vectors, should be in metadata
     }
 
     cmd = [EMPIRICA_CLI] + tool_map.get(tool_name, [tool_name])

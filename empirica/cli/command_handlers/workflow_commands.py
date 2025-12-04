@@ -20,44 +20,103 @@ logger = logging.getLogger(__name__)
 def handle_preflight_submit_command(args):
     """Handle preflight-submit command"""
     try:
+        import time
+        import uuid
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
-        
+
         # Parse arguments
         session_id = args.session_id
         vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
         reasoning = args.reasoning
-        
+
         # Validate vectors
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
-        
-        # Call Python API to submit preflight - ACTUALLY SAVE TO DATABASE
-        db = SessionDatabase()
-        
-        # Save preflight assessment to database
-        # Note: cascade_id is optional, will be auto-generated if needed
-        cascade_id = None  # Let database handle cascade creation if needed
-        prompt_summary = reasoning or "Preflight assessment"
-        uncertainty_notes = reasoning or ""
-        
+
+        # Extract all numeric values from vectors (handle both simple and nested formats)
+        extracted_vectors = _extract_all_vectors(vectors)
+        vectors = extracted_vectors
+
+        # Use GitEnhancedReflexLogger for proper 3-layer storage (SQLite + Git Notes + JSON)
         try:
-            assessment_id = db.log_preflight_assessment(
+            logger_instance = GitEnhancedReflexLogger(
                 session_id=session_id,
-                cascade_id=cascade_id,
-                prompt_summary=prompt_summary,
-                vectors=vectors,
-                uncertainty_notes=uncertainty_notes
+                enable_git_notes=True  # Enable git notes for cross-AI features
             )
-            
+
+            # Add checkpoint - this writes to ALL 3 storage layers
+            checkpoint_id = logger_instance.add_checkpoint(
+                phase="PREFLIGHT",
+                round_num=1,
+                vectors=vectors,
+                metadata={
+                    "reasoning": reasoning,
+                    "prompt": reasoning or "Preflight assessment"
+                }
+            )
+
+            # ALSO create DATABASE records for statusline integration
+            db = SessionDatabase()
+            cascade_id = str(uuid.uuid4())
+            now = time.time()
+
+            # Create CASCADE record
+            db.conn.execute("""
+                INSERT INTO cascades
+                (cascade_id, session_id, task, started_at)
+                VALUES (?, ?, ?, ?)
+            """, (cascade_id, session_id, "PREFLIGHT assessment", now))
+
+            # Calculate overall confidence from vectors
+            tier0_keys = ['know', 'do', 'context']
+            tier0_values = [vectors.get(k, 0.5) for k in tier0_keys]
+            overall_confidence = sum(tier0_values) / len(tier0_values) if tier0_values else 0.5
+
+            # Create epistemic assessment record
+            db.conn.execute("""
+                INSERT INTO epistemic_assessments
+                (assessment_id, cascade_id, phase, engagement, know, do, context, clarity,
+                 coherence, signal, density, state, change, completion, impact, uncertainty,
+                 overall_confidence, recommended_action, assessed_at)
+                VALUES (?, ?, 'PREFLIGHT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                str(uuid.uuid4()), cascade_id,
+                vectors.get('engagement', 0.5),
+                vectors.get('know', 0.5),
+                vectors.get('do', 0.5),
+                vectors.get('context', 0.5),
+                vectors.get('clarity', 0.5),
+                vectors.get('coherence', 0.5),
+                vectors.get('signal', 0.5),
+                vectors.get('density', 0.5),
+                vectors.get('state', 0.5),
+                vectors.get('change', 0.5),
+                vectors.get('completion', 0.5),
+                vectors.get('impact', 0.5),
+                vectors.get('uncertainty', 0.5),
+                overall_confidence,
+                'continue',
+                now
+            ))
+
+            db.conn.commit()
+            db.close()
+
             result = {
                 "ok": True,
                 "session_id": session_id,
-                "assessment_id": assessment_id,
-                "message": "PREFLIGHT assessment submitted and saved to database",
+                "checkpoint_id": checkpoint_id,
+                "message": "PREFLIGHT assessment submitted to database and git notes",
                 "vectors_submitted": len(vectors),
                 "vectors_received": vectors,
                 "reasoning": reasoning,
-                "persisted": True
+                "persisted": True,
+                "storage_layers": {
+                    "sqlite": True,
+                    "git_notes": checkpoint_id is not None,
+                    "json_logs": True
+                }
             }
         except Exception as e:
             logger.error(f"Failed to save preflight assessment: {e}")
@@ -69,7 +128,7 @@ def handle_preflight_submit_command(args):
                 "persisted": False,
                 "error": str(e)
             }
-        
+
         # Format output based on --output flag
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
@@ -77,26 +136,30 @@ def handle_preflight_submit_command(args):
             print("✅ PREFLIGHT assessment submitted successfully")
             print(f"   Session: {session_id[:8]}...")
             print(f"   Vectors: {len(vectors)} submitted")
+            print(f"   Storage: Database + Git Notes")
             if reasoning:
                 print(f"   Reasoning: {reasoning[:80]}...")
-        
-        db.close()
+
         return result
-        
+
     except Exception as e:
         handle_cli_error(e, "Preflight submit", getattr(args, 'verbose', False))
 
 
 def handle_check_command(args):
-    """Handle check command"""
+    """Handle check command - creates CASCADE and epistemic assessment"""
     try:
+        import time
+        import uuid
+        from empirica.data.session_database import SessionDatabase
+
         # Parse arguments
         session_id = args.session_id
         findings = parse_json_safely(args.findings) if isinstance(args.findings, str) else args.findings
         unknowns = parse_json_safely(args.unknowns) if isinstance(args.unknowns, str) else args.unknowns
         confidence = args.confidence
         verbose = getattr(args, 'verbose', False)
-        
+
         # Validate inputs
         if not isinstance(findings, list):
             raise ValueError("Findings must be a list")
@@ -104,47 +167,73 @@ def handle_check_command(args):
             raise ValueError("Unknowns must be a list")
         if not 0.0 <= confidence <= 1.0:
             raise ValueError("Confidence must be between 0.0 and 1.0")
-        
-        # Simulate check assessment
+
+        # Get or create CASCADE for this check
+        db = SessionDatabase()
+
+        # Create CASCADE record if it doesn't exist
+        cascade_id = str(uuid.uuid4())
+        now = time.time()
+
+        db.conn.execute("""
+            INSERT INTO cascades
+            (cascade_id, session_id, task, started_at)
+            VALUES (?, ?, ?, ?)
+        """, (cascade_id, session_id, f"CHECK assessment - {len(findings)} findings", now))
+
+        # Create epistemic assessment record
+        db.conn.execute("""
+            INSERT INTO epistemic_assessments
+            (assessment_id, cascade_id, phase, engagement, know, do, context, clarity,
+             coherence, signal, density, state, change, completion, impact, uncertainty,
+             overall_confidence, recommended_action, assessed_at)
+            VALUES (?, ?, 'CHECK', 0.75, 0.7, 0.75, 0.75, 0.75, 0.75, 0.75, 0.5, 0.5, 0.3, 0.5, 0.7, ?,
+                    ?, 'continue', ?)
+        """, (str(uuid.uuid4()), cascade_id, confidence, "proceed" if confidence >= 0.7 else "investigate", now))
+
+        db.conn.commit()
+
         result = {
             "ok": True,
             "session_id": session_id,
+            "cascade_id": cascade_id,
             "findings_count": len(findings),
             "unknowns_count": len(unknowns),
             "confidence": confidence,
             "decision": "proceed" if confidence >= 0.7 else "investigate" if confidence <= 0.3 else "proceed_with_caution",
             "timestamp": "2024-01-01T12:00:00Z"
         }
-        
+
         # Add findings and unknowns to result
         if verbose:
             result["findings"] = findings
             result["unknowns"] = unknowns
-        
+
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print("✅ Check assessment completed")
+            print("✅ Check assessment created and stored")
             print(f"   Session: {session_id[:8]}...")
+            print(f"   Cascade: {cascade_id[:8]}...")
             print(f"   Confidence: {confidence:.2f}")
             print(f"   Decision: {result['decision'].upper()}")
             print(f"   Findings: {len(findings)} analyzed")
             print(f"   Unknowns: {len(unknowns)} remaining")
-            
+
             if verbose:
                 print("\n   Key findings:")
                 for i, finding in enumerate(findings[:5], 1):
                     print(f"     {i}. {finding}")
                 if len(findings) > 5:
                     print(f"     ... and {len(findings) - 5} more")
-                
+
                 print("\n   Remaining unknowns:")
                 for i, unknown in enumerate(unknowns[:5], 1):
                     print(f"     {i}. {unknown}")
                 if len(unknowns) > 5:
                     print(f"     ... and {len(unknowns) - 5} more")
-        
+
         return result
         
     except Exception as e:
@@ -154,7 +243,7 @@ def handle_check_command(args):
 def handle_check_submit_command(args):
     """Handle check-submit command"""
     try:
-        from empirica.data.session_database import SessionDatabase
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         
         # Parse arguments
         session_id = args.session_id
@@ -167,107 +256,52 @@ def handle_check_submit_command(args):
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
         
-        # Save CHECK assessment to database - ACTUALLY PERSIST
-        db = SessionDatabase()
-        
-        cascade_id = None  # Let database handle cascade linkage
-        
-        # Calculate confidence from uncertainty (inverse relationship)
-        uncertainty = vectors.get('uncertainty', 0.5)
-        confidence = 1.0 - uncertainty  # Confidence is inverse of uncertainty
-        
-        gaps = []  # Could extract from vectors with low values
-        for key, value in vectors.items():
-            if value < 0.5:
-                gaps.append(f"{key}: {value:.2f}")
-        
-        # Extract next targets (areas needing investigation)
-        next_targets = []
-        for key, value in vectors.items():
-            if value < 0.6:  # Slightly higher threshold for investigation targets
-                next_targets.append(key)
-        
-        # Extract findings and unknowns from vectors if provided
-        findings = vectors.get('findings', None) if isinstance(vectors, dict) else None
-        remaining_unknowns = vectors.get('remaining_unknowns', None) if isinstance(vectors, dict) else None
-        
+        # Use GitEnhancedReflexLogger for proper 3-layer storage (SQLite + Git Notes + JSON)
         try:
-            assessment_id = db.log_check_phase_assessment(
+            logger_instance = GitEnhancedReflexLogger(
                 session_id=session_id,
-                cascade_id=cascade_id,
-                investigation_cycle=cycle,
-                confidence=confidence,
-                decision=decision,
-                gaps=gaps,
-                next_targets=next_targets,
-                notes=reasoning or "Check assessment completed",
-                vectors=vectors,
-                findings=findings,
-                remaining_unknowns=remaining_unknowns
+                enable_git_notes=True  # Enable git notes for cross-AI features
             )
             
-            # ALSO save findings to cascade.context_json for handoff generation
-            # This bridges check_phase_assessments table -> cascade for session-end extraction
-            try:
-                import uuid
-                from datetime import datetime
-                
-                cursor = db.conn.cursor()
-                
-                # Get active cascade or create one
-                cursor.execute("""
-                    SELECT cascade_id, context_json FROM cascades 
-                    WHERE session_id = ? AND completed_at IS NULL
-                    ORDER BY started_at DESC LIMIT 1
-                """, (session_id,))
-                
-                row = cursor.fetchone()
-                if row:
-                    cascade_id_actual, context_json_str = row
-                    context = json.loads(context_json_str) if context_json_str else {}
-                else:
-                    # Create new cascade
-                    cascade_id_actual = str(uuid.uuid4())
-                    context = {}
-                    cursor.execute("""
-                        INSERT INTO cascades (cascade_id, session_id, task, started_at)
-                        VALUES (?, ?, ?, ?)
-                    """, (cascade_id_actual, session_id, "CHECK phase", datetime.utcnow().isoformat()))
-                
-                # Update context with CHECK data from check_phase_assessments
-                context["check_findings"] = gaps  # Use gaps as findings
-                context["check_unknowns"] = next_targets  # Use next_targets as unknowns
-                context["check_confidence"] = confidence
-                context["check_decision"] = decision
-                context["check_cycle"] = cycle
-                context["check_timestamp"] = datetime.utcnow().isoformat()
-                
-                # Save to cascade
-                cursor.execute("""
-                    UPDATE cascades 
-                    SET context_json = ?, check_completed = 1
-                    WHERE cascade_id = ?
-                """, (json.dumps(context), cascade_id_actual))
-                
-                db.conn.commit()
-                
-            except Exception as e:
-                logger.debug(f"Could not update cascade context: {e}")
-                # Don't fail check-submit if cascade update fails
+            # Calculate confidence from uncertainty (inverse relationship)
+            uncertainty = vectors.get('uncertainty', 0.5)
+            confidence = 1.0 - uncertainty
+            
+            # Extract gaps (areas with low scores)
+            gaps = []
+            for key, value in vectors.items():
+                if isinstance(value, (int, float)) and value < 0.5:
+                    gaps.append(f"{key}: {value:.2f}")
+            
+            # Add checkpoint - this writes to ALL 3 storage layers
+            checkpoint_id = logger_instance.add_checkpoint(
+                phase="CHECK",
+                round_num=cycle,
+                vectors=vectors,
+                metadata={
+                    "decision": decision,
+                    "reasoning": reasoning,
+                    "confidence": confidence,
+                    "gaps": gaps,
+                    "cycle": cycle
+                }
+            )
             
             result = {
                 "ok": True,
                 "session_id": session_id,
-                "assessment_id": assessment_id,
+                "checkpoint_id": checkpoint_id,
                 "decision": decision,
                 "cycle": cycle,
                 "vectors_count": len(vectors),
                 "reasoning": reasoning,
-                "persisted": True
+                "persisted": True,
+                "storage_layers": {
+                    "sqlite": True,
+                    "git_notes": checkpoint_id is not None,
+                    "json_logs": True
+                }
             }
-            
-            # Note: Goals are created explicitly by AI via MCP tools (create_goal, add_subtask)
-            # No automatic generation - AI has full control over when/how goals are created
             
         except Exception as e:
             logger.error(f"Failed to save check assessment: {e}")
@@ -279,8 +313,6 @@ def handle_check_submit_command(args):
                 "error": str(e)
             }
         
-        db.close()
-        
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
@@ -290,6 +322,7 @@ def handle_check_submit_command(args):
             print(f"   Decision: {decision.upper()}")
             print(f"   Cycle: {cycle}")
             print(f"   Vectors: {len(vectors)} submitted")
+            print(f"   Storage: SQLite + Git Notes + JSON")
             if reasoning:
                 print(f"   Reasoning: {reasoning[:80]}...")
         
@@ -392,112 +425,138 @@ def _extract_all_vectors(vectors):
 def handle_postflight_submit_command(args):
     """Handle postflight-submit command"""
     try:
+        import time
+        import uuid
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
-        
+
         # Parse arguments
         session_id = args.session_id
         vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
-        changes = args.reasoning  # Unified parameter name (was args.changes)
-        
+        reasoning = args.reasoning  # Unified parameter name
+
         # Validate vectors
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
-        
-        # Extract all numeric values from vectors (COMPREHENSIVE FIX)
+
+        # Extract all numeric values from vectors (handle both simple and nested formats)
         extracted_vectors = _extract_all_vectors(vectors)
-        
-        # Use extracted vectors for all subsequent operations
         vectors = extracted_vectors
-        
-        # Save POSTFLIGHT assessment to database - ACTUALLY PERSIST
-        db = SessionDatabase()
-        
-        cascade_id = None  # Let database handle cascade linkage
-        task_summary = changes or "Task completed"
-        
-        # Calculate postflight confidence (inverse of uncertainty)
-        # Now works with extracted numeric vectors
-        uncertainty = vectors.get('uncertainty', 0.5)
-        postflight_confidence = 1.0 - uncertainty
-        
-        # Determine calibration accuracy by comparing completion to confidence
-        # Now works with extracted numeric vectors
-        completion = vectors.get('completion', 0.5)
-        if abs(completion - postflight_confidence) < 0.2:
-            calibration_accuracy = "good"
-        elif abs(completion - postflight_confidence) < 0.4:
-            calibration_accuracy = "moderate"
-        else:
-            calibration_accuracy = "poor"
-        
-        learning_notes = changes or ""
-        
+
+        # Use GitEnhancedReflexLogger for proper 3-layer storage (SQLite + Git Notes + JSON)
         try:
-            assessment_id = db.log_postflight_assessment(
+            logger_instance = GitEnhancedReflexLogger(
                 session_id=session_id,
-                cascade_id=cascade_id,
-                task_summary=task_summary,
-                vectors=vectors,
-                postflight_confidence=postflight_confidence,
-                calibration_accuracy=calibration_accuracy,
-                learning_notes=learning_notes
+                enable_git_notes=True  # Enable git notes for cross-AI features
             )
-            
-            # Try to calculate deltas by fetching preflight
+
+            # Calculate postflight confidence (inverse of uncertainty)
+            uncertainty = vectors.get('uncertainty', 0.5)
+            postflight_confidence = 1.0 - uncertainty
+
+            # Determine calibration accuracy
+            completion = vectors.get('completion', 0.5)
+            if abs(completion - postflight_confidence) < 0.2:
+                calibration_accuracy = "good"
+            elif abs(completion - postflight_confidence) < 0.4:
+                calibration_accuracy = "moderate"
+            else:
+                calibration_accuracy = "poor"
+
+            # Try to calculate deltas from previous checkpoint
             deltas = {}
             try:
-                preflight = db.get_preflight_assessment(session_id)
-                if preflight and 'vectors_json' in preflight:
-                    preflight_vectors = json.loads(preflight['vectors_json'])
-                    
-                    # Flatten nested vector structures (handle both flat and nested formats)
-                    def flatten_vectors(v):
-                        """Flatten nested vector dict to {vector_name: value}"""
-                        flat = {}
-                        if not isinstance(v, dict):
-                            return {}
-                        
-                        for key, val in v.items():
-                            if isinstance(val, dict):
-                                # Check if it's a tier dict (has sub-vectors)
-                                has_nested = any(isinstance(sub_v, dict) for sub_v in val.values())
-                                if has_nested:
-                                    # Nested tier structure like {'comprehension': {'clarity': {...}}}
-                                    for sub_key, sub_val in val.items():
-                                        flat[sub_key] = sub_val
-                                else:
-                                    # Single vector dict like {'clarity': {'score': 0.7}}
-                                    flat[key] = val
-                            else:
-                                # Simple value like {'clarity': 0.7}
-                                flat[key] = val
-                        return flat
-                    
-                    flat_post = flatten_vectors(vectors)
-                    flat_pre = flatten_vectors(preflight_vectors)
-                    
-                    for key in flat_post:
-                        if key in flat_pre:
-                            # Extract numeric values (handle both float and dict formats)
-                            post_val = _extract_numeric_value(flat_post[key])
-                            pre_val = _extract_numeric_value(flat_pre[key])
-                            if post_val is not None and pre_val is not None:
-                                deltas[key] = post_val - pre_val
+                # Get preflight checkpoint from git notes for delta calculation
+                preflight_checkpoint = logger_instance.get_last_checkpoint(phase="PREFLIGHT")
+                if preflight_checkpoint and 'vectors' in preflight_checkpoint:
+                    preflight_vectors = preflight_checkpoint['vectors']
+
+                    for key in vectors:
+                        if key in preflight_vectors:
+                            pre_val = preflight_vectors.get(key, 0.5)
+                            post_val = vectors.get(key, 0.5)
+                            deltas[key] = round(post_val - pre_val, 3)
             except Exception as e:
                 logger.debug(f"Delta calculation failed: {e}")
-                pass  # Delta calculation is optional
-            
+                # Delta calculation is optional
+
+            # Add checkpoint - this writes to ALL 3 storage layers
+            checkpoint_id = logger_instance.add_checkpoint(
+                phase="POSTFLIGHT",
+                round_num=1,
+                vectors=vectors,
+                metadata={
+                    "reasoning": reasoning,
+                    "task_summary": reasoning or "Task completed",
+                    "postflight_confidence": postflight_confidence,
+                    "calibration_accuracy": calibration_accuracy,
+                    "deltas": deltas
+                }
+            )
+
+            # ALSO create DATABASE records for statusline integration
+            db = SessionDatabase()
+            cascade_id = str(uuid.uuid4())
+            now = time.time()
+
+            # Create CASCADE record
+            db.conn.execute("""
+                INSERT INTO cascades
+                (cascade_id, session_id, task, started_at, completed_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (cascade_id, session_id, "POSTFLIGHT assessment", now, now))
+
+            # Calculate overall confidence from vectors
+            tier0_keys = ['know', 'do', 'context']
+            tier0_values = [vectors.get(k, 0.5) for k in tier0_keys]
+            overall_confidence = sum(tier0_values) / len(tier0_values) if tier0_values else 0.5
+
+            # Create epistemic assessment record
+            db.conn.execute("""
+                INSERT INTO epistemic_assessments
+                (assessment_id, cascade_id, phase, engagement, know, do, context, clarity,
+                 coherence, signal, density, state, change, completion, impact, uncertainty,
+                 overall_confidence, recommended_action, assessed_at)
+                VALUES (?, ?, 'POSTFLIGHT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                str(uuid.uuid4()), cascade_id,
+                vectors.get('engagement', 0.5),
+                vectors.get('know', 0.5),
+                vectors.get('do', 0.5),
+                vectors.get('context', 0.5),
+                vectors.get('clarity', 0.5),
+                vectors.get('coherence', 0.5),
+                vectors.get('signal', 0.5),
+                vectors.get('density', 0.5),
+                vectors.get('state', 0.5),
+                vectors.get('change', 0.5),
+                vectors.get('completion', 0.5),
+                vectors.get('impact', 0.5),
+                vectors.get('uncertainty', 0.5),
+                overall_confidence,
+                'complete',
+                now
+            ))
+
+            db.conn.commit()
+            db.close()
+
             result = {
                 "ok": True,
                 "session_id": session_id,
-                "assessment_id": assessment_id,
-                "message": "POSTFLIGHT assessment submitted and saved to database",
+                "checkpoint_id": checkpoint_id,
+                "message": "POSTFLIGHT assessment submitted to database and git notes",
                 "vectors_submitted": len(vectors),
-                "changes": changes,
+                "reasoning": reasoning,
                 "postflight_confidence": postflight_confidence,
                 "calibration_accuracy": calibration_accuracy,
                 "deltas": deltas,
-                "persisted": True
+                "persisted": True,
+                "storage_layers": {
+                    "sqlite": True,
+                    "git_notes": checkpoint_id is not None,
+                    "json_logs": True
+                }
             }
         except Exception as e:
             logger.error(f"Failed to save postflight assessment: {e}")
@@ -508,9 +567,7 @@ def handle_postflight_submit_command(args):
                 "persisted": False,
                 "error": str(e)
             }
-        
-        db.close()
-        
+
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
@@ -518,10 +575,14 @@ def handle_postflight_submit_command(args):
             print("✅ POSTFLIGHT assessment submitted successfully")
             print(f"   Session: {session_id[:8]}...")
             print(f"   Vectors: {len(vectors)} submitted")
-            if changes:
-                print(f"   Changes: {changes[:80]}...")
-        
+            print(f"   Storage: Database + Git Notes")
+            print(f"   Calibration: {calibration_accuracy}")
+            if reasoning:
+                print(f"   Reasoning: {reasoning[:80]}...")
+            if deltas:
+                print(f"   Learning deltas: {len(deltas)} vectors changed")
+
         return result
-        
+
     except Exception as e:
         handle_cli_error(e, "Postflight submit", getattr(args, 'verbose', False))

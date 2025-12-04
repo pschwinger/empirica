@@ -217,6 +217,7 @@ def handle_checkpoint_list_command(args):
     Usage:
         empirica checkpoint-list --session-id abc123
         empirica checkpoint-list --session-id abc123 --limit 5
+        empirica checkpoint-list --session-id abc123 --output json
     """
     try:
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
@@ -224,10 +225,14 @@ def handle_checkpoint_list_command(args):
         session_id = args.session_id if hasattr(args, 'session_id') and args.session_id else None
         limit = args.limit if hasattr(args, 'limit') else 10
         phase = args.phase if hasattr(args, 'phase') else None
+        output_format = getattr(args, 'output', 'default')
         
         if not session_id:
             logger.error("Session ID required for listing checkpoints but not provided")
-            print("⚠️  Session ID required for listing checkpoints")
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": "Session ID required"}, indent=2))
+            else:
+                print("⚠️  Session ID required for listing checkpoints")
             sys.exit(1)
         
         git_logger = GitEnhancedReflexLogger(
@@ -239,26 +244,41 @@ def handle_checkpoint_list_command(args):
         
         logger.info(f"Found {len(checkpoints)} checkpoints for session {session_id}")
         
-        if not checkpoints:
-            print(f"No checkpoints found for session: {session_id}")
+        if output_format == 'json':
+            result = {
+                "ok": True,
+                "session_id": session_id,
+                "checkpoints": checkpoints,
+                "count": len(checkpoints),
+                "limit": limit
+            }
             if phase:
-                print(f"(filtered by phase: {phase})")
-            return
-        
-        print(f"Found {len(checkpoints)} checkpoint(s) for session: {session_id}\n")
-        
-        for i, cp in enumerate(checkpoints, 1):
-            print(f"{i}. {cp['checkpoint_id']}")
-            print(f"   Phase: {cp['phase']}, Round: {cp['round']}")
-            print(f"   Created: {cp['timestamp']}")
-            print(f"   Vectors: {len(cp.get('vectors', {}))} loaded")
-            print()
+                result["phase_filter"] = phase
+            print(json.dumps(result, indent=2))
+        else:
+            if not checkpoints:
+                print(f"No checkpoints found for session: {session_id}")
+                if phase:
+                    print(f"(filtered by phase: {phase})")
+                return
+            
+            print(f"Found {len(checkpoints)} checkpoint(s) for session: {session_id}\n")
+            
+            for i, cp in enumerate(checkpoints, 1):
+                print(f"{i}. {cp['checkpoint_id']}")
+                print(f"   Phase: {cp['phase']}, Round: {cp['round']}")
+                print(f"   Created: {cp['timestamp']}")
+                print(f"   Vectors: {len(cp.get('vectors', {}))} loaded")
+                print()
         
     except Exception as e:
         logger.error(f"Failed to list checkpoints: {e}", exc_info=True)
-        print(f"❌ Failed to list checkpoints: {e}")
-        import traceback
-        traceback.print_exc()
+        if output_format == 'json':
+            print(json.dumps({"ok": False, "error": str(e)}, indent=2))
+        else:
+            print(f"❌ Failed to list checkpoints: {e}")
+            import traceback
+            traceback.print_exc()
         sys.exit(1)
 
 

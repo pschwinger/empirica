@@ -10,7 +10,6 @@ from .bootstrap_commands import (
     handle_profile_list_command, handle_profile_show_command, 
     handle_profile_create_command, handle_profile_set_default_command
 )
-from .assessment_commands import handle_assess_command, handle_self_awareness_command, handle_metacognitive_command
 from .cascade_commands import (
     handle_preflight_command,
     handle_postflight_command,
@@ -60,8 +59,8 @@ from .mcp_commands import (
 )
 from .session_commands import (
     handle_sessions_list_command, handle_sessions_show_command, handle_sessions_export_command,
-    # handle_session_end_command removed - use handoff-create
 )
+from .session_create import handle_session_create_command
 from .checkpoint_commands import (
     handle_checkpoint_create_command, handle_checkpoint_load_command,
     handle_checkpoint_list_command, handle_checkpoint_diff_command,
@@ -84,15 +83,14 @@ from .investigation_commands import handle_investigate_command, handle_analyze_c
 from .performance_commands import handle_benchmark_command, handle_performance_command
 from .component_commands import handle_list_command, handle_explain_command, handle_demo_command
 from .utility_commands import (
-    handle_feedback_command, handle_goal_analysis_command, handle_calibration_command, handle_uvl_command
+    handle_goal_analysis_command
 )
 from .ask_handler import handle_ask_command
 from .chat_handler import handle_chat_command
 
 # Export all handlers
 __all__ = [
-    # Bootstrap commands
-    'handle_bootstrap_command',
+    # Bootstrap commands (only onboard and profiles remain)
     'handle_bootstrap_system_command',
     'handle_onboard_command',
     'handle_profile_list_command',
@@ -101,9 +99,6 @@ __all__ = [
     'handle_profile_set_default_command',
     
     # Assessment commands  
-    'handle_assess_command',
-    'handle_self_awareness_command',
-    'handle_metacognitive_command',
     
     # Cascade commands
     'handle_preflight_command',
@@ -166,6 +161,7 @@ __all__ = [
     'handle_sessions_export_command',
     
     # Checkpoint commands (Phase 2)
+    'handle_session_create_command',
     'handle_checkpoint_create_command',
     'handle_checkpoint_load_command',
     'handle_checkpoint_list_command',
@@ -201,10 +197,7 @@ __all__ = [
     'handle_demo_command',
     
     # Utility commands
-    'handle_feedback_command',
     'handle_goal_analysis_command',
-    'handle_calibration_command',
-    'handle_uvl_command',
     
     # Session commands
     'handle_sessions_list_command',

@@ -1,0 +1,53 @@
+# Docker Compose configuration for Empirica
+# Usage:
+#   docker-compose up -d        # Start MCP server
+#   docker-compose run cli      # Run CLI commands
+#   docker-compose down         # Stop services
+
+version: '3.8'
+
+services:
+  # Empirica CLI service
+  cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: empirica:1.0.0-beta
+    container_name: empirica-cli
+    volumes:
+      - ./workspace:/workspace
+      - empirica-data:/data/.empirica
+    working_dir: /workspace
+    entrypoint: ["empirica"]
+    command: ["--help"]
+    user: "1000:1000"
+
+  # Empirica MCP Server (for Claude Desktop integration)
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: empirica:1.0.0-beta
+    container_name: empirica-mcp
+    ports:
+      - "3000:3000"
+    volumes:
+      - empirica-data:/data/.empirica
+    environment:
+      - EMPIRICA_HOME=/data/.empirica
+      - MCP_PORT=3000
+    command: ["python", "-m", "mcp_local.empirica_mcp_server"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  empirica-data:
+    driver: local
+
+networks:
+  default:
+    name: empirica-network

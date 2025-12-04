@@ -44,6 +44,16 @@ def handle_goals_create_command(args):
         constraints = parse_json_safely(args.constraints) if args.constraints else None
         metadata = parse_json_safely(args.metadata) if args.metadata else None
         
+        # Validate success criteria
+        if not success_criteria_list:
+            output_format = getattr(args, 'output', 'default')
+            error_msg = "At least one success criterion is required. Use --success-criteria '[\"criterion 1\", \"criterion 2\"]'"
+            if output_format == 'json':
+                print(json.dumps({"ok": False, "error": error_msg}, indent=2))
+            else:
+                print(f"❌ {error_msg}")
+            sys.exit(1)
+        
         # Use the actual Goal repository
         goal_repo = GoalRepository()
         

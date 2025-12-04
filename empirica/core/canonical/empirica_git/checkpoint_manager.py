@@ -16,7 +16,7 @@ import subprocess
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime, UTC
 
 logger = logging.getLogger(__name__)
@@ -238,6 +238,64 @@ class CheckpointManager:
         
         return json.loads(result.stdout)
     
+    def load_recent_checkpoints(
+        self,
+        session_id: Optional[str] = None,
+        ai_id: Optional[str] = None,
+        count: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Load recent checkpoints matching filters
+
+        Args:
+            session_id: Filter by session
+            ai_id: Filter by AI
+            count: Number of recent checkpoints to return
+
+        Returns:
+            List of checkpoint dicts (most recent first)
+        """
+        if not self._git_available:
+            return []
+
+        try:
+            # Get all checkpoints
+            result = subprocess.run(
+                ['git', 'log', '--all', '--pretty=format:%H'],
+                cwd=self.workspace_root,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode != 0:
+                return []
+
+            commit_hashes = result.stdout.strip().split('\n')
+            checkpoints = []
+
+            # Search for matching checkpoints
+            for commit_hash in commit_hashes:
+                if len(checkpoints) >= count:
+                    break
+
+                checkpoint = self._load_checkpoint_by_hash(commit_hash)
+                if not checkpoint:
+                    continue
+
+                # Apply filters
+                if session_id and checkpoint.get('session_id') != session_id:
+                    continue
+                if ai_id and checkpoint.get('ai_id') != ai_id:
+                    continue
+
+                checkpoints.append(checkpoint)
+
+            return checkpoints
+        except Exception as e:
+            logger.warning(f"Failed to load recent checkpoints: {e}")
+            return []
+
     def _find_latest_checkpoint(
         self,
         session_id: Optional[str] = None,
@@ -251,26 +309,26 @@ class CheckpointManager:
             capture_output=True,
             text=True
         )
-        
+
         if result.returncode != 0:
             return None
-        
+
         commit_hashes = result.stdout.strip().split('\n')
-        
+
         # Search for matching checkpoint
         for commit_hash in commit_hashes:
             checkpoint = self._load_checkpoint_by_hash(commit_hash)
             if not checkpoint:
                 continue
-            
+
             # Apply filters
             if session_id and checkpoint.get('session_id') != session_id:
                 continue
             if ai_id and checkpoint.get('ai_id') != ai_id:
                 continue
-            
+
             return checkpoint
-        
+
         return None
 
 

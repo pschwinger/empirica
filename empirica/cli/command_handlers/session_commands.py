@@ -19,11 +19,9 @@ logger = logging.getLogger(__name__)
 def handle_sessions_list_command(args):
     """List all sessions with summary information"""
     try:
-        print_header("📋 Empirica Sessions")
-        
         from empirica.data.session_database import SessionDatabase
-        
-        db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
+
+        db = SessionDatabase()  # Use path resolver
         cursor = db.conn.cursor()
         
         # Query all sessions
@@ -40,6 +38,32 @@ def handle_sessions_list_command(args):
         
         logger.info(f"Found {len(sessions)} sessions to display")
         
+        # Check output format FIRST (before any printing)
+        if hasattr(args, 'output') and args.output == 'json':
+            # JSON output only
+            if not sessions:
+                print(json.dumps({"ok": False, "sessions": [], "count": 0, "message": "No sessions found"}))
+            else:
+                sessions_list = []
+                for row in sessions:
+                    session_id, ai_id, user_id, start_time, end_time, cascades, conf, drift = row
+                    sessions_list.append({
+                        "session_id": session_id,
+                        "ai_id": ai_id,
+                        "user_id": user_id,
+                        "start_time": str(start_time),
+                        "end_time": str(end_time) if end_time else None,
+                        "total_cascades": cascades,
+                        "avg_confidence": conf,
+                        "drift_detected": bool(drift)
+                    })
+                print(json.dumps({"ok": True, "sessions": sessions_list, "count": len(sessions)}))
+            db.close()
+            return
+        
+        # Pretty output (terminal)
+        print_header("📋 Empirica Sessions")
+        
         if not sessions:
             logger.info("No sessions found in database")
             print("\n📭 No sessions found")
@@ -52,9 +76,30 @@ def handle_sessions_list_command(args):
         for row in sessions:
             session_id, ai_id, user_id, start_time, end_time, cascades, conf, drift = row
             
-            # Format timestamps
-            start = datetime.fromisoformat(start_time).strftime("%Y-%m-%d %H:%M") if start_time else "N/A"
-            end = datetime.fromisoformat(end_time).strftime("%Y-%m-%d %H:%M") if end_time else "Active"
+            # Format timestamps - handle various types (str, datetime, float/timestamp)
+            def format_timestamp(ts):
+                """Format timestamp handling str, datetime, or numeric timestamp"""
+                if not ts:
+                    return None
+                try:
+                    if isinstance(ts, str):
+                        # Try parsing ISO format string
+                        return datetime.fromisoformat(ts).strftime("%Y-%m-%d %H:%M")
+                    elif isinstance(ts, (int, float)):
+                        # Unix timestamp
+                        return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
+                    elif hasattr(ts, 'strftime'):
+                        # datetime object
+                        return ts.strftime("%Y-%m-%d %H:%M")
+                    else:
+                        # Unknown format, return as string
+                        return str(ts)
+                except (ValueError, AttributeError, OSError) as e:
+                    # Invalid timestamp, return as string
+                    return str(ts) if ts else None
+            
+            start = format_timestamp(start_time) or "N/A"
+            end = format_timestamp(end_time) or "Active"
             
             # Status indicator
             status = "✅" if end_time else "⏳"
@@ -101,7 +146,7 @@ def handle_sessions_show_command(args):
 
         print_header(f"📊 Session Details: {session_id[:8]}")
 
-        db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
+        db = SessionDatabase()  # Use path resolver
 
         # Get session summary (use resolved session_id)
         summary = db.get_session_summary(session_id, detail_level="detailed")
@@ -239,7 +284,7 @@ def handle_sessions_export_command(args):
 
         print_header(f"📦 Exporting Session: {session_id[:8]}")
 
-        db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
+        db = SessionDatabase()  # Use path resolver
 
         # Get full session summary (use resolved session_id)
         summary = db.get_session_summary(session_id, detail_level="full")

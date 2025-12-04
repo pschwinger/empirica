@@ -38,19 +38,23 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta, UTC
 
-from .reflex_logger import ReflexLogger
 from .reflex_frame import VectorState, Action
 from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema as EpistemicAssessment
 
 logger = logging.getLogger(__name__)
 
 
-class GitEnhancedReflexLogger(ReflexLogger):
+class GitEnhancedReflexLogger:
     """
-    Git-enhanced reflex logger with compressed checkpoint storage.
+    Epistemic checkpoint logger with 3-layer storage.
     
-    Extends ReflexLogger to store epistemic state in git notes for token efficiency.
-    Falls back to SQLite when git unavailable.
+    Storage Architecture:
+    - SQLite: Queryable checkpoints (fallback)
+    - Git Notes: Compressed (~450 tokens), distributed, signable
+    - JSON Logs: Full audit trail (optional)
+    
+    No longer inherits from ReflexLogger - standalone implementation.
+    Different interface: add_checkpoint() vs log_assessment()
     """
     
     def __init__(
@@ -61,15 +65,17 @@ class GitEnhancedReflexLogger(ReflexLogger):
         git_repo_path: Optional[str] = None
     ):
         """
-        Initialize git-enhanced logger.
+        Initialize checkpoint logger.
         
         Args:
             session_id: Session identifier
             enable_git_notes: Enable git notes storage (default: False for backward compat)
-            base_log_dir: Base directory for reflex logs
+            base_log_dir: Base directory for checkpoint logs
             git_repo_path: Path to git repository (default: current directory)
         """
-        super().__init__(base_log_dir=base_log_dir)
+        # Setup base log directory (no inheritance needed!)
+        self.base_log_dir = Path(base_log_dir)
+        self.base_log_dir.mkdir(parents=True, exist_ok=True)
         
         self.session_id = session_id
         self.enable_git_notes = enable_git_notes
