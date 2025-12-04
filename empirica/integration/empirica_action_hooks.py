@@ -7,6 +7,10 @@ Feeds:
 - /tmp/empirica_realtime/12d_vectors.json - Full 12D epistemic monitor
 - /tmp/empirica_realtime/cascade_status.json - All 5 cascade phases with goal
 - /tmp/empirica_realtime/chain_of_thought.json - User-facing reasoning steps
+- /tmp/empirica_realtime/statusline_*.json - Per-AI statusline cache (audit trail)
+
+Triggers statusline display when CASCADE phases change, enabling real-time
+audit trail during action replay and live task execution.
 """
 
 import json
@@ -202,6 +206,33 @@ class EmpiricaActionHooks:
         except Exception as e:
             print(f"Warning: Could not update snapshot monitor feed: {e}")
 
+    @staticmethod
+    def update_statusline_cache(session_id: str, ai_id: str, phase: str, vectors: Dict[str, float] = None):
+        """Update statusline cache for fast rendering during action replay.
+
+        This allows statusline to be triggered/refreshed automatically when
+        CASCADE phases change, providing real-time audit trail.
+        """
+        try:
+            statusline_data = {
+                "timestamp": time.time(),
+                "session_id": session_id,
+                "ai_id": ai_id,
+                "phase": phase,
+                "vectors": vectors or {},
+                "display_mode": os.getenv('EMPIRICA_STATUS_MODE', 'balanced')
+            }
+
+            output_file = REALTIME_DIR / f"statusline_{ai_id}.json"
+            with open(output_file, 'w') as f:
+                json.dump(statusline_data, f, indent=2)
+
+            # Trigger statusline pane update
+            trigger_pane_update('statusline')
+
+        except Exception as e:
+            print(f"Warning: Could not update statusline cache: {e}")
+
 def track_component_usage(component_name: str):
     """Decorator to track when Empirica components are used"""
     def decorator(func: Callable) -> Callable:
@@ -277,6 +308,15 @@ def log_thought(thought: str, phase: str = "ACT", goal: str = None):
     hooks = EmpiricaActionHooks()
     hooks.update_chain_of_thought(thought, phase, goal)
 
+def log_statusline(session_id: str, ai_id: str, phase: str, vectors: Dict[str, float] = None):
+    """Directly update statusline cache for audit trail.
+
+    Use this after CASCADE phase transitions to trigger statusline updates
+    during action replay.
+    """
+    hooks = EmpiricaActionHooks()
+    hooks.update_statusline_cache(session_id, ai_id, phase, vectors)
+
 # Auto-initialize tmux dashboard when action hooks are imported
 def initialize_tmux_dashboard():
     """Initialize tmux dashboard for real-time monitoring"""
@@ -320,7 +360,8 @@ def trigger_pane_update(pane_name: str):
             '12d': 'empirica:dashboard.0',
             'cascade': 'empirica:dashboard.1',
             'thought': 'empirica:dashboard.2',
-            'snapshot': 'empirica:dashboard.1'  # Upper-right pane for snapshot dashboard
+            'snapshot': 'empirica:dashboard.1',  # Upper-right pane for snapshot dashboard
+            'statusline': 'empirica:statusline'  # Dedicated statusline pane for audit trail
         }
 
         pane = pane_map.get(pane_name)
