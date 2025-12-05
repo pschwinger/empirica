@@ -645,7 +645,7 @@ pip install -e .
 ls ~/.empirica/sessions/sessions.db
 
 # If missing, run bootstrap
-empirica bootstrap
+empirica session-create
 ```
 
 **Check 2: Permissions**

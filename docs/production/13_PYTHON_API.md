@@ -87,7 +87,7 @@ Gets most recent session for AI.
 Log epistemic assessments during CASCADE workflow.
 
 ```python
-from empirica.core.canonical.reflex_logger import ReflexLogger
+from empirica.core.canonical import ReflexLogger
 
 logger = ReflexLogger(session_id=session_id)
 
@@ -296,8 +296,7 @@ Queries previous handoff reports.
 
 ```python
 from empirica.data.session_database import SessionDatabase
-from empirica.core.canonical.reflex_logger import ReflexLogger
-from empirica.core.canonical import CanonicalEpistemicAssessor
+from empirica.core.canonical import ReflexLogger, CanonicalEpistemicAssessor
 from empirica.core.handoff import EpistemicHandoffReportGenerator
 
 # 1. Create session

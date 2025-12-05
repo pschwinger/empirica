@@ -311,8 +311,8 @@ empirica/cli/
 #### Profile Integration Point:
 ```bash
 # Future CLI usage:
-empirica bootstrap --profile high_reasoning_collaborative
-empirica bootstrap --ai-model claude-sonnet --domain medical  # Auto-selects profile
+empirica session-create --profile high_reasoning_collaborative
+empirica session-create --ai-model claude-sonnet --domain medical  # Auto-selects profile
 empirica profile list  # List available profiles
 empirica profile show high_reasoning_collaborative  # Show profile details
 ```

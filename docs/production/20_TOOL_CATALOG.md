@@ -1123,7 +1123,7 @@ empirica component list | grep code-intelligence
 empirica component info code-intelligence
 
 # Reinstall if needed
-empirica bootstrap --level extended
+empirica session-create --level extended
 ```
 
 ### Component Errors

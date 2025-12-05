@@ -5,6 +5,24 @@
 
 ---
 
+> **📅 HISTORICAL DOCUMENT - 2025-12-05 UPDATE**
+> 
+> This action plan outlined the data flow fixes needed for unified storage.
+> 
+> **✅ STATUS: ACTION PLAN COMPLETED**
+> 
+> The database schema uniformity migration (commit 21dd6ad1) has implemented this plan:
+> - ✅ PREFLIGHT now writes to unified `reflexes` table
+> - ✅ CHECK now writes to unified `reflexes` table  
+> - ✅ POSTFLIGHT now writes to unified `reflexes` table
+> - ✅ All queries now use single table with phase filtering
+> 
+> This document is preserved for historical reference.
+> 
+> For current implementation, see: `docs/production/12_SESSION_DATABASE.md`
+
+---
+
 ## Overview
 
 Three critical data flow issues must be fixed to achieve:

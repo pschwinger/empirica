@@ -108,22 +108,23 @@
 │     • Ideal for: Direct invocation, deliberate guidance     │
 │                                                              │
 │  💻 Empirica CLI (Command-Line Interface)                   │
-│     • empirica bootstrap - Initialize session               │
+│     • empirica session-create - Initialize session          │
 │     • empirica assess <query> - Run assessment              │
 │     • empirica cascade <task> - Run full workflow           │
 │     • empirica investigate <dir> - Analyze codebase         │
 │     • Ideal for: Automation, scripting, human operators     │
 │                                                              │
-│  🚀 Bootstrap (Automated Initialization)                    │
-│     • extended_metacognitive_bootstrap.py                   │
-│     • Levels 0-4 (minimal → complete)                       │
+│  🚀 Session Management                                       │
+│     • empirica session-create - Create new sessions         │
+│     • Bootstrap levels 0-2 (minimal → full tracking)        │
 │     • Auto-tracking enabled                                 │
-│     • Ideal for: Session startup, component loading         │
+│     • Ideal for: Session startup, epistemic tracking        │
+│     • Note: "Bootstrap" now for system prompts only         │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Key Principle:** MCP for deliberate AI guidance. CLI for automation. Bootstrap for initialization.
+**Key Principle:** MCP for deliberate AI guidance. CLI for automation. Session-create for initialization.
 
 ---
 

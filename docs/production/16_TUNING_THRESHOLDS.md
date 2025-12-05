@@ -542,7 +542,7 @@ cp config.yaml.backup config.yaml
 empirica clear-cache --calibration
 
 # Restart monitoring
-empirica bootstrap --level standard
+empirica session-create --level standard
 ```
 
 ---

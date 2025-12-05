@@ -4,6 +4,24 @@
 
 ---
 
+> **📅 HISTORICAL DOCUMENT - 2025-12-05 UPDATE**
+> 
+> This document was created to track the gap between specification and implementation.
+> 
+> **✅ STATUS: IMPLEMENTATION NOW MATCHES SPEC**
+> 
+> The database schema uniformity migration (commit 21dd6ad1) has implemented the spec:
+> - ✅ Unified `reflexes` table now in production
+> - ✅ Old tables (`epistemic_assessments`, `preflight_assessments`, etc.) deprecated
+> - ✅ Automatic migration preserves all historical data
+> 
+> This document is preserved for historical reference showing what needed to be fixed.
+> The "Implementation" column now represents the OLD pre-migration state.
+> 
+> For current architecture, see: `docs/production/12_SESSION_DATABASE.md`
+
+---
+
 ## PREFLIGHT Assessment Flow
 
 ### SPEC (from STORAGE_ARCHITECTURE_COMPLETE.md + CASCADE docs)

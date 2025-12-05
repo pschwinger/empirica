@@ -201,7 +201,7 @@ Different bootstrap configurations for various use cases:
 ### Minimal Bootstrap
 
 ```bash
-empirica bootstrap --level minimal
+empirica session-create --level minimal
 ```
 
 **Activates:**
@@ -213,7 +213,7 @@ empirica bootstrap --level minimal
 ### Standard Bootstrap (Default)
 
 ```bash
-empirica bootstrap --level standard
+empirica session-create --level standard
 ```
 
 **Activates:**
@@ -225,7 +225,7 @@ empirica bootstrap --level standard
 ### Extended Bootstrap
 
 ```bash
-empirica bootstrap --level extended
+empirica session-create --level extended
 ```
 
 **Activates:**
@@ -237,7 +237,7 @@ empirica bootstrap --level extended
 ### Complete Bootstrap
 
 ```bash
-empirica bootstrap --level complete
+empirica session-create --level complete
 ```
 
 **Activates:**
@@ -267,7 +267,7 @@ Personas define behavioral patterns and threshold adjustments for different work
 
 **researcher** - Exploration and learning focused
 ```bash
-empirica bootstrap --persona researcher
+empirica session-create --persona researcher
 # - High uncertainty tolerance (0.75)
 # - Max 10 investigation rounds
 # - Hypothesis-driven exploration
@@ -276,7 +276,7 @@ empirica bootstrap --persona researcher
 
 **implementer** - Task execution focused
 ```bash
-empirica bootstrap --persona implementer
+empirica session-create --persona implementer
 # - Moderate uncertainty tolerance (0.50)
 # - Max 5 investigation rounds
 # - Requirement-driven
@@ -285,7 +285,7 @@ empirica bootstrap --persona implementer
 
 **reviewer** - Quality and validation focused
 ```bash
-empirica bootstrap --persona reviewer
+empirica session-create --persona reviewer
 # - Low uncertainty tolerance (0.40)
 # - Max 8 investigation rounds
 # - Thorough validation
@@ -294,7 +294,7 @@ empirica bootstrap --persona reviewer
 
 **coordinator** - Multi-agent orchestration
 ```bash
-empirica bootstrap --persona coordinator
+empirica session-create --persona coordinator
 # - Moderate uncertainty tolerance (0.60)
 # - Max 6 investigation rounds
 # - Workflow-based
@@ -303,7 +303,7 @@ empirica bootstrap --persona coordinator
 
 **learner** - Educational, guidance-needing
 ```bash
-empirica bootstrap --persona learner
+empirica session-create --persona learner
 # - High uncertainty tolerance (0.80)
 # - Max 12 investigation rounds
 # - Guided learning
@@ -312,7 +312,7 @@ empirica bootstrap --persona learner
 
 **expert** - Domain specialist, minimal guidance
 ```bash
-empirica bootstrap --persona expert
+empirica session-create --persona expert
 # - Low uncertainty tolerance (0.45)
 # - Max 4 investigation rounds
 # - Expert hypothesis generation
@@ -328,7 +328,7 @@ empirica bootstrap --persona expert
 
 **Manual Override:**
 ```bash
-empirica bootstrap --persona implementer --ai-id my-ai
+empirica session-create --persona implementer --ai-id my-ai
 # Uses implementer persona explicitly
 ```
 
@@ -378,7 +378,7 @@ custom_persona:
 
 **Use custom persona:**
 ```bash
-empirica bootstrap --persona custom_persona
+empirica session-create --persona custom_persona
 ```
 
 ### For More Details
@@ -427,7 +427,7 @@ empirica cascade "task" \
   --uncertainty-threshold 0.65
 
 # Bootstrap with specific components
-empirica bootstrap \
+empirica session-create \
   --enable code_intelligence \
   --enable tool_management \
   --disable drift_monitor
@@ -448,7 +448,7 @@ mkdir -p .empirica_reflex_logs/my_custom_ai
 export EMPIRICA_AI_ID="my_custom_ai"
 
 # Initialize database
-empirica bootstrap --level standard
+empirica session-create --level standard
 
 # Verify
 empirica list --status
@@ -584,13 +584,13 @@ echo $EMPIRICA_DB_PATH
 ls -la .empirica/${EMPIRICA_AI_ID}/empirica.db
 
 # Reinitialize
-empirica bootstrap --level standard
+empirica session-create --level standard
 ```
 
 **Issue:** Components not activating
 ```bash
 # Check bootstrap level
-empirica bootstrap --level extended
+empirica session-create --level extended
 
 # Or manually enable
 export EMPIRICA_ENABLE_CODE_INTELLIGENCE=true
@@ -633,7 +633,7 @@ EMPIRICA_TRACK_TO_REFLEX=true
 EOF
 
 # Reinitialize
-empirica bootstrap --level standard
+empirica session-create --level standard
 
 echo "✅ Migrated to v2.0"
 ```

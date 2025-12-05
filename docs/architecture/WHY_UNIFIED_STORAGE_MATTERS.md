@@ -4,6 +4,24 @@
 
 ---
 
+> **📅 HISTORICAL DOCUMENT - 2025-12-05 UPDATE**
+> 
+> This document was written to explain WHY we needed unified storage.
+> 
+> **✅ STATUS: UNIFIED STORAGE NOW IMPLEMENTED**
+> 
+> The database schema uniformity migration (commit 21dd6ad1) has achieved this:
+> - ✅ All epistemic data now in unified `reflexes` table
+> - ✅ Old fragmented tables (`epistemic_assessments`, `preflight_assessments`, etc.) deprecated
+> - ✅ Automatic migration completed
+> 
+> This document is preserved to explain the architectural reasoning behind the migration.
+> All examples of "scattered storage" now represent the OLD pre-migration state.
+> 
+> For current architecture, see: `docs/production/12_SESSION_DATABASE.md`
+
+---
+
 ## The Problem Statement
 
 The current implementation splits assessment storage across **three independent code paths** with **different tables, formats, and timing**:

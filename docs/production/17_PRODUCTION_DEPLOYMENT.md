@@ -284,15 +284,12 @@ async def run_tracked_cascade(task, context):
 # health.py
 async def health_check():
     try:
-        # Test bootstrap
-        bootstrap = ExtendedMetacognitiveBootstrap(level="0")
-        components = bootstrap.bootstrap()
-        
-        # Test database
+        # Test session creation
         db = SessionDatabase()
+        session_id = db.create_session(ai_id="healthcheck", bootstrap_level=0)
         db.close()
         
-        return {'status': 'healthy', 'components': len(components)}
+        return {'status': 'healthy', 'session_id': session_id}
     except Exception as e:
         return {'status': 'unhealthy', 'error': str(e)}
 ```
@@ -406,8 +403,9 @@ db.close()
 # Limit investigation rounds
 cascade = CanonicalEpistemicCascade(max_investigation_rounds=1)
 
-# Use lower bootstrap level
-bootstrap = ExtendedMetacognitiveBootstrap(level="1")
+# Use lower bootstrap level for faster startup
+db = SessionDatabase()
+session_id = db.create_session(ai_id="production", bootstrap_level=1)
 ```
 
 ### Slow Performance

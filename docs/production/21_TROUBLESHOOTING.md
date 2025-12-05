@@ -108,13 +108,20 @@ session_id = db.create_session(ai_id="myai", bootstrap_level=1)
 
 ### Issue 5: Component Not Found
 
-**Error:** `KeyError: 'canonical_cascade'`
+**Error:** `KeyError: 'canonical_cascade'` or similar component errors
 
-**Solution:** Check available components
+**Solution:** Use direct imports instead of bootstrap
 ```python
-bootstrap = ExtendedMetacognitiveBootstrap(level="2")
-components = bootstrap.bootstrap()
-print("Available:", list(components.keys()))
+# ❌ OLD - Bootstrap classes removed
+# bootstrap = ExtendedMetacognitiveBootstrap(level="2")
+# components = bootstrap.bootstrap()
+
+# ✅ NEW - Direct imports
+from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
+from empirica.core.canonical import CanonicalEpistemicAssessor
+
+cascade = CanonicalEpistemicCascade()
+assessor = CanonicalEpistemicAssessor()
 ```
 
 **Component Loading by Level:**
@@ -318,13 +325,25 @@ grep -r "from empirica" your_project/
 
 **Symptom:** Bootstrap takes > 1 second
 
-**Cause:** Loading too many components
+**Cause:** Too much initialization overhead
 
 **Solution:**
 ```python
-# Use lower level for testing
-bootstrap = ExtendedMetacognitiveBootstrap(level="0")  # 0.01s
-# Use level 2 for production (0.17s is acceptable)
+# ❌ OLD - Bootstrap classes removed
+# bootstrap = ExtendedMetacognitiveBootstrap(level="0")
+
+# ✅ NEW - Use appropriate bootstrap level for sessions
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+session_id = db.create_session(
+    ai_id="test",
+    bootstrap_level=0  # 0=minimal, 1=standard, 2=full tracking
+)
+db.close()
+
+# Or via CLI:
+# empirica session-create --ai-id test --bootstrap-level 0
 ```
 
 ### Issue 12: Slow Cascade

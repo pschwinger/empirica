@@ -60,14 +60,23 @@ python3 -m empirica.cli cascade "Continue investigation" --context-level standar
 ### 3. Run a Cascade (Python)
 
 ```python
-from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
+# ❌ DEPRECATED - Bootstrap classes removed (bootstrap reserved for system prompts)
+# from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
 
-# Bootstrap
-bootstrap = OptimalMetacognitiveBootstrap(level='1')
-components = bootstrap.bootstrap()
+# ✅ Use session-create CLI or SessionDatabase
+from empirica.data.session_database import SessionDatabase
 
-# Run cascade (if loaded)
-cascade = components.get('canonical_cascade')
+# Create session
+db = SessionDatabase()
+session_id = db.create_session(ai_id='myai', bootstrap_level=1)
+db.close()
+
+# Or via CLI:
+# empirica session-create --ai-id myai --bootstrap-level 1
+
+# Run cascade
+from empirica.core.metacognitive_cascade import CanonicalEpistemicCascade
+cascade = CanonicalEpistemicCascade()
 result = await cascade.run_epistemic_cascade(
     task="Refactor the authentication module",
     context={'cwd': '/path/to/project'}

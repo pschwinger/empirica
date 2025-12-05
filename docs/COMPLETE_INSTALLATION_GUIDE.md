@@ -20,7 +20,7 @@ Choose your preferred package manager:
 ```bash
 pip install empirica
 empirica --version
-empirica bootstrap --ai-id myagent --level extended
+empirica session-create --ai-id myagent --level extended
 ```
 
 **Verify installation:**
@@ -39,7 +39,7 @@ brew tap empirica/tap
 brew install empirica
 
 # Verify
-empirica bootstrap --help
+empirica session-create --help
 ```
 
 **Or install directly from formula:**
@@ -56,7 +56,7 @@ brew install --build-from-source ./packaging/homebrew/empirica.rb
 choco install empirica
 
 # Verify
-empirica bootstrap --help
+empirica session-create --help
 ```
 
 ---
@@ -91,7 +91,7 @@ docker-compose run cli bootstrap --ai-id myagent
 git clone https://github.com/nubaeon/empirica.git
 cd empirica
 pip install -e .
-empirica bootstrap --ai-id dev-agent
+empirica session-create --ai-id dev-agent
 ```
 
 ---
@@ -306,17 +306,17 @@ chmod 755 ~/.empirica
 
 ```bash
 export EMPIRICA_HOME=/custom/path/.empirica
-empirica bootstrap --ai-id myagent
+empirica session-create --ai-id myagent
 ```
 
 ### Multi-Profile Setup
 
 ```bash
 # Development profile
-empirica bootstrap --ai-id dev-agent --profile development
+empirica session-create --ai-id dev-agent --profile development
 
 # Production profile  
-empirica bootstrap --ai-id prod-agent --profile production
+empirica session-create --ai-id prod-agent --profile production
 ```
 
 ### Integration with Git
@@ -326,7 +326,7 @@ Empirica automatically uses git for checkpoints and handoff reports:
 ```bash
 cd your-project
 git init
-empirica bootstrap --ai-id myagent
+empirica session-create --ai-id myagent
 # Checkpoints are stored in git notes
 ```
 
@@ -337,7 +337,7 @@ empirica bootstrap --ai-id myagent
 After installation, verify everything works:
 
 - [ ] CLI responds: `empirica --version`
-- [ ] Bootstrap works: `empirica bootstrap --ai-id test --level minimal`
+- [ ] Bootstrap works: `empirica session-create --ai-id test --level minimal`
 - [ ] Database created: `ls ~/.empirica/sessions.db`
 - [ ] System prompt loaded (if applicable): Check `.clinerules` or equivalent
 - [ ] MCP server connects (if applicable): Check IDE tool picker
@@ -347,7 +347,7 @@ After installation, verify everything works:
 
 ## Next Steps
 
-1. **Quick Start:** Run `empirica bootstrap --ai-id myagent --level extended`
+1. **Quick Start:** Run `empirica session-create --ai-id myagent --level extended`
 2. **Read Methodology:** See `docs/production/00_COMPLETE_SUMMARY.md`
 3. **Try CASCADE Workflow:** See `docs/production/03_BASIC_USAGE.md`
 4. **Join Community:** (Add community links when available)
@@ -366,6 +366,6 @@ After installation, verify everything works:
 **Installation complete!** 🎉 Start your first session:
 
 ```bash
-empirica bootstrap --ai-id myagent --level extended
+empirica session-create --ai-id myagent --level extended
 empirica goals create --objective "Learn Empirica" --scope project_wide
 ```

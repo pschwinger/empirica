@@ -175,7 +175,7 @@ empirica mcp-start
 ls ~/.empirica/sessions/sessions.db
 
 # Create if missing
-empirica bootstrap
+empirica session-create
 
 # Check permissions
 chmod -R u+rw ~/.empirica
@@ -238,7 +238,7 @@ empirica migrate
 
 # Or recreate database
 mv ~/.empirica/sessions/sessions.db ~/.empirica/sessions/sessions.db.backup
-empirica bootstrap
+empirica session-create
 ```
 
 ---
@@ -407,7 +407,7 @@ mkdir -p ~/.empirica/sessions
 empirica onboard
 
 # Or run bootstrap
-empirica bootstrap
+empirica session-create
 ```
 
 ### Credentials file errors
@@ -444,7 +444,7 @@ du -h ~/.empirica/sessions/sessions.db
 # Archive old sessions (future feature)
 # For now, backup and recreate:
 mv ~/.empirica/sessions/sessions.db ~/.empirica/sessions/sessions.db.old
-empirica bootstrap
+empirica session-create
 ```
 
 **Many reflex logs:**

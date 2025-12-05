@@ -70,7 +70,7 @@ The easiest way to use Empirica is via CLI commands:
 ### 1. Bootstrap Empirica
 ```bash
 # Initialize with standard components
-empirica bootstrap --level 2
+empirica session-create --level 2
 ```
 
 ### 2. Start a Cascade with PREFLIGHT

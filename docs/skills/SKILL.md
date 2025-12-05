@@ -253,17 +253,20 @@ python3 empirica/bootstraps/optimal_metacognitive_bootstrap.py
 3. **Genuine practice**: No heuristics, actual state-checking
 4. **Export results**: Review learning trajectory
 
-**Other bootstraps:**
+**Other approaches:**
 ```bash
-# Standard bootstrap (simpler)
-empirica bootstrap
+# Session creation (standard approach)
+empirica session-create --ai-id myai --bootstrap-level 1
 
-# System bootstrap (advanced configuration)
+# System bootstrap (system prompt generation - different purpose)
 empirica bootstrap-system --level extended
 
 # Onboarding wizard (comprehensive learning path)
 empirica onboard --ai-id claude
 ```
+
+**Note:** "Bootstrap" is now reserved for system prompt generation. 
+Use `session-create` for creating sessions.
 
 **Detailed docs:** [`docs/ONBOARDING_GUIDE.md`](../ONBOARDING_GUIDE.md)
 
@@ -1503,9 +1506,13 @@ from empirica.core.canonical import CanonicalEpistemicAssessor
 # Session management
 from empirica.data.session_database import SessionDatabase
 
-# Bootstraps
-from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
-from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
+# Session creation (bootstrap classes DEPRECATED)
+# ❌ DEPRECATED - Bootstrap classes removed
+# from empirica.bootstraps.optimal_metacognitive_bootstrap import OptimalMetacognitiveBootstrap
+# from empirica.bootstraps.extended_metacognitive_bootstrap import ExtendedMetacognitiveBootstrap
+
+# ✅ Use session-create or SessionDatabase
+from empirica.data.session_database import SessionDatabase
 ```
 
 ---

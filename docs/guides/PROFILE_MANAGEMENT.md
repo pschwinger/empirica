@@ -78,7 +78,7 @@ constraints:
 
 **Example:**
 ```bash
-empirica bootstrap --profile high_reasoning \
+empirica session-create --profile high_reasoning \
   --ai-model claude-sonnet \
   --domain software-architecture
 ```
@@ -119,7 +119,7 @@ guidance:
 
 **Example:**
 ```bash
-empirica bootstrap --profile autonomous \
+empirica session-create --profile autonomous \
   --ai-model minimax \
   --domain testing
 ```
@@ -166,7 +166,7 @@ compliance:
 
 **Example:**
 ```bash
-empirica bootstrap --profile critical \
+empirica session-create --profile critical \
   --ai-model claude-opus \
   --domain healthcare
 ```
@@ -206,7 +206,7 @@ learning:
 
 **Example:**
 ```bash
-empirica bootstrap --profile exploratory \
+empirica session-create --profile exploratory \
   --ai-model gpt-4 \
   --domain research
 ```
@@ -244,7 +244,7 @@ constraints:
 
 **Example:**
 ```bash
-empirica bootstrap  # Uses balanced by default
+empirica session-create  # Uses balanced by default
 ```
 
 ---
@@ -274,7 +274,7 @@ If no profile specified, Empirica selects based on:
 3. **Explicit Override:**
    ```bash
    # Override auto-detection
-   empirica bootstrap --profile critical --ai-model gpt-3.5
+   empirica session-create --profile critical --ai-model gpt-3.5
    # Uses critical (not balanced) because explicitly set
    ```
 
@@ -362,13 +362,13 @@ empirica profile-set-default high_reasoning
 
 ```bash
 # Explicit profile
-empirica bootstrap --profile high_reasoning
+empirica session-create --profile high_reasoning
 
 # Profile + AI model
-empirica bootstrap --profile autonomous --ai-model minimax
+empirica session-create --profile autonomous --ai-model minimax
 
 # Full specification
-empirica bootstrap \
+empirica session-create \
   --profile critical \
   --ai-model claude-opus \
   --domain healthcare
@@ -404,15 +404,21 @@ result = bootstrap_session(
 ### Python API
 
 ```python
-from empirica.bootstraps import ExtendedMetacognitiveBootstrap
+# ❌ DEPRECATED - Bootstrap classes removed (bootstrap reserved for system prompts)
+# from empirica.bootstraps import ExtendedMetacognitiveBootstrap
 
-# With profile
-bootstrap = ExtendedMetacognitiveBootstrap(
-    level="2",
-    profile='high_reasoning'
+# ✅ Use session-create CLI or SessionDatabase
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+session_id = db.create_session(
+    ai_id="my-ai",
+    bootstrap_level=2  # Adjust based on needs (0=minimal, 1=standard, 2=full)
 )
+db.close()
 
-components = bootstrap.bootstrap()
+# Note: Profiles are configured in empirica/config/mco/ directory
+# Use 'empirica session-create --ai-id my-ai --bootstrap-level 2' for CLI
 ```
 
 ---
@@ -444,7 +450,7 @@ constraints:
 **Step 2: Load profile**
 
 ```bash
-empirica bootstrap --profile my-profile
+empirica session-create --profile my-profile
 ```
 
 ### Modifying Built-In Profiles
@@ -609,7 +615,7 @@ empirica profile-show high-reasoning  # Wrong (underscore not dash)
 **Debug:**
 ```bash
 # Check if profile was actually set
-empirica bootstrap --profile high_reasoning --verbose
+empirica session-create --profile high_reasoning --verbose
 # Look for: "Profile: high_reasoning loaded"
 
 # Verify profile configuration
@@ -623,7 +629,7 @@ empirica profile-show high_reasoning
 **Solutions:**
 ```bash
 # Use more flexible profile
-empirica bootstrap --profile high_reasoning  # Instead of autonomous
+empirica session-create --profile high_reasoning  # Instead of autonomous
 
 # Or create custom profile with looser constraints
 # Edit ~/.empirica/profiles/my-profile.yaml
@@ -638,7 +644,7 @@ investigation:
 **Solutions:**
 ```bash
 # Use stricter profile
-empirica bootstrap --profile critical  # Instead of balanced
+empirica session-create --profile critical  # Instead of balanced
 
 # Or lower uncertainty threshold
 # Edit profile:
@@ -705,7 +711,7 @@ guidance:
 
 ```bash
 # Bootstrap
-empirica bootstrap --profile high_reasoning --ai-model claude-opus
+empirica session-create --profile high_reasoning --ai-model claude-opus
 
 # Workflow
 PREFLIGHT:
@@ -734,7 +740,7 @@ POSTFLIGHT:
 
 ```bash
 # Bootstrap
-empirica bootstrap --profile autonomous --ai-model minimax
+empirica session-create --profile autonomous --ai-model minimax
 
 # Workflow
 PREFLIGHT:
@@ -764,7 +770,7 @@ POSTFLIGHT:
 
 ```bash
 # Bootstrap
-empirica bootstrap --profile critical --ai-model claude-opus --domain healthcare
+empirica session-create --profile critical --ai-model claude-opus --domain healthcare
 
 # Workflow
 PREFLIGHT:

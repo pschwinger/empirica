@@ -101,10 +101,10 @@ empirica onboard --ai-id claude
 ### Bootstrap
 ```bash
 # Quick bootstrap
-empirica bootstrap
+empirica session-create
 
 # Bootstrap with profile (NEW in v2.0)
-empirica bootstrap --profile development --ai-model qwen-coder-turbo
+empirica session-create --profile development --ai-model qwen-coder-turbo
 
 # System bootstrap (advanced)
 empirica bootstrap-system --level 2
@@ -574,17 +574,17 @@ When using `--assessment-json` flag or responding to interactive prompts, provid
 
 Empirica has two similar-sounding commands that serve different purposes:
 
-### `empirica bootstrap` - System Initialization
+### `empirica session-create` - System Initialization
 **Purpose**: Set up and configure the Empirica framework itself  
 **Use when**: First-time setup, changing configuration levels  
 **Options**: `--level {0,1,2,3,4,minimal,standard,extended,complete}`
 
 ```bash
 # Initialize Empirica framework
-empirica bootstrap --level standard
+empirica session-create --level standard
 
 # Test bootstrap configuration
-empirica bootstrap --level extended --test
+empirica session-create --level extended --test
 ```
 
 **Note**: This does NOT require an `--ai-id` flag.
@@ -633,7 +633,7 @@ python3 empirica/bootstraps/extended_metacognitive_bootstrap.py --level extended
 ### Quick Decision Guide
 
 **I want to...**
-- ✅ Set up Empirica framework → `empirica bootstrap`
+- ✅ Set up Empirica framework → `empirica session-create`
 - ✅ Learn Empirica as an AI agent → `empirica onboard --ai-id <name>`
 - ✅ Start using preflight/postflight → Already set up? Just use `empirica preflight <task>`
 

@@ -800,7 +800,7 @@ sqlite3 .empirica/*/empirica.db "REINDEX; ANALYZE;"
 
 # Backup and recreate
 cp empirica.db empirica.db.backup
-empirica bootstrap --level standard
+empirica session-create --level standard
 ```
 
 ### Missing Reflex Frames
