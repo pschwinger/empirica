@@ -375,6 +375,47 @@ class SessionDatabase:
             )
         """)
 
+        # Table 16: goals (Goal/Subtask Tracking for Decision Quality)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS goals (
+                goal_id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                objective TEXT NOT NULL,
+                status TEXT DEFAULT 'in_progress',  -- 'in_progress' | 'complete' | 'blocked'
+
+                -- Scope vectors (0.0-1.0)
+                scope_breadth REAL,  -- How wide (0=single file, 1=entire codebase)
+                scope_duration REAL,  -- How long (0=minutes, 1=months)
+                scope_coordination REAL,  -- Multi-agent (0=solo, 1=heavy)
+
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+            )
+        """)
+
+        # Table 17: subtasks (Investigation and Work Items)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS subtasks (
+                subtask_id TEXT PRIMARY KEY,
+                goal_id TEXT NOT NULL,
+                description TEXT NOT NULL,
+                importance TEXT DEFAULT 'medium',  -- 'critical' | 'high' | 'medium' | 'low'
+                status TEXT DEFAULT 'not_started',  -- 'not_started' | 'in_progress' | 'complete'
+
+                -- Investigation tracking (JSON arrays of strings)
+                findings TEXT,  -- JSON: ["Finding 1", "Finding 2", ...]
+                unknowns TEXT,  -- JSON: ["Unknown 1", "Unknown 2", ...]
+                dead_ends TEXT,  -- JSON: ["Attempted X - blocked by Y", ...]
+
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+
+                FOREIGN KEY (goal_id) REFERENCES goals(goal_id)
+            )
+        """)
+
         # Create indexes for performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_ai ON sessions(ai_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time)")
@@ -390,6 +431,10 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_created ON epistemic_snapshots(created_at)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflexes_session ON reflexes(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_reflexes_phase ON reflexes(phase)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_goals_session ON goals(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_subtasks_goal ON subtasks(goal_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_subtasks_status ON subtasks(status)")
 
         self.conn.commit()
         
@@ -1617,6 +1662,195 @@ class SessionDatabase:
                     })
         
         return results
+
+    # =========================================================================
+    # Goal and Subtask Management (for decision quality + continuity + audit)
+    # =========================================================================
+
+    def create_goal(self, session_id: str, objective: str, scope_breadth: float = None,
+                   scope_duration: float = None, scope_coordination: float = None) -> str:
+        """Create a new goal for this session
+
+        Args:
+            session_id: Session UUID
+            objective: What are you trying to accomplish?
+            scope_breadth: 0.0-1.0 (0=single file, 1=entire codebase)
+            scope_duration: 0.0-1.0 (0=minutes, 1=months)
+            scope_coordination: 0.0-1.0 (0=solo, 1=heavy multi-agent)
+
+        Returns:
+            goal_id (UUID string)
+        """
+        goal_id = str(uuid.uuid4())
+        cursor = self.conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO goals (goal_id, session_id, objective, scope_breadth, scope_duration, scope_coordination, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'in_progress')
+        """, (goal_id, session_id, objective, scope_breadth, scope_duration, scope_coordination))
+
+        self.conn.commit()
+        return goal_id
+
+    def create_subtask(self, goal_id: str, description: str, importance: str = 'medium') -> str:
+        """Create a subtask within a goal
+
+        Args:
+            goal_id: Parent goal UUID
+            description: What are you investigating/implementing?
+            importance: 'critical' | 'high' | 'medium' | 'low'
+
+        Returns:
+            subtask_id (UUID string)
+        """
+        subtask_id = str(uuid.uuid4())
+        cursor = self.conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO subtasks (subtask_id, goal_id, description, importance, status)
+            VALUES (?, ?, ?, ?, 'not_started')
+        """, (subtask_id, goal_id, description, importance))
+
+        self.conn.commit()
+        return subtask_id
+
+    def update_subtask_findings(self, subtask_id: str, findings: List[str]):
+        """Update findings for a subtask
+
+        Args:
+            subtask_id: Subtask UUID
+            findings: List of finding strings
+        """
+        cursor = self.conn.cursor()
+        findings_json = json.dumps(findings)
+
+        cursor.execute("""
+            UPDATE subtasks SET findings = ? WHERE subtask_id = ?
+        """, (findings_json, subtask_id))
+
+        self.conn.commit()
+
+    def update_subtask_unknowns(self, subtask_id: str, unknowns: List[str]):
+        """Update unknowns for a subtask
+
+        Args:
+            subtask_id: Subtask UUID
+            unknowns: List of unknown strings
+        """
+        cursor = self.conn.cursor()
+        unknowns_json = json.dumps(unknowns)
+
+        cursor.execute("""
+            UPDATE subtasks SET unknowns = ? WHERE subtask_id = ?
+        """, (unknowns_json, subtask_id))
+
+        self.conn.commit()
+
+    def update_subtask_dead_ends(self, subtask_id: str, dead_ends: List[str]):
+        """Update dead ends for a subtask
+
+        Args:
+            subtask_id: Subtask UUID
+            dead_ends: List of dead end strings (e.g., "Attempted X - blocked by Y")
+        """
+        cursor = self.conn.cursor()
+        dead_ends_json = json.dumps(dead_ends)
+
+        cursor.execute("""
+            UPDATE subtasks SET dead_ends = ? WHERE subtask_id = ?
+        """, (dead_ends_json, subtask_id))
+
+        self.conn.commit()
+
+    def get_goal_tree(self, session_id: str) -> List[Dict]:
+        """Get complete goal tree for a session
+
+        Returns list of goals with nested subtasks
+
+        Args:
+            session_id: Session UUID
+
+        Returns:
+            List of goal dicts, each with 'subtasks' list
+        """
+        cursor = self.conn.cursor()
+
+        cursor.execute("""
+            SELECT goal_id, objective, status, scope_breadth, scope_duration, scope_coordination
+            FROM goals WHERE session_id = ? ORDER BY created_at
+        """, (session_id,))
+
+        goals = []
+        for row in cursor.fetchall():
+            goal_id = row[0]
+
+            # Get subtasks for this goal
+            cursor.execute("""
+                SELECT subtask_id, description, importance, status, findings, unknowns, dead_ends
+                FROM subtasks WHERE goal_id = ? ORDER BY created_at
+            """, (goal_id,))
+
+            subtasks = []
+            for sub_row in cursor.fetchall():
+                subtasks.append({
+                    'subtask_id': sub_row[0],
+                    'description': sub_row[1],
+                    'importance': sub_row[2],
+                    'status': sub_row[3],
+                    'findings': json.loads(sub_row[4]) if sub_row[4] else [],
+                    'unknowns': json.loads(sub_row[5]) if sub_row[5] else [],
+                    'dead_ends': json.loads(sub_row[6]) if sub_row[6] else []
+                })
+
+            goals.append({
+                'goal_id': goal_id,
+                'objective': row[1],
+                'status': row[2],
+                'scope_breadth': row[3],
+                'scope_duration': row[4],
+                'scope_coordination': row[5],
+                'subtasks': subtasks
+            })
+
+        return goals
+
+    def query_unknowns_summary(self, session_id: str) -> Dict:
+        """Get summary of all unknowns in a session (for CHECK decisions)
+
+        Args:
+            session_id: Session UUID
+
+        Returns:
+            Dict with total_unknowns count and breakdown by goal
+        """
+        cursor = self.conn.cursor()
+
+        cursor.execute("""
+            SELECT g.goal_id, g.objective, COUNT(CASE WHEN s.unknowns IS NOT NULL
+                                                         AND s.unknowns != '[]'
+                                                      THEN 1 END) as unknown_count
+            FROM goals g
+            LEFT JOIN subtasks s ON g.goal_id = s.goal_id
+            WHERE g.session_id = ? AND g.status = 'in_progress'
+            GROUP BY g.goal_id
+        """, (session_id,))
+
+        total_unknowns = 0
+        unknowns_by_goal = []
+
+        for row in cursor.fetchall():
+            goal_id, objective, unknown_count = row
+            unknowns_by_goal.append({
+                'goal_id': goal_id,
+                'objective': objective,
+                'unknown_count': unknown_count or 0
+            })
+            total_unknowns += unknown_count or 0
+
+        return {
+            'total_unknowns': total_unknowns,
+            'unknowns_by_goal': unknowns_by_goal
+        }
 
     def close(self):
         """Close database connection"""
