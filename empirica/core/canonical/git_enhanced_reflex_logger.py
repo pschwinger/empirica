@@ -140,25 +140,27 @@ class GitEnhancedReflexLogger:
         phase: str,
         round_num: int,
         vectors: Dict[str, float],
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        epistemic_tags: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """
         Add compressed checkpoint to git notes and SQLite.
-        
+
         Args:
             phase: Workflow phase (PREFLIGHT, CHECK, ACT, POSTFLIGHT)
             round_num: Current round number
             vectors: Epistemic vector scores (12D)
             metadata: Additional metadata (task, decision, files changed, etc.)
-        
+            epistemic_tags: Semantic tags (findings, unknowns, deadends) for rehydration
+
         Returns:
             Note ID (git SHA) if successful, None otherwise
         """
         self.current_phase = phase
         self.current_round = round_num
-        
+
         # Create compressed checkpoint
-        checkpoint = self._create_checkpoint(phase, round_num, vectors, metadata)
+        checkpoint = self._create_checkpoint(phase, round_num, vectors, metadata, epistemic_tags)
         
         # Save to SQLite (always, for fallback)
         self._save_checkpoint_to_sqlite(checkpoint)
@@ -174,21 +176,23 @@ class GitEnhancedReflexLogger:
         phase: str,
         round_num: int,
         vectors: Dict[str, float],
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        epistemic_tags: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Create compressed checkpoint (target: 200-500 tokens).
-        
+
         Compression strategy:
         - Only store vector scores (not rationales)
         - Store metadata selectively (only what's needed for context)
         - Use compact field names
         - Calculate overall confidence from vectors
-        
-        Phase 2.5 Enhancement:
-        - Capture git state (commits since last checkpoint)
-        - Calculate learning delta (if previous checkpoint exists)
-        
+
+        Phase 3 Enhancement:
+        - Capture epistemic tags (findings, unknowns, deadends)
+        - Enable rehydration for next AI in handoff
+        - Preserve reasoning trail for mutual validation
+
         Returns:
             Compressed checkpoint dictionary
         """
@@ -196,7 +200,7 @@ class GitEnhancedReflexLogger:
         tier0_keys = ['know', 'do', 'context']
         tier0_values = [vectors.get(k, 0.5) for k in tier0_keys]
         overall_confidence = sum(tier0_values) / len(tier0_values) if tier0_values else 0.5
-        
+
         checkpoint = {
             "session_id": self.session_id,
             "phase": phase,
@@ -204,7 +208,8 @@ class GitEnhancedReflexLogger:
             "timestamp": datetime.now(UTC).isoformat(),
             "vectors": vectors,
             "overall_confidence": round(overall_confidence, 3),
-            "meta": metadata or {}
+            "meta": metadata or {},
+            "epistemic_tags": epistemic_tags or {}
         }
         
         # Phase 2.5: Capture git state
