@@ -77,12 +77,27 @@ profiles:
       low: 0.50               # Low confidence threshold
       goal_orchestrator: 0.70 # Goal system confidence requirement
     
-    # CASCADE Control
+    # CASCADE Control (Descriptive - System Observes These Patterns)
     cascade:
-      max_investigation_rounds: 7              # Maximum INVESTIGATE cycles
-      check_confidence_to_proceed: 0.70        # CHECK phase confidence gate
-      preflight_engagement_min: 0.60           # PREFLIGHT engagement requirement
-      postflight_calibration_enabled: true     # Enable calibration tracking
+      # Readiness thresholds (when system considers AI "ready")
+      ready_confidence_threshold: 0.70         # If confidence >= 0.70, system shows "ready for execution"
+      ready_uncertainty_threshold: 0.35        # If uncertainty <= 0.35, system shows "uncertainty resolved"
+      ready_context_threshold: 0.65            # If context >= 0.65, system shows "good contextual understanding"
+
+      # Typical patterns AI with this profile exhibits (observational)
+      typical_check_frequency: "2-3 per session"  # Usually uses CHECK 2-3 times per session
+      typical_investigation_depth: 0.6             # Tends to investigate to ~0.6 complexity depth
+      typical_session_patterns:
+        simple_tasks: "PREFLIGHT → [work] → POSTFLIGHT"
+        medium_tasks: "PREFLIGHT → [work] → CHECK → [work] → POSTFLIGHT"
+        complex_tasks: "PREFLIGHT → [work] → CHECK → [work] → CHECK → [work] → POSTFLIGHT"
+
+      # CASCADE recording behavior
+      record_explicit_checkpoints: true        # Record PREFLIGHT, CHECK, POSTFLIGHT assessments
+      record_implicit_reasoning: true          # Record observed reasoning phases (THINK, INVESTIGATE, PLAN, ACT, REFLECT)
+      aggregate_reasoning_patterns: true       # Analyze and aggregate reasoning phase sequences
+      preflight_engagement_min: 0.60            # Engagement threshold for starting work
+      postflight_calibration_enabled: true     # Enable learning delta calculations
 
   # ---------------------------------------------------------------------------
   # EXPLORATORY PROFILE (Research, Prototyping, Learning)
@@ -124,9 +139,22 @@ profiles:
       goal_orchestrator: 0.60 # Goals can be more exploratory
     
     cascade:
-      max_investigation_rounds: 10             # More investigation allowed
-      check_confidence_to_proceed: 0.60        # Lower confidence gate
-      preflight_engagement_min: 0.50           # Easy engagement
+      # Readiness thresholds
+      ready_confidence_threshold: 0.60         # Lower bar for exploratory work
+      ready_uncertainty_threshold: 0.45        # More tolerance for uncertainty
+      ready_context_threshold: 0.55            # More tolerance for incomplete context
+
+      # Typical patterns
+      typical_check_frequency: "3-4 per session"  # More frequent checkpoints for exploration
+      typical_investigation_depth: 0.75            # Tends toward deeper investigation
+      typical_session_patterns:
+        exploratory: "PREFLIGHT → [INVESTIGATE] → CHECK → [EXPLORE/ACT] → CHECK → [INVESTIGATE] → POSTFLIGHT"
+
+      # Recording
+      record_explicit_checkpoints: true
+      record_implicit_reasoning: true
+      aggregate_reasoning_patterns: true
+      preflight_engagement_min: 0.50
       postflight_calibration_enabled: true     # Track learning aggressively
 
   # ---------------------------------------------------------------------------
@@ -169,9 +197,22 @@ profiles:
       goal_orchestrator: 0.85 # Goals must be well-defined
     
     cascade:
-      max_investigation_rounds: 5              # Fewer rounds, expect clarity
-      check_confidence_to_proceed: 0.85        # High confidence gate
-      preflight_engagement_min: 0.70           # Serious engagement required
+      # Readiness thresholds
+      ready_confidence_threshold: 0.85         # High bar for production work
+      ready_uncertainty_threshold: 0.20        # Low tolerance for uncertainty
+      ready_context_threshold: 0.80            # Strong context understanding required
+
+      # Typical patterns
+      typical_check_frequency: "1-2 per session"  # Minimal checkpoints (clear work scope)
+      typical_investigation_depth: 0.4             # Tends toward focused investigation
+      typical_session_patterns:
+        production: "PREFLIGHT → [focused investigation] → CHECK → [execution] → POSTFLIGHT"
+
+      # Recording
+      record_explicit_checkpoints: true
+      record_implicit_reasoning: true
+      aggregate_reasoning_patterns: true
+      preflight_engagement_min: 0.70
       postflight_calibration_enabled: true     # Strict calibration tracking
 
   # ---------------------------------------------------------------------------
@@ -214,9 +255,22 @@ profiles:
       goal_orchestrator: 0.50 # Flexible goals
     
     cascade:
-      max_investigation_rounds: 3              # Very fast cycles
-      check_confidence_to_proceed: 0.50        # Low confidence gate
-      preflight_engagement_min: 0.50           # Easy start
+      # Readiness thresholds
+      ready_confidence_threshold: 0.50         # Low bar for speed
+      ready_uncertainty_threshold: 0.60        # High tolerance for uncertainty
+      ready_context_threshold: 0.45            # Minimal context needed
+
+      # Typical patterns
+      typical_check_frequency: "0-1 per session"  # Minimal checkpoints (go fast)
+      typical_investigation_depth: 0.3             # Minimal investigation
+      typical_session_patterns:
+        rapid: "PREFLIGHT → [quick ACT/EXPERIMENT] → POSTFLIGHT"
+
+      # Recording
+      record_explicit_checkpoints: true
+      record_implicit_reasoning: true
+      aggregate_reasoning_patterns: false     # Skip aggregation for speed
+      preflight_engagement_min: 0.50
       postflight_calibration_enabled: false    # Skip calibration for speed
 
   # ---------------------------------------------------------------------------
@@ -259,9 +313,22 @@ profiles:
       goal_orchestrator: 0.75 # Well-defined goals
     
     cascade:
-      max_investigation_rounds: 6              # Balanced investigation
-      check_confidence_to_proceed: 0.75        # Moderate-high confidence gate
-      preflight_engagement_min: 0.65           # Moderate engagement
+      # Readiness thresholds
+      ready_confidence_threshold: 0.75         # Moderate-high bar for experts
+      ready_uncertainty_threshold: 0.30        # Low tolerance for uncertainty (know limits)
+      ready_context_threshold: 0.70            # Strong context understanding
+
+      # Typical patterns
+      typical_check_frequency: "1-2 per session"  # Strategic checkpoints
+      typical_investigation_depth: 0.6             # Balanced investigation
+      typical_session_patterns:
+        expert: "PREFLIGHT → [focused investigation] → CHECK → [execution] → POSTFLIGHT"
+
+      # Recording
+      record_explicit_checkpoints: true
+      record_implicit_reasoning: true
+      aggregate_reasoning_patterns: true
+      preflight_engagement_min: 0.65
       postflight_calibration_enabled: true     # Track performance
 
   # ---------------------------------------------------------------------------
@@ -304,9 +371,22 @@ profiles:
       goal_orchestrator: 0.70 # Need well-defined goals
     
     cascade:
-      max_investigation_rounds: 9              # More investigation cycles
-      check_confidence_to_proceed: 0.70        # Standard confidence gate
-      preflight_engagement_min: 0.55           # Encourage engagement
+      # Readiness thresholds
+      ready_confidence_threshold: 0.70         # Standard gate (learn through practice)
+      ready_uncertainty_threshold: 0.40        # Moderate uncertainty tolerance
+      ready_context_threshold: 0.60            # Encourage learning through investigation
+
+      # Typical patterns
+      typical_check_frequency: "2-4 per session"  # Frequent checkpoints (more learning)
+      typical_investigation_depth: 0.7             # Tends toward deeper investigation for learning
+      typical_session_patterns:
+        learning: "PREFLIGHT → [INVESTIGATE] → CHECK → [THINK/PLAN/ACT] → CHECK → [INVESTIGATE/REFLECT] → POSTFLIGHT"
+
+      # Recording
+      record_explicit_checkpoints: true
+      record_implicit_reasoning: true
+      aggregate_reasoning_patterns: true       # Analyze patterns for learning
+      preflight_engagement_min: 0.55
       postflight_calibration_enabled: true     # Aggressive learning tracking
 
 # =============================================================================
