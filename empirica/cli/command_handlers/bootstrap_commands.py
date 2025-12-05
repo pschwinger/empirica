@@ -44,156 +44,70 @@ def _get_bootstrap_profile_thresholds():
 
 
 def handle_bootstrap_command(args):
-    """Handle main bootstrap command (consolidates bootstrap, bootstrap-system, onboard)"""
+    """
+    DEPRECATED: Use 'empirica session-create' instead
+
+    This command is kept for backward compatibility only.
+    bootstrap_session() is no longer exposed as an MCP tool.
+    The 'bootstrap' term is reserved for future MCO system prompt programming.
+
+    Redirects to session-create with same parameters.
+    """
     try:
         # Check if --onboard flag is set (replaces old 'onboard' command)
         if getattr(args, 'onboard', False):
             # Redirect to onboarding wizard
             return handle_onboard_command(args)
 
-        # Extract all arguments including new profile parameters
-        bootstrap_level = getattr(args, 'level', 'standard')
-        verbose = getattr(args, 'verbose', False)
-        profile = getattr(args, 'profile', None)
-        ai_model = getattr(args, 'ai_model', None)
-        domain = getattr(args, 'domain', None)
-        test_mode = getattr(args, 'test', False)
+        print("⚠️  DEPRECATED: The 'empirica bootstrap' command is deprecated.")
+        print("    Use 'empirica session-create --ai-id <id>' instead.\n")
 
-        # Call MCP server bootstrap_session tool
-        logger.info(f"Starting bootstrap with level: {bootstrap_level}, profile: {profile}")
-        print("🚀 Bootstrapping Empirica semantic framework...")
-        
-        start_time = time.time()
-        
-        # Try MCP server bootstrap first (profile-aware)
-        try:
-            from ..mcp_client import bootstrap_session
-            
-            result = bootstrap_session(
-                ai_id='empirica_cli',
-                session_type=bootstrap_level,
-                profile=profile,
-                ai_model=ai_model,
-                domain=domain
-            )
-            
-            if result and result.get('ok'):
-                end_time = time.time()
-                
-                logger.info("Bootstrap process completed successfully")
-                print(f"\n✅ Bootstrap complete!")
-                print(f"   📊 Components loaded: {result.get('component_count', 0)}")
-                print(f"   ⏱️ Bootstrap time: {format_execution_time(start_time, end_time)}")
-                print(f"   🎯 Level: {bootstrap_level}")
-                print(f"   🎭 Profile: {result.get('profile', 'auto-selected')}")
-                
-                if verbose:
-                    print("\n🔍 Loaded components:")
-                    for comp_name in result.get('components_loaded', []):
-                        if comp_name not in ['lazy_components', 'tracker']:
-                            print(f"   • {comp_name}")
-            else:
-                raise Exception("MCP bootstrap failed, falling back to local bootstrap")
-                
-        except ImportError:
-            # Fallback to local bootstrap if MCP server not available
-                        
-            bootstrap = OptimalMetacognitiveBootstrap(
-                ai_id='empirica_cli',
-                level=bootstrap_level
-            )
-            
-            components = bootstrap.bootstrap()
-            
-            end_time = time.time()
-            
-            logger.info("Bootstrap process completed successfully")
-            print(f"\n✅ Bootstrap complete!")
-            print(f"   📊 Components loaded: {len(components)}")
-            print(f"   ⏱️ Bootstrap time: {format_execution_time(start_time, end_time)}")
-            print(f"   🎯 Level: {bootstrap_level}")
-            
-            if verbose:
-                print("\n🔍 Loaded components:")
-                for comp_name in components.keys():
-                    if comp_name not in ['lazy_components', 'tracker']:
-                        print(f"   • {comp_name}")
-        
-        # Run tests if requested
-        if test_mode:
-            print("\n🧪 Running bootstrap tests...")
-            test_result = run_bootstrap_tests(verbose=verbose)
-            print(f"   ✅ Tests passed: {test_result.get('passed', 0)}/{test_result.get('total', 0)}")
-            
-            if test_result.get('failed_tests') and verbose:
-                print("   ⚠️ Failed tests:")
-                for test in test_result['failed_tests']:
-                    print(f"     • {test}")
-        
+        # Redirect to session-create
+        from .session_create import handle_session_create_command
+
+        # Create a mock args object for session_create
+        class MockArgs:
+            def __init__(self, ai_id):
+                self.ai_id = ai_id
+                self.user_id = getattr(args, 'profile', None)  # Repurpose profile as user_id
+                self.bootstrap_level = 1  # Standard level
+                self.output = 'default'
+
+        mock_args = MockArgs('empirica_cli')
+        logger.info("Redirecting deprecated 'bootstrap' command to 'session-create'")
+        return handle_session_create_command(mock_args)
+
     except Exception as e:
-        handle_cli_error(e, "Bootstrap", verbose)
+        handle_cli_error(e, "Bootstrap (deprecated)", getattr(args, 'verbose', False))
 
 
 def handle_bootstrap_system_command(args):
-    """Handle system-level bootstrap command (advanced)"""
+    """
+    DEPRECATED: Use 'empirica session-create' instead
+
+    Extended bootstrap system command has been deprecated.
+    Use 'empirica session-create' for standard session initialization.
+    """
     try:
-                
-        print("🚀 Running extended metacognitive system bootstrap...")
-        
-        start_time = time.time()
-        
-        # Get level (default to 2 for extended bootstrap)
-        bootstrap_level = getattr(args, 'level', '2')
-        verbose = getattr(args, 'verbose', False)
-        
-        # Create extended bootstrap instance
-        bootstrap = ExtendedMetacognitiveBootstrap(
-            ai_id='empirica_cli_extended',
-            level=bootstrap_level
-        )
-        
-        # Run bootstrap
-        components = bootstrap.bootstrap()
-        
-        end_time = time.time()
-        
-        
-        logger.info("Extended bootstrap process completed successfully")
-        print(f"\n✅ Extended bootstrap complete!")
-        print(f"   📊 Total components: {len(components)}")
-        print(f"   🎯 Init level: {bootstrap.init_level}")
-        print(f"   ⏱️ Bootstrap time: {format_execution_time(start_time, end_time)}")
-        
-        if verbose:
-            print("\n🔍 Loaded components:")
-            for comp_name in components.keys():
-                if comp_name not in ['lazy_components', 'tracker']:
-                    print(f"   • {comp_name}")
-        
-        # Show tier breakdown
-        if result.get('tier_breakdown'):
-            print("🏗️ Component tiers:")
-            for tier, count in result['tier_breakdown'].items():
-                print(f"   • {tier}: {count} components")
-        
-        if getattr(args, 'test', False):
-            print("\n🧪 Running system tests...")
-            test_result = run_bootstrap_tests(verbose=getattr(args, 'verbose', False))
-            print(f"   ✅ System test status: {test_result.get('status', 'unknown')}")
-            
-            if test_result.get('failed_tests') and getattr(args, 'verbose', False):
-                print("   ⚠️ Failed tests:")
-                for test in test_result['failed_tests']:
-                    print(f"     • {test}")
-        
-        if getattr(args, 'verbose', False):
-            print("🔍 Extended bootstrap details:")
-            for key, value in result.items():
-                if key not in ['total_components', 'vector_system_status', 'bootstrap_time', 'tier_breakdown']:
-                    print(f"   • {key}: {value}")
-        
+        print("⚠️  DEPRECATED: The 'empirica bootstrap-system' command is deprecated.")
+        print("    Use 'empirica session-create --ai-id <id>' instead.\n")
+
+        # Redirect to session-create
+        from .session_create import handle_session_create_command
+
+        class MockArgs:
+            def __init__(self):
+                self.ai_id = 'empirica_cli_extended'
+                self.user_id = None
+                self.bootstrap_level = 2  # Extended level
+                self.output = 'default'
+
+        mock_args = MockArgs()
+        logger.info("Redirecting deprecated 'bootstrap-system' command to 'session-create'")
+        return handle_session_create_command(mock_args)
+
     except Exception as e:
-        handle_cli_error(e, "Extended bootstrap", getattr(args, 'verbose', False))
+        handle_cli_error(e, "Bootstrap System (deprecated)", getattr(args, 'verbose', False))
 
 
 def handle_onboard_command(args):
