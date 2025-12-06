@@ -206,7 +206,7 @@ Empirica provides **23 MCP tools** for Claude Desktop integration.
 
 ```bash
 # Bootstrap
-empirica bootstrap --ai-id=your-id --level=2
+empirica session-create --ai-id=your-id --level=2
 
 # Workflow
 empirica preflight --session-id=latest:active:your-id --prompt="Task"
@@ -347,7 +347,7 @@ cd empirica
 pip install -e .
 
 # Verify installation
-empirica bootstrap --ai-id=test-agent --level=2
+empirica session-create --ai-id=test-agent --level=2
 ```
 
 ### Your First CASCADE

@@ -167,7 +167,7 @@ Every MCP tool has a CLI equivalent:
 
 | MCP Tool | CLI Command | Purpose |
 |----------|-------------|---------|
-| `bootstrap_session` | `empirica bootstrap` | Initialize session |
+| `bootstrap_session` | `empirica session-create` | Initialize session |
 | `execute_preflight` | `empirica preflight` | Baseline assessment |
 | `create_goal` | `empirica goals-create` | Structure work |
 | `create_handoff_report` | `empirica handoff-create` | Session continuity |
@@ -234,7 +234,7 @@ git clone https://github.com/Nubaeon/empirica
 cd empirica
 pip install -e .
 
-empirica bootstrap --ai-id=your-id --level=2
+empirica session-create --ai-id=your-id --level=2
 empirica preflight --session-id=latest --prompt="Your task"
 ```
 

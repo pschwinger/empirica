@@ -103,10 +103,10 @@ empirica onboard --ai-id claude
 # Quick bootstrap
 empirica session-create
 
-# Bootstrap with profile (NEW in v2.0)
-empirica session-create --profile development --ai-model qwen-coder-turbo
+# Session creation (v4.0)
+empirica session-create --ai-id myai --output json
 
-# System bootstrap (advanced)
+# System prompts installation (separate from sessions)
 empirica bootstrap-system --level 2
 ```
 

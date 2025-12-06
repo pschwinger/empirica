@@ -91,7 +91,7 @@ When bootstrapping a session, Empirica automatically applies the correct system 
 
 ```bash
 # Applies "high_reasoning_collaborative" prompt
-empirica bootstrap --profile high_reasoning_collaborative
+empirica session-create --profile high_reasoning_collaborative
 ```
 
 ### In MCP (Claude Desktop)

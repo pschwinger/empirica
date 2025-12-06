@@ -133,18 +133,18 @@ empirica postflight-submit \
 ## 📊 Session Management
 **Track and resume epistemic sessions.**
 
-### `empirica bootstrap`
+### `empirica session-create`
 Initialize metacognitive capabilities.
 
 ```bash
 # Standard bootstrap
-empirica bootstrap --ai-id my-agent --level 2
+empirica session-create --ai-id my-agent --level 2
 
 # Bootstrap with specific profile
-empirica bootstrap --profile high_reasoning_collaborative
+empirica session-create --profile high_reasoning_collaborative
 
 # Bootstrap for specific domain
-empirica bootstrap --ai-id security-bot --domain security
+empirica session-create --ai-id security-bot --domain security
 ```
 
 ### `empirica sessions list`
@@ -362,7 +362,7 @@ fi
 # Automated epistemic workflow
 
 # 1. Bootstrap session
-SESSION_ID=$(empirica bootstrap --ai-id ci-bot --level 2 --output json | jq -r .session_id)
+SESSION_ID=$(empirica session-create --ai-id ci-bot --level 2 --output json | jq -r .session_id)
 
 # 2. Run preflight
 empirica preflight "Run security audit" --session-id $SESSION_ID
@@ -434,10 +434,10 @@ The dashboard shows:
 
 ```bash
 # Use custom profile
-empirica bootstrap --profile-file ./my_profile.json
+empirica session-create --profile-file ./my_profile.json
 
 # Override profile thresholds
-empirica bootstrap \
+empirica session-create \
   --profile high_reasoning \
   --threshold-uncertainty-high 0.75 \
   --threshold-engagement-min 0.65
@@ -447,13 +447,13 @@ empirica bootstrap \
 
 ```bash
 # Security domain (stricter thresholds)
-empirica bootstrap --domain security
+empirica session-create --domain security
 
 # Research domain (higher uncertainty tolerance)
-empirica bootstrap --domain research
+empirica session-create --domain research
 
 # Code analysis domain
-empirica bootstrap --domain code_analysis
+empirica session-create --domain code_analysis
 ```
 
 ---

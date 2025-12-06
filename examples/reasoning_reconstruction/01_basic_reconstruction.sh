@@ -38,7 +38,7 @@ if sessions:
         print(f"  - {s[0]} (AI: {s[1]}, Started: {s[2]}, Turns: {s[3]})")
     print(f"\nExample: ./{sessions[0][0]}")
 else:
-    print("\nNo sessions found. Run 'empirica bootstrap' to create one.")
+    print("\nNo sessions found. Run 'empirica session-create' to create one.")
 
 db.close()
 EOF

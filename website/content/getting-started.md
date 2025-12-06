@@ -46,7 +46,7 @@ pip install -e .
 # Check that Empirica is installed correctly
 empirica --version
 
-# You should see: Empirica v1.0.0 or similar
+# You should see: Empirica v4.0.0 or similar
 ```
 
 ### 3. Test Your Setup

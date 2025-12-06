@@ -93,17 +93,17 @@ empirica monitor --session current
 empirica monitor --session <session_id>
 ```
 
-### 5. `empirica bootstrap`
+### 5. `empirica session-create`
 **Initialize metacognitive capabilities.**
 
 Sets up the environment, loads profiles, and initializes the epistemic engine.
 
 ```bash
 # Standard bootstrap
-empirica bootstrap --ai-id my-agent --level 2
+empirica session-create --ai-id my-agent --level 2
 
 # Bootstrap with specific profile
-empirica bootstrap --profile high_reasoning_collaborative
+empirica session-create --profile high_reasoning_collaborative
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Profile Management Guide
 
-**Empirica v2.0 - Investigation Profiles for AI Agents**
+**Empirica v4.0 - Investigation Profiles for AI Agents**
 
 ---
 

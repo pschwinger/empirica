@@ -411,7 +411,7 @@ docs/
 ├── 01_a_AI_AGENT_START.md             # Entry point for AI agents (CLI)
 ├── 01_b_MCP_AI_START.md               # Entry point for AI agents (MCP)
 ├── production/                        # 25 production docs
-│   ├── 00_COMPLETE_SUMMARY.md
+│   ├── 00_DOCUMENTATION_MAP.md
 │   ├── 05_EPISTEMIC_VECTORS.md
 │   ├── 06_CASCADE_FLOW.md
 │   └── ... (22 more docs)
@@ -541,10 +541,10 @@ prompt = get_system_prompt(
 **Key Commands:**
 ```bash
 # Bootstrap with profile
-empirica bootstrap --profile high_reasoning_collaborative
+empirica session-create --profile high_reasoning_collaborative
 
 # Auto-select profile
-empirica bootstrap --ai-model claude-sonnet --domain research
+empirica session-create --ai-model claude-sonnet --domain research
 
 # Workflow commands
 empirica preflight "task description"

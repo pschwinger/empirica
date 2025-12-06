@@ -1,6 +1,6 @@
 # Investigation System
 
-**Empirica v2.0 - Strategic Tool Recommendations**
+**Empirica v4.0 - Strategic Tool Recommendations**
 
 ---
 

@@ -1,6 +1,6 @@
 # Dashboard Monitoring
 
-**Empirica v2.0 - Real-Time Tmux Visualization**
+**Empirica v4.0 - Real-Time Tmux Visualization**
 
 ---
 

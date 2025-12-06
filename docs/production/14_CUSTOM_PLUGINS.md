@@ -1,6 +1,6 @@
 # Custom Plugins Guide
 
-**Empirica v2.0 - Extending Investigation Capabilities**
+**Empirica v4.0 - Extending Investigation Capabilities**
 
 ---
 

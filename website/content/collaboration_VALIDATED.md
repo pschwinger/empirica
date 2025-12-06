@@ -256,7 +256,7 @@ A **session** is a complete work unit with:
 
 ```
 1. BOOTSTRAP → Initialize session
-   empirica bootstrap --ai-id=claude-dev --level=2
+   empirica session-create --ai-id=claude-dev --level=2
    
 2. PREFLIGHT → Assess initial state
    empirica preflight --session-id=latest --prompt="Task"
@@ -839,7 +839,7 @@ resume_goal(
 **Try It:**
 ```bash
 # Create session
-empirica bootstrap --ai-id=your-id --level=2
+empirica session-create --ai-id=your-id --level=2
 
 # Create goal
 empirica goals-create --session-id=latest --objective="Your goal"

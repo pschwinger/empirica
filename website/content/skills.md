@@ -96,10 +96,10 @@ Skills are automatically loaded when you bootstrap a session.
 
 ```bash
 # Load default skills for development
-empirica bootstrap --ai-id rovo-dev --level 2
+empirica session-create --ai-id rovo-dev --level 2
 
 # Load specific skill set
-empirica bootstrap --skills-dir ./custom_skills
+empirica session-create --skills-dir ./custom_skills
 ```
 
 ### Via MCP (Claude Desktop)
