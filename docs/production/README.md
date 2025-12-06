@@ -57,7 +57,7 @@ This folder contains comprehensive documentation for the production-ready Empiri
 - `03_BASIC_USAGE.md` - Basic usage patterns and examples
 
 ### Core Concepts
-- `00_COMPLETE_SUMMARY.md` - High-level system overview ✅
+- `00_DOCUMENTATION_MAP.md` - Complete navigation map and quick reference ✅
 - `04_ARCHITECTURE_OVERVIEW.md` - System architecture and design ✅
 - `05_EPISTEMIC_VECTORS.md` - Understanding the 13 epistemic dimensions ✅
 - `SYSTEM_ARCHITECTURE_DEEP_DIVE.md` - Complete technical deep dive ⭐ ✅ (Updated v2.1)

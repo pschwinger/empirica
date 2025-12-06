@@ -1,6 +1,6 @@
 # 12. Session Database & Reflex Logs
 
-**Empirica v2.0 - Data Architecture & Temporal Separation**
+**Empirica v4.0 - Unified Storage Architecture**
 
 **Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
 
@@ -8,12 +8,13 @@
 
 ## Overview
 
-Empirica uses **dual storage architecture** for epistemic tracking:
+Empirica uses **3-layer atomic storage architecture** for epistemic tracking:
 
-1. **Session Database** - SQLite for queryable structured data
-2. **Reflex Logs** - JSON for temporal separation
+1. **Session Database (SQLite)** - Primary storage, queryable structured data
+2. **Git Notes** - Compressed checkpoints (~97.5% token reduction)
+3. **Reflex Logs (JSON)** - Full audit trail, temporal separation
 
-**Why both?** Different purposes, complementary strengths.
+**Why three?** Each layer serves a distinct purpose with complementary strengths. All three write atomically.
 
 ---
 
@@ -68,15 +69,16 @@ from empirica.data.session_database import SessionDatabase
 # This creates the database and all tables automatically
 db = SessionDatabase()
 # ✅ Database created at: .empirica/sessions/sessions.db
-# ✅ All 12 tables initialized
+# ✅ All tables initialized (including unified reflexes table)
 # ✅ Ready to use immediately
 ```
 
 **What happens on first run:**
 1. Creates `.empirica/sessions/` directory
 2. Creates `sessions.db` SQLite file
-3. Initializes all 12 tables with proper schema
-4. Returns ready-to-use database connection
+3. Initializes all tables with proper schema
+4. Migrates any old table data to unified `reflexes` table
+5. Returns ready-to-use database connection
 
 **For production systems:**
 ```python
@@ -152,7 +154,7 @@ CREATE TABLE sessions (
     user_id TEXT,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
-    bootstrap_level INTEGER,
+    bootstrap_level INTEGER,  -- Legacy, no behavioral effect in v4.0
     components_loaded INTEGER,
     status TEXT,  -- 'active', 'completed', 'aborted'
     total_cascades INTEGER DEFAULT 0,
@@ -169,9 +171,60 @@ CREATE TABLE sessions (
 
 ---
 
-### Table 2: cascades
+### Table 2: reflexes (UNIFIED v4.0) ✅
 
-**Purpose:** Track each CASCADE execution (THINK → ACT)
+**Purpose:** Unified storage for all CASCADE phases (PREFLIGHT, CHECK, POSTFLIGHT)
+
+```sql
+CREATE TABLE reflexes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    phase TEXT NOT NULL,  -- 'PREFLIGHT', 'CHECK', 'POSTFLIGHT'
+    round INTEGER DEFAULT 1,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 13 epistemic vectors (all REAL 0.0-1.0)
+    engagement REAL,
+    know REAL,
+    do REAL,
+    context REAL,
+    clarity REAL,
+    coherence REAL,
+    signal REAL,
+    density REAL,
+    state REAL,
+    change REAL,
+    completion REAL,
+    impact REAL,
+    uncertainty REAL,
+    
+    -- Metadata
+    reflex_data TEXT,  -- JSON with phase-specific data
+    reasoning TEXT,
+    evidence TEXT,
+    
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+```
+
+**Key Features:**
+- ✅ **Single table** for all CASCADE phases (no more scattered tables)
+- ✅ **13 canonical vectors** consistently stored
+- ✅ **Phase filtering** via WHERE clause
+- ✅ **Round tracking** for multiple CHECK cycles
+- ✅ **Automatic migration** from old tables
+
+**Replaces deprecated tables:**
+- `epistemic_assessments` ❌ (migrated to reflexes)
+- `preflight_assessments` ❌ (migrated to reflexes)
+- `postflight_assessments` ❌ (migrated to reflexes)
+- `check_phase_assessments` ❌ (migrated to reflexes)
+
+---
+
+### Table 3: cascades
+
+**Purpose:** Track each CASCADE execution workflow (metadata only, not epistemic data)
 
 ```sql
 CREATE TABLE cascades (
@@ -319,22 +372,22 @@ cursor.execute("""
 
 ```sql
 CREATE TABLE goals (
-    goal_id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
     objective TEXT NOT NULL,
-    status TEXT DEFAULT 'in_progress',  -- 'in_progress' | 'complete' | 'blocked'
-    
-    -- Scope vectors (0.0-1.0)
-    scope_breadth REAL,      -- How wide (0=single file, 1=entire codebase)
-    scope_duration REAL,     -- How long (0=minutes, 1=months)
-    scope_coordination REAL, -- Multi-agent (0=solo, 1=heavy coordination)
-    
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP,
+    scope TEXT NOT NULL,              -- JSON: {breadth, duration, coordination}
+    estimated_complexity REAL,
+    created_timestamp REAL NOT NULL,
+    completed_timestamp REAL,
+    is_completed BOOLEAN DEFAULT 0,
+    goal_data TEXT NOT NULL,          -- JSON: additional metadata
+    status TEXT DEFAULT 'in_progress', -- 'in_progress' | 'complete' | 'blocked'
     
     FOREIGN KEY (session_id) REFERENCES sessions(session_id)
 );
 ```
+
+**Note:** Scope is stored as JSON for flexibility. Individual vectors (breadth, duration, coordination) are packed into the `scope` field.
 
 **Purpose:** Goals enable **decision quality, continuity, and audit trails** for complex investigations.
 
@@ -362,12 +415,19 @@ goal_id = db.create_goal(
     scope_duration=0.4,     # Few hours
     scope_coordination=0.3  # Mostly solo, some docs
 )
+# Note: Method packs scope_breadth/duration/coordination into JSON 'scope' field
 
 # Query goals for session
 cursor.execute("""
-    SELECT * FROM goals 
+    SELECT id, objective, scope, status FROM goals 
     WHERE session_id = ? AND status = 'in_progress'
 """, (session_id,))
+
+# Parse scope JSON
+for row in cursor.fetchall():
+    goal_id, objective, scope_json, status = row
+    scope = json.loads(scope_json)
+    print(f"Breadth: {scope['breadth']}, Duration: {scope['duration']}")
 ```
 
 ---
@@ -378,23 +438,24 @@ cursor.execute("""
 
 ```sql
 CREATE TABLE subtasks (
-    subtask_id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     goal_id TEXT NOT NULL,
     description TEXT NOT NULL,
-    importance TEXT DEFAULT 'medium',  -- 'critical' | 'high' | 'medium' | 'low'
-    status TEXT DEFAULT 'not_started', -- 'not_started' | 'in_progress' | 'complete'
+    status TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'in_progress' | 'completed'
+    epistemic_importance TEXT NOT NULL DEFAULT 'medium',  -- 'critical' | 'high' | 'medium' | 'low'
+    estimated_tokens INTEGER,
+    actual_tokens INTEGER,
+    completion_evidence TEXT,
+    notes TEXT,
+    created_timestamp REAL NOT NULL,
+    completed_timestamp REAL,
+    subtask_data TEXT NOT NULL,  -- JSON: {findings: [], unknowns: [], dead_ends: []}
     
-    -- Investigation tracking (JSON arrays of strings)
-    findings TEXT,   -- JSON: ["Finding 1", "Finding 2", ...]
-    unknowns TEXT,   -- JSON: ["Unknown 1", "Unknown 2", ...]
-    dead_ends TEXT,  -- JSON: ["Attempted X - blocked by Y", ...]
-    
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP,
-    
-    FOREIGN KEY (goal_id) REFERENCES goals(goal_id)
+    FOREIGN KEY (goal_id) REFERENCES goals(id)
 );
 ```
+
+**Note:** Investigation tracking (findings, unknowns, dead_ends) is stored as JSON in the `subtask_data` field.
 
 **Investigation Tracking Fields:**
 
@@ -413,30 +474,37 @@ CREATE TABLE subtasks (
 **Example Usage:**
 
 ```python
-# Create subtask
+# Create subtask (creates subtask_data JSON with empty arrays)
 subtask_id = db.create_subtask(
     goal_id=goal_id,
     description="Map OAuth2 endpoints and flow",
     importance='high'
 )
 
-# Log discoveries
+# Log discoveries (updates subtask_data JSON)
 db.update_subtask_findings(subtask_id, [
     "Auth endpoint: /oauth/authorize",
     "Token endpoint: /oauth/token",
     "PKCE required"
 ])
 
-# Log remaining questions (for CHECK)
+# Log remaining questions (for CHECK - updates subtask_data JSON)
 db.update_subtask_unknowns(subtask_id, [
     "Token expiration times not documented",
     "MFA impact on refresh unclear"
 ])
 
-# Log blocked paths
+# Log blocked paths (updates subtask_data JSON)
 db.update_subtask_dead_ends(subtask_id, [
     "Tried JWT - blocked by security policy"
 ])
+
+# Query subtask data
+cursor.execute("SELECT id, subtask_data FROM subtasks WHERE id = ?", (subtask_id,))
+row = cursor.fetchone()
+subtask_data = json.loads(row[1])
+print(f"Findings: {subtask_data['findings']}")
+print(f"Unknowns: {subtask_data['unknowns']}")
 
 # Query for CHECK decision
 unknowns = db.query_unknowns_summary(session_id)

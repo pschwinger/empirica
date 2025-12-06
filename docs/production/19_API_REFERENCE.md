@@ -1,6 +1,6 @@
 # API Reference
 
-**Empirica v2.0 - Complete Method Signatures**
+**Empirica v4.0 - Complete Method Signatures**
 
 **Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
 
@@ -25,13 +25,15 @@ class SessionDatabase:
 def create_session(
     self,
     ai_id: str,
-    bootstrap_level: int = 1,
+    bootstrap_level: int = 1,  # LEGACY: No behavioral effect in v4.0
     components_loaded: int = 6
 ) -> str
 ```
 Create new Empirica session.
 
 **Returns:** str - Session UUID
+
+**Note:** `bootstrap_level` parameter exists for backward compatibility but has no effect in v4.0. All sessions use unified storage and lazy component loading.
 
 ---
 
@@ -184,12 +186,14 @@ class SessionDatabase:
 def create_session(
     self,
     ai_id: str,
-    bootstrap_level: int,
+    bootstrap_level: int,  # LEGACY: No effect in v4.0
     components_loaded: int,
     user_id: Optional[str] = None
 ) -> str
 ```
 Returns: session_id
+
+**Note:** `bootstrap_level` retained for API compatibility only.
 
 #### end_session()
 ```python

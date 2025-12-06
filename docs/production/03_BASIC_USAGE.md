@@ -1,6 +1,6 @@
 # Basic Usage Guide
 
-**Empirica v2.0 - Getting Started**
+**Empirica v4.0 - Getting Started**
 
 **Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
 
@@ -29,13 +29,13 @@ from empirica.data.session_database import SessionDatabase
 
 # Create session
 db = SessionDatabase()
-session_id = db.create_session(
-    ai_id="myai",
-    bootstrap_level=1  # 0-4, standard is 1
-)
+session_id = db.create_session(ai_id="myai")
 db.close()
 
 print(f"Session created: {session_id}")
+
+# Note: bootstrap_level parameter exists for backward compatibility
+# but has no behavioral effect in v4.0
 ```
 
 ---
@@ -201,22 +201,14 @@ Every assessment uses the same 13 epistemic vectors:
 
 ## Session Types
 
+All sessions in v4.0 work the same way - instant creation with lazy component loading:
+
 ```python
-# Development session (verbose logging)
-db.create_session(ai_id="myai", bootstrap_level=1)
-
-# Production session (minimal logging)
-db.create_session(ai_id="myai", bootstrap_level=0)
-
-# Extended metacognitive (full tracking)
-db.create_session(ai_id="myai", bootstrap_level=2)
+# Create any session (bootstrap_level is legacy, has no effect)
+db.create_session(ai_id="myai")
 ```
 
-**Bootstrap Levels:**
-- 0 = Minimal (production)
-- 1 = Standard (recommended)
-- 2 = Extended (full metacognitive tracking)
-- 3-4 = Experimental (research use)
+**Note:** The `bootstrap_level` parameter exists for backward compatibility but has no behavioral effect in v4.0. All sessions use unified storage (reflexes table) and lazy component loading.
 
 ---
 

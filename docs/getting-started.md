@@ -452,7 +452,7 @@ git notes show refs/notes/empirica/checkpoints/<commit-hash>
 ### For Users: Explore Production Docs
 
 **Essential references:**
-- [Complete System Overview](production/00_COMPLETE_SUMMARY.md)
+- [Complete Documentation Map](production/00_DOCUMENTATION_MAP.md)
 - [13 Epistemic Vectors](production/05_EPISTEMIC_VECTORS.md)
 - [All 23 MCP Tools](production/20_TOOL_CATALOG.md)
 - [Session Continuity](production/23_SESSION_CONTINUITY.md)

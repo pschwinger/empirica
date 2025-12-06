@@ -735,7 +735,7 @@ empirica preflight "task" --no-git
 **For complete technical details, see:**
 
 **Core System:**
-- [Complete System Overview](production/00_COMPLETE_SUMMARY.md) - Start here
+- [Complete Documentation Map](production/00_DOCUMENTATION_MAP.md) - Navigation to all docs
 - [13 Epistemic Vectors](production/05_EPISTEMIC_VECTORS.md) - Full vector guide
 - [CASCADE Flow](production/06_CASCADE_FLOW.md) - Phase-by-phase details
 - [Session Continuity](production/23_SESSION_CONTINUITY.md) - Handoffs & resumption

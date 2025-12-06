@@ -64,6 +64,31 @@ class SessionDatabase:
 
         self._create_tables()
         logger.info(f"📊 Session Database initialized: {self.db_path}")
+
+    @staticmethod
+    def _validate_session_id(session_id: str) -> None:
+        """
+        Validate session_id is a proper UUID format.
+
+        This ensures:
+        - Session IDs are globally unique
+        - Git notes refs are valid paths
+        - Session aliases work correctly
+        - Multi-AI coordination is safe
+
+        Args:
+            session_id: Session ID to validate
+
+        Raises:
+            ValueError: If session_id is not a valid UUID
+        """
+        try:
+            uuid.UUID(session_id)
+        except (ValueError, AttributeError, TypeError):
+            raise ValueError(
+                f"Invalid session_id: '{session_id}'. "
+                f"Session IDs must be valid UUIDs (e.g., '550e8400-e29b-41d4-a716-446655440000')"
+            )
     
     def _create_tables(self):
         """Create all database tables"""
@@ -152,8 +177,14 @@ class SessionDatabase:
             cursor.execute("ALTER TABLE cascades ADD COLUMN goal_json TEXT")
         except sqlite3.OperationalError:
             pass  # Column already exists
-        
-        # Note: Deprecated tables (epistemic_assessments, preflight_assessments, 
+
+        # Migration for goals table: Add status column if missing
+        try:
+            cursor.execute("ALTER TABLE goals ADD COLUMN status TEXT DEFAULT 'in_progress'")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        # Note: Deprecated tables (epistemic_assessments, preflight_assessments,
         # postflight_assessments, check_phase_assessments) have been removed.
         # All epistemic data is now stored in the unified reflexes table.
         # Migration happens automatically in _migrate_legacy_tables_to_reflexes()
@@ -378,18 +409,16 @@ class SessionDatabase:
         # Table 16: goals (Goal/Subtask Tracking for Decision Quality)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS goals (
-                goal_id TEXT PRIMARY KEY,
+                id TEXT PRIMARY KEY,
                 session_id TEXT NOT NULL,
                 objective TEXT NOT NULL,
+                scope TEXT NOT NULL,  -- JSON: {breadth, duration, coordination}
+                estimated_complexity REAL,
+                created_timestamp REAL NOT NULL,
+                completed_timestamp REAL,
+                is_completed BOOLEAN DEFAULT 0,
+                goal_data TEXT NOT NULL,
                 status TEXT DEFAULT 'in_progress',  -- 'in_progress' | 'complete' | 'blocked'
-
-                -- Scope vectors (0.0-1.0)
-                scope_breadth REAL,  -- How wide (0=single file, 1=entire codebase)
-                scope_duration REAL,  -- How long (0=minutes, 1=months)
-                scope_coordination REAL,  -- Multi-agent (0=solo, 1=heavy)
-
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP,
 
                 FOREIGN KEY (session_id) REFERENCES sessions(session_id)
             )
@@ -398,21 +427,20 @@ class SessionDatabase:
         # Table 17: subtasks (Investigation and Work Items)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS subtasks (
-                subtask_id TEXT PRIMARY KEY,
+                id TEXT PRIMARY KEY,
                 goal_id TEXT NOT NULL,
                 description TEXT NOT NULL,
-                importance TEXT DEFAULT 'medium',  -- 'critical' | 'high' | 'medium' | 'low'
-                status TEXT DEFAULT 'not_started',  -- 'not_started' | 'in_progress' | 'complete'
+                status TEXT NOT NULL DEFAULT 'pending',
+                epistemic_importance TEXT NOT NULL DEFAULT 'medium',
+                estimated_tokens INTEGER,
+                actual_tokens INTEGER,
+                completion_evidence TEXT,
+                notes TEXT,
+                created_timestamp REAL NOT NULL,
+                completed_timestamp REAL,
+                subtask_data TEXT NOT NULL,
 
-                -- Investigation tracking (JSON arrays of strings)
-                findings TEXT,  -- JSON: ["Finding 1", "Finding 2", ...]
-                unknowns TEXT,  -- JSON: ["Unknown 1", "Unknown 2", ...]
-                dead_ends TEXT,  -- JSON: ["Attempted X - blocked by Y", ...]
-
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP,
-
-                FOREIGN KEY (goal_id) REFERENCES goals(goal_id)
+                FOREIGN KEY (goal_id) REFERENCES goals(id)
             )
         """)
 
@@ -581,20 +609,22 @@ class SessionDatabase:
     def end_session(self, session_id: str, avg_confidence: Optional[float] = None,
                    drift_detected: bool = False, notes: Optional[str] = None):
         """Mark session as ended"""
+        self._validate_session_id(session_id)
+
         cursor = self.conn.cursor()
         cursor.execute("""
-            UPDATE sessions 
+            UPDATE sessions
             SET end_time = ?, avg_confidence = ?, drift_detected = ?, session_notes = ?
             WHERE session_id = ?
         """, (datetime.now(), avg_confidence, drift_detected, notes, session_id))
-        
+
         self.conn.commit()
     
     def create_cascade(self, session_id: str, task: str, context: Dict[str, Any],
                       goal_id: Optional[str] = None, goal: Optional[Dict[str, Any]] = None) -> str:
         """
         Create cascade record, return cascade_id
-        
+
         Args:
             session_id: Session identifier
             task: Task description
@@ -602,6 +632,7 @@ class SessionDatabase:
             goal_id: Optional goal identifier
             goal: Optional full goal object
         """
+        self._validate_session_id(session_id)
         cascade_id = str(uuid.uuid4())
         goal_json = json.dumps(goal) if goal else None
         
@@ -1005,30 +1036,126 @@ class SessionDatabase:
             
             vectors = assessment_data.get("vectors", {})
             
-            # Calculate confidence scores (weighted per Empirica v2.0)
+            # Load configuration weights for confidence calculations
+            try:
+                import yaml
+                from pathlib import Path
+
+                # Load the confidence weights configuration
+                config_path = Path(__file__).parent.parent / "config" / "mco" / "confidence_weights.yaml"
+                if config_path.exists():
+                    with open(config_path, 'r') as f:
+                        config = yaml.safe_load(f)
+
+                    foundation_weights = config.get("foundation_confidence_weights", {
+                        'know': 0.4,
+                        'do': 0.3,
+                        'context': 0.3
+                    })
+                else:
+                    # Default weights if config file not found
+                    foundation_weights = {
+                        'know': 0.4,
+                        'do': 0.3,
+                        'context': 0.3
+                    }
+            except Exception:
+                # Fallback to original hardcoded values if config loading fails
+                foundation_weights = {
+                    'know': 0.4,
+                    'do': 0.3,
+                    'context': 0.3
+                }
+
+            # Calculate confidence scores using configurable weights
             foundation_confidence = (
-                vectors.get('know', 0.5) * 0.4 +
-                vectors.get('do', 0.5) * 0.3 +
-                vectors.get('context', 0.5) * 0.3
+                vectors.get('know', 0.5) * foundation_weights.get('know', 0.4) +
+                vectors.get('do', 0.5) * foundation_weights.get('do', 0.3) +
+                vectors.get('context', 0.5) * foundation_weights.get('context', 0.3)
             )
+
+            # Load comprehension weights
+            try:
+                comprehension_weights = config.get("comprehension_confidence_weights", {
+                    'clarity': 0.3,
+                    'coherence': 0.3,
+                    'signal': 0.2,
+                    'density': 0.2
+                }) if 'config' in locals() else {
+                    'clarity': 0.3,
+                    'coherence': 0.3,
+                    'signal': 0.2,
+                    'density': 0.2
+                }
+            except:
+                comprehension_weights = {
+                    'clarity': 0.3,
+                    'coherence': 0.3,
+                    'signal': 0.2,
+                    'density': 0.2
+                }
+
             comprehension_confidence = (
-                vectors.get('clarity', 0.5) * 0.3 +
-                vectors.get('coherence', 0.5) * 0.3 +
-                vectors.get('signal', 0.5) * 0.2 +
-                (1.0 - vectors.get('density', 0.5)) * 0.2
+                vectors.get('clarity', 0.5) * comprehension_weights.get('clarity', 0.3) +
+                vectors.get('coherence', 0.5) * comprehension_weights.get('coherence', 0.3) +
+                vectors.get('signal', 0.5) * comprehension_weights.get('signal', 0.2) +
+                (1.0 - vectors.get('density', 0.5)) * comprehension_weights.get('density', 0.2)
             )
-            execution_confidence = sum([
-                vectors.get('state', 0.5),
-                vectors.get('change', 0.5),
-                vectors.get('completion', 0.5),
-                vectors.get('impact', 0.5)
-            ]) / 4.0
-            
+
+            # Load execution weights
+            try:
+                execution_weights = config.get("execution_confidence_weights", {
+                    'state': 0.25,
+                    'change': 0.25,
+                    'completion': 0.25,
+                    'impact': 0.25
+                }) if 'config' in locals() else {
+                    'state': 0.25,
+                    'change': 0.25,
+                    'completion': 0.25,
+                    'impact': 0.25
+                }
+            except:
+                execution_weights = {
+                    'state': 0.25,
+                    'change': 0.25,
+                    'completion': 0.25,
+                    'impact': 0.25
+                }
+
+            execution_confidence = (
+                vectors.get('state', 0.5) * execution_weights.get('state', 0.25) +
+                vectors.get('change', 0.5) * execution_weights.get('change', 0.25) +
+                vectors.get('completion', 0.5) * execution_weights.get('completion', 0.25) +
+                vectors.get('impact', 0.5) * execution_weights.get('impact', 0.25)
+            )
+
+            # Load overall weights
+            try:
+                overall_weights = config.get("overall_confidence_weights", {
+                    'foundation': 0.35,
+                    'comprehension': 0.25,
+                    'execution': 0.25,
+                    'engagement': 0.15
+                }) if 'config' in locals() else {
+                    'foundation': 0.35,
+                    'comprehension': 0.25,
+                    'execution': 0.25,
+                    'engagement': 0.15
+                }
+            except:
+                overall_weights = {
+                    'foundation': 0.35,
+                    'comprehension': 0.25,
+                    'execution': 0.25,
+                    'engagement': 0.15
+                }
+
             overall_confidence = (
-                foundation_confidence * 0.35 +
-                comprehension_confidence * 0.25 +
-                execution_confidence * 0.25 +
-                vectors.get('engagement', 0.5) * 0.15
+                foundation_confidence * overall_weights.get('foundation', 0.35) +
+                comprehension_confidence * overall_weights.get('comprehension', 0.25) +
+                execution_confidence * overall_weights.get('execution', 0.25) +
+                vectors.get('engagement', 0.5) * overall_weights.get('engagement', 0.15)
             )
             
             # Build metaStateVector (current phase = 1.0, others = 0.0)
@@ -1684,10 +1811,17 @@ class SessionDatabase:
         goal_id = str(uuid.uuid4())
         cursor = self.conn.cursor()
 
+        # Build scope JSON from individual vectors
+        scope_data = {
+            'breadth': scope_breadth,
+            'duration': scope_duration,
+            'coordination': scope_coordination
+        }
+
         cursor.execute("""
-            INSERT INTO goals (goal_id, session_id, objective, scope_breadth, scope_duration, scope_coordination, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'in_progress')
-        """, (goal_id, session_id, objective, scope_breadth, scope_duration, scope_coordination))
+            INSERT INTO goals (id, session_id, objective, scope, status, created_timestamp, is_completed, goal_data)
+            VALUES (?, ?, ?, ?, 'in_progress', ?, 0, ?)
+        """, (goal_id, session_id, objective, json.dumps(scope_data), time.time(), json.dumps({})))
 
         self.conn.commit()
         return goal_id
@@ -1706,10 +1840,17 @@ class SessionDatabase:
         subtask_id = str(uuid.uuid4())
         cursor = self.conn.cursor()
 
+        # Build subtask_data JSON with investigation tracking
+        subtask_data = {
+            'findings': [],
+            'unknowns': [],
+            'dead_ends': []
+        }
+
         cursor.execute("""
-            INSERT INTO subtasks (subtask_id, goal_id, description, importance, status)
-            VALUES (?, ?, ?, ?, 'not_started')
-        """, (subtask_id, goal_id, description, importance))
+            INSERT INTO subtasks (id, goal_id, description, epistemic_importance, status, created_timestamp, subtask_data)
+            VALUES (?, ?, ?, ?, 'pending', ?, ?)
+        """, (subtask_id, goal_id, description, importance, time.time(), json.dumps(subtask_data)))
 
         self.conn.commit()
         return subtask_id
@@ -1722,11 +1863,19 @@ class SessionDatabase:
             findings: List of finding strings
         """
         cursor = self.conn.cursor()
-        findings_json = json.dumps(findings)
-
+        
+        # Get current subtask_data
+        cursor.execute("SELECT subtask_data FROM subtasks WHERE id = ?", (subtask_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise ValueError(f"Subtask {subtask_id} not found")
+        
+        subtask_data = json.loads(row[0])
+        subtask_data['findings'] = findings
+        
         cursor.execute("""
-            UPDATE subtasks SET findings = ? WHERE subtask_id = ?
-        """, (findings_json, subtask_id))
+            UPDATE subtasks SET subtask_data = ? WHERE id = ?
+        """, (json.dumps(subtask_data), subtask_id))
 
         self.conn.commit()
 
@@ -1738,11 +1887,19 @@ class SessionDatabase:
             unknowns: List of unknown strings
         """
         cursor = self.conn.cursor()
-        unknowns_json = json.dumps(unknowns)
-
+        
+        # Get current subtask_data
+        cursor.execute("SELECT subtask_data FROM subtasks WHERE id = ?", (subtask_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise ValueError(f"Subtask {subtask_id} not found")
+        
+        subtask_data = json.loads(row[0])
+        subtask_data['unknowns'] = unknowns
+        
         cursor.execute("""
-            UPDATE subtasks SET unknowns = ? WHERE subtask_id = ?
-        """, (unknowns_json, subtask_id))
+            UPDATE subtasks SET subtask_data = ? WHERE id = ?
+        """, (json.dumps(subtask_data), subtask_id))
 
         self.conn.commit()
 
@@ -1754,13 +1911,68 @@ class SessionDatabase:
             dead_ends: List of dead end strings (e.g., "Attempted X - blocked by Y")
         """
         cursor = self.conn.cursor()
-        dead_ends_json = json.dumps(dead_ends)
-
+        
+        # Get current subtask_data
+        cursor.execute("SELECT subtask_data FROM subtasks WHERE id = ?", (subtask_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise ValueError(f"Subtask {subtask_id} not found")
+        
+        subtask_data = json.loads(row[0])
+        subtask_data['dead_ends'] = dead_ends
+        
         cursor.execute("""
-            UPDATE subtasks SET dead_ends = ? WHERE subtask_id = ?
-        """, (dead_ends_json, subtask_id))
+            UPDATE subtasks SET subtask_data = ? WHERE id = ?
+        """, (json.dumps(subtask_data), subtask_id))
 
         self.conn.commit()
+
+    def complete_subtask(self, subtask_id: str, evidence: str):
+        """Mark subtask as completed with evidence
+
+        Args:
+            subtask_id: Subtask UUID
+            evidence: Evidence of completion (e.g., "Documented in design doc", "PR merged")
+        """
+        cursor = self.conn.cursor()
+        
+        cursor.execute("""
+            UPDATE subtasks 
+            SET status = 'completed', 
+                completion_evidence = ?,
+                completed_timestamp = ?
+            WHERE id = ?
+        """, (evidence, time.time(), subtask_id))
+        
+        self.conn.commit()
+
+    def get_all_sessions(self, ai_id: Optional[str] = None, limit: int = 50) -> List[Dict]:
+        """List all sessions, optionally filtered by ai_id
+
+        Args:
+            ai_id: Optional AI identifier to filter by
+            limit: Maximum number of sessions to return (default 50)
+
+        Returns:
+            List of session dictionaries
+        """
+        cursor = self.conn.cursor()
+        
+        if ai_id:
+            cursor.execute("""
+                SELECT * FROM sessions 
+                WHERE ai_id = ? 
+                ORDER BY start_time DESC 
+                LIMIT ?
+            """, (ai_id, limit))
+        else:
+            cursor.execute("""
+                SELECT * FROM sessions 
+                ORDER BY start_time DESC 
+                LIMIT ?
+            """, (limit,))
+        
+        return [dict(row) for row in cursor.fetchall()]
 
     def get_goal_tree(self, session_id: str) -> List[Dict]:
         """Get complete goal tree for a session
@@ -1776,39 +1988,42 @@ class SessionDatabase:
         cursor = self.conn.cursor()
 
         cursor.execute("""
-            SELECT goal_id, objective, status, scope_breadth, scope_duration, scope_coordination
-            FROM goals WHERE session_id = ? ORDER BY created_at
+            SELECT id, objective, status, scope, estimated_complexity
+            FROM goals WHERE session_id = ? ORDER BY created_timestamp
         """, (session_id,))
 
         goals = []
         for row in cursor.fetchall():
             goal_id = row[0]
+            scope_data = json.loads(row[3]) if row[3] else {}
 
             # Get subtasks for this goal
             cursor.execute("""
-                SELECT subtask_id, description, importance, status, findings, unknowns, dead_ends
-                FROM subtasks WHERE goal_id = ? ORDER BY created_at
+                SELECT id, description, epistemic_importance, status, subtask_data
+                FROM subtasks WHERE goal_id = ? ORDER BY created_timestamp
             """, (goal_id,))
 
             subtasks = []
             for sub_row in cursor.fetchall():
+                subtask_data = json.loads(sub_row[4]) if sub_row[4] else {}
                 subtasks.append({
                     'subtask_id': sub_row[0],
                     'description': sub_row[1],
                     'importance': sub_row[2],
                     'status': sub_row[3],
-                    'findings': json.loads(sub_row[4]) if sub_row[4] else [],
-                    'unknowns': json.loads(sub_row[5]) if sub_row[5] else [],
-                    'dead_ends': json.loads(sub_row[6]) if sub_row[6] else []
+                    'findings': subtask_data.get('findings', []),
+                    'unknowns': subtask_data.get('unknowns', []),
+                    'dead_ends': subtask_data.get('dead_ends', [])
                 })
 
             goals.append({
                 'goal_id': goal_id,
                 'objective': row[1],
                 'status': row[2],
-                'scope_breadth': row[3],
-                'scope_duration': row[4],
-                'scope_coordination': row[5],
+                'scope_breadth': scope_data.get('breadth'),
+                'scope_duration': scope_data.get('duration'),
+                'scope_coordination': scope_data.get('coordination'),
+                'estimated_complexity': row[4],
                 'subtasks': subtasks
             })
 
@@ -1826,30 +2041,35 @@ class SessionDatabase:
         cursor = self.conn.cursor()
 
         cursor.execute("""
-            SELECT g.goal_id, g.objective, COUNT(CASE WHEN s.unknowns IS NOT NULL
-                                                         AND s.unknowns != '[]'
-                                                      THEN 1 END) as unknown_count
+            SELECT g.id, g.objective, s.id, s.subtask_data
             FROM goals g
-            LEFT JOIN subtasks s ON g.goal_id = s.goal_id
+            LEFT JOIN subtasks s ON g.id = s.goal_id
             WHERE g.session_id = ? AND g.status = 'in_progress'
-            GROUP BY g.goal_id
         """, (session_id,))
 
         total_unknowns = 0
-        unknowns_by_goal = []
+        unknowns_by_goal = {}
 
         for row in cursor.fetchall():
-            goal_id, objective, unknown_count = row
-            unknowns_by_goal.append({
-                'goal_id': goal_id,
-                'objective': objective,
-                'unknown_count': unknown_count or 0
-            })
-            total_unknowns += unknown_count or 0
+            goal_id, objective, subtask_id, subtask_data_json = row
+            
+            if goal_id not in unknowns_by_goal:
+                unknowns_by_goal[goal_id] = {
+                    'goal_id': goal_id,
+                    'objective': objective,
+                    'unknown_count': 0
+                }
+            
+            if subtask_data_json:
+                subtask_data = json.loads(subtask_data_json)
+                unknowns = subtask_data.get('unknowns', [])
+                unknowns_count = len([u for u in unknowns if u])  # Count non-empty unknowns
+                unknowns_by_goal[goal_id]['unknown_count'] += unknowns_count
+                total_unknowns += unknowns_count
 
         return {
             'total_unknowns': total_unknowns,
-            'unknowns_by_goal': unknowns_by_goal
+            'unknowns_by_goal': list(unknowns_by_goal.values())
         }
 
     def close(self):

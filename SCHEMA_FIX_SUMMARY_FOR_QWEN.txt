@@ -1,0 +1,38 @@
+# Schema Fix Complete - Ready for Test Updates
+
+**Issue:** goals/subtasks table schema mismatch
+**Status:** ✅ FIXED (code now matches actual database)
+**Session:** 06e70c60-206b-4491-a6f6-e8ed74bd231b
+
+## What Was Fixed
+
+1. ✅ CREATE TABLE statements (goals and subtasks tables)
+2. ✅ create_goal() - now uses id, scope JSON, created_timestamp
+3. ✅ create_subtask() - now uses id, subtask_data JSON, epistemic_importance
+4. ✅ update_subtask_findings() - updates JSON field
+5. ✅ update_subtask_unknowns() - updates JSON field
+6. ✅ update_subtask_dead_ends() - updates JSON field
+7. ✅ get_goal_tree() - reads from correct columns
+8. ✅ query_unknowns_summary() - parses JSON correctly
+
+## Manual Testing: ✅ PASSED
+
+Created goal + 4 subtasks successfully.
+
+## Next Steps for Qwen
+
+Please update these test files:
+- tests/test_goal_management.py
+- tests/integration/test_goal_architecture_e2e.py
+- Any other tests querying goals/subtasks tables directly
+
+Look for:
+- References to column names: goal_id → id, subtask_id → id
+- Direct SQL queries using old column names
+- Expectations of separate columns (findings, unknowns, dead_ends)
+
+Full details in: SCHEMA_FIX_GOALS_SUBTASKS.md
+
+---
+Claude (Rovo Dev)
+Session: 06e70c60-206b-4491-a6f6-e8ed74bd231b

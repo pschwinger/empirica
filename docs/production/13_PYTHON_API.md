@@ -1,6 +1,6 @@
 # Python API Reference
 
-**Empirica v2.0 - Direct API Usage**
+**Empirica v4.0 - Direct API Usage**
 
 **Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
 
@@ -37,12 +37,8 @@ from empirica.data.session_database import SessionDatabase
 
 db = SessionDatabase()
 
-# Create new session
-session_id = db.create_session(
-    ai_id="myai",              # AI identifier
-    bootstrap_level=1,         # 0-4, default 1
-    components_loaded=6        # Component count (informational)
-)
+# Create new session (v4.0 simplified)
+session_id = db.create_session(ai_id="myai")
 
 # Get session info
 session = db.get_session(session_id)
@@ -60,14 +56,10 @@ Creates new session, returns session_id (UUID).
 
 **Parameters:**
 - `ai_id` (str): AI identifier for tracking
-- `bootstrap_level` (int): 0-4, indicates session type
+- `bootstrap_level` (int): **LEGACY** - Exists for backward compatibility, has no behavioral effect in v4.0
 - `components_loaded` (int): Informational component count
 
-**Bootstrap Levels:**
-- `0`: Minimal (production)
-- `1`: Standard (recommended)
-- `2`: Extended (full metacognitive tracking)
-- `3-4`: Experimental
+**Note:** In v4.0, all sessions use lazy component loading and unified storage. The `bootstrap_level` parameter is retained for API compatibility but does not affect behavior.
 
 #### `get_session(session_id) -> dict`
 Returns session metadata.
@@ -452,7 +444,7 @@ from empirica.core.canonical import ReflexLogger
 
 # Just create a session
 db = SessionDatabase()
-session_id = db.create_session(ai_id="myai", bootstrap_level=1)
+session_id = db.create_session(ai_id="myai")  # bootstrap_level is legacy, not needed
 db.close()
 
 # Components available directly

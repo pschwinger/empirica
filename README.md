@@ -2,8 +2,8 @@
 
 > AI agents that know what they know—and what they don't
 
-[![Status](https://img.shields.io/badge/status-beta-yellow)]()
-[![Version](https://img.shields.io/badge/version-1.0.0--beta-green)]()
+[![Status](https://img.shields.io/badge/status-production-green)]()
+[![Version](https://img.shields.io/badge/version-4.0-blue)]()
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-LGPL--3.0%20OR%20MIT-green)]()
 
@@ -19,7 +19,7 @@ Instead of false confidence and hallucinations, Empirica gives agents:
 
 This produces AI you can trust—not because it's always right, but because **it knows when it might be wrong**.
 
-**Learn more:** [Why Empirica?](WHY_EMPIRICA.md) | [Full Documentation](docs/production/00_COMPLETE_SUMMARY.md)
+**Learn more:** [Why Empirica?](WHY_EMPIRICA.md) | [Documentation Map](docs/production/00_DOCUMENTATION_MAP.md)
 
 ---
 
@@ -30,7 +30,7 @@ Choose your preferred method:
 ### PyPI (Recommended)
 ```bash
 pip install empirica
-empirica bootstrap --ai-id myagent --level extended
+empirica session-create --ai-id myagent
 ```
 
 ### Homebrew (macOS/Linux)
@@ -47,7 +47,7 @@ choco install empirica
 ### Docker
 ```bash
 docker pull soulentheo/empirica:latest
-docker run -v $(pwd)/.empirica:/data/.empirica soulentheo/empirica:latest bootstrap --ai-id myagent
+docker run -v $(pwd)/.empirica:/data/.empirica soulentheo/empirica:latest session-create --ai-id myagent
 ```
 
 **Advanced installation:** System prompts, MCP server, and more → [Complete Installation Guide](docs/COMPLETE_INSTALLATION_GUIDE.md)
@@ -66,13 +66,13 @@ Track your knowledge state across 13 dimensions:
 **Result:** Know exactly where your knowledge gaps are.
 
 ### 🔄 CASCADE Workflow
-Natural work rhythm with built-in calibration:
-1. **PREFLIGHT** - Assess what you know before starting
-2. **Investigate/Act** - Do the work (implicit loop)
-3. **CHECK** - Pause to assess: "Am I still confident?"
-4. **POSTFLIGHT** - Measure what you learned
+Epistemic checkpoints for measurable learning:
+1. **PREFLIGHT** - Assess what you know before starting (13 vectors)
+2. **Work Phase** - Do your actual work (implicit reasoning: THINK, INVESTIGATE, PLAN, ACT)
+3. **CHECK** (optional, 0-N times) - Decision gate: ready to proceed or investigate more?
+4. **POSTFLIGHT** - Measure what you learned (compare with PREFLIGHT)
 
-**Result:** Measurable learning and well-calibrated predictions.
+**Result:** Measurable learning deltas and evidence-based decisions.
 
 ### 🗄️ Triple Storage for Session Continuity
 - **Git Notes** - 97.5% token reduction (46 vs 1,821 tokens)
@@ -80,6 +80,15 @@ Natural work rhythm with built-in calibration:
 - **Handoff Reports** - 98% token reduction (~400 vs 20,000 tokens)
 
 **Result:** Resume work across days/weeks without context loss.
+
+### 🎯 Goal/Subtask Tracking (NEW v4.0)
+- Investigation tracking for complex tasks
+- Log findings, unknowns, and dead ends incrementally
+- Decision quality: unknowns inform CHECK decisions
+- Continuity: complete investigation history in handoffs
+- Use when: high uncertainty, multi-session work, complex investigations
+
+**Result:** Better decisions through systematic investigation logging.
 
 ### 🤝 Multi-Agent Coordination
 - Create and share goals across AI agents
@@ -102,17 +111,24 @@ Natural work rhythm with built-in calibration:
 # Install
 pip install empirica
 
-# Start your first session
-empirica bootstrap --ai-id myagent --level extended
+# Create your first session
+empirica session-create --ai-id myagent --output json
+
+# Run PREFLIGHT assessment
+empirica preflight --session-id <SESSION_ID> --prompt "Your task description"
 
 # View all commands
 empirica --help
 ```
 
+**Note:** "Bootstrap" refers to system prompts (AI instructions), not session creation. Use `session-create` for sessions.
+
 **Next steps:**
 - **AI Agents**: Read [`docs/01_a_AI_AGENT_START.md`](docs/01_a_AI_AGENT_START.md) - 10-minute interactive guide
 - **Developers**: See [`docs/COMPLETE_INSTALLATION_GUIDE.md`](docs/COMPLETE_INSTALLATION_GUIDE.md) for MCP server, system prompts, Python API
-- **Full Documentation**: [`docs/production/00_COMPLETE_SUMMARY.md`](docs/production/00_COMPLETE_SUMMARY.md)
+- **Complete Guide**: [`docs/production/00_DOCUMENTATION_MAP.md`](docs/production/00_DOCUMENTATION_MAP.md) - Navigation to all docs
+- **CASCADE Workflow**: [`docs/production/06_CASCADE_FLOW.md`](docs/production/06_CASCADE_FLOW.md) - Understanding PREFLIGHT/CHECK/POSTFLIGHT
+- **Goal Tracking**: [`docs/guides/GOAL_TREE_USAGE_GUIDE.md`](docs/guides/GOAL_TREE_USAGE_GUIDE.md) - Investigation logging (v4.0)
 
 ---
 

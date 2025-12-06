@@ -1,6 +1,8 @@
 # Empirica Documentation
 
-**Phase 0 Documentation:** Functional Self-Awareness for AI Agents
+**Version:** 4.0  
+**Source of Truth:** `system-prompts/CANONICAL_SYSTEM_PROMPT.md`  
+**Status:** Production Ready
 
 ---
 
@@ -115,12 +117,17 @@ See [docs/production/05_EPISTEMIC_VECTORS.md](production/05_EPISTEMIC_VECTORS.md
 
 ### Common Commands
 ```bash
-# Onboarding
-empirica onboard
+# Create session
+empirica session-create --ai-id myagent --output json
 
-# Basic workflow
-empirica preflight "task"
-empirica postflight <session>
+# CASCADE workflow
+empirica preflight --session-id <ID> --prompt "task"
+empirica check --session-id <ID> --confidence 0.75
+empirica postflight --session-id <ID> --task-summary "completed"
+
+# Goals/subtasks (v4.0)
+empirica goals-create --session-id <ID> --objective "..."
+empirica goals-list <ID>
 
 # MCP server
 empirica mcp-start
@@ -131,11 +138,12 @@ empirica sessions-list
 ```
 
 ### Key Concepts
-- **Functional Self-Awareness** - Measurable capacity to inspect internal state and predict outcomes
-- **NO HEURISTICS** - Evidence-based assessment, not pattern matching
-- **Preflight → Postflight** - Track epistemic growth through calibration
-- **Calibration** - Predictions match reality (empirically testable)
-- **13-Vector System (UVL)** - Comprehensive epistemic measurement
+- **Epistemic Self-Awareness** - Know what you know vs what you're guessing
+- **CASCADE Workflow** - PREFLIGHT → [CHECK]* → POSTFLIGHT (epistemic checkpoints)
+- **Goals/Subtasks (v4.0)** - Investigation logging for complex tasks
+- **13-Vector Assessment** - Comprehensive epistemic measurement (KNOW, DO, CONTEXT, UNCERTAINTY, etc.)
+- **Three Separate Concerns** - CASCADE phases, goal tracking, implicit reasoning
+- **Unified Reflexes Table** - All epistemic data in one place (v4.0 architecture)
 
 ---
 
@@ -150,6 +158,13 @@ empirica sessions-list
 - [04_MCP_QUICKSTART.md](04_MCP_QUICKSTART.md) - MCP basics
 - [05_ARCHITECTURE.md](05_ARCHITECTURE.md) - System overview
 - [06_TROUBLESHOOTING.md](06_TROUBLESHOOTING.md) - Problem solving
+
+### Core Documentation (v4.0)
+- [production/00_DOCUMENTATION_MAP.md](production/00_DOCUMENTATION_MAP.md) - Complete navigation map (NEW)
+- [production/06_CASCADE_FLOW.md](production/06_CASCADE_FLOW.md) - CASCADE workflow guide (NEW)
+- [guides/GOAL_TREE_USAGE_GUIDE.md](guides/GOAL_TREE_USAGE_GUIDE.md) - Goal tracking guide (NEW v4.0)
+- [production/12_SESSION_DATABASE.md](production/12_SESSION_DATABASE.md) - Database schema with goals/subtasks
+- [production/13_PYTHON_API.md](production/13_PYTHON_API.md) - Complete Python API reference
 
 ### Comprehensive Guides
 - [ONBOARDING_GUIDE.md](ONBOARDING_GUIDE.md) - Complete learning path

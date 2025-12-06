@@ -1,8 +1,10 @@
 # Production Deployment Guide
 
-**Empirica v2.0 - Deploying to Production**
+**Empirica v4.0 - Deploying to Production**
 
 **Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
+
+**v4.0 Note:** Examples below may reference `bootstrap_level` parameter - this exists for backward compatibility but has no behavioral effect in v4.0. All sessions use unified storage and lazy component loading.
 
 ---
 

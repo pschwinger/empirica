@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-**Empirica v2.0 - Common Issues and Solutions**
+**Empirica v4.0 - Common Issues and Solutions**
 
 **Storage Architecture:** See `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`  
 
@@ -90,21 +90,17 @@ pip install watchdog psutil numpy
 
 **Cause:** Wrong bootstrap level for required features
 
-**Solution:** Use appropriate bootstrap level
+**Solution:** Use session-create (v4.0 simplified)
 ```bash
-# ❌ DEPRECATED - Bootstrap classes removed
-# bootstrap = ExtendedMetacognitiveBootstrap(level="1")
-
-# ✅ CORRECT - Use session-create with appropriate level
-empirica session-create --ai-id myai --bootstrap-level 1  # Standard (recommended)
-empirica session-create --ai-id myai --bootstrap-level 2  # Full tracking
+# ✅ CORRECT - Simple session creation (v4.0)
+empirica session-create --ai-id myai --output json
 
 # Or via Python:
 db = SessionDatabase()
-session_id = db.create_session(ai_id="myai", bootstrap_level=1)
+session_id = db.create_session(ai_id="myai")
 ```
 
-**Note:** "Bootstrap" now refers only to system prompts. Use `session-create` for sessions.
+**Note:** In v4.0, `bootstrap_level` parameter exists for backward compatibility but has no behavioral effect. "Bootstrap" refers only to system prompts installation, not session creation.
 
 ### Issue 5: Component Not Found
 
@@ -124,12 +120,7 @@ cascade = CanonicalEpistemicCascade()
 assessor = CanonicalEpistemicAssessor()
 ```
 
-**Component Loading by Level:**
-- Level 0: 14 components (minimal)
-- Level 1: 25 components (no parallel reasoning)
-- Level 2: 30 components (RECOMMENDED) ←
-- Level 3: ~35 components (advanced)
-- Level 4: ~40 components (complete)
+**v4.0 Note:** All sessions use lazy component loading. Components are loaded on-demand, not at session creation time.
 
 ---
 
@@ -263,7 +254,7 @@ cursor.execute("""
 `postflight_assessments`, `check_phase_assessments`) were unified into `reflexes` table.
 Data migration happens automatically on first database access.
 
-**Reference:** See `DATABASE_SESSION_QUERY_FINDINGS.md` for full schema details
+**Reference:** See `12_SESSION_DATABASE.md` for full schema details and `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md` for storage architecture
 
 ---
 mkdir -p .empirica/sessions
@@ -321,30 +312,25 @@ grep -r "from empirica" your_project/
 
 ## Performance Issues
 
-### Issue 11: Slow Bootstrap
+### Issue 11: Slow Session Creation
 
-**Symptom:** Bootstrap takes > 1 second
+**Symptom:** Session creation takes > 1 second
 
-**Cause:** Too much initialization overhead
+**Cause:** This should NOT happen in v4.0 (instant creation with lazy loading)
 
 **Solution:**
 ```python
-# ❌ OLD - Bootstrap classes removed
-# bootstrap = ExtendedMetacognitiveBootstrap(level="0")
-
-# ✅ NEW - Use appropriate bootstrap level for sessions
+# v4.0 sessions are instant (no pre-loading)
 from empirica.data.session_database import SessionDatabase
 
 db = SessionDatabase()
-session_id = db.create_session(
-    ai_id="test",
-    bootstrap_level=0  # 0=minimal, 1=standard, 2=full tracking
-)
+session_id = db.create_session(ai_id="test")  # <100ms
 db.close()
 
-# Or via CLI:
-# empirica session-create --ai-id test --bootstrap-level 0
+# If slow, check database permissions or disk I/O
 ```
+
+**Note:** v4.0 uses lazy component loading - no initialization overhead at session creation time.
 
 ### Issue 12: Slow Cascade
 

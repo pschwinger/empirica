@@ -77,7 +77,7 @@ This is AI you can trust—not because it's always right, but because it **knows
 ## Learn More
 
 - **Quick Start**: See README.md for installation
-- **Methodology**: Read docs/production/00_COMPLETE_SUMMARY.md
+- **Methodology**: Read docs/production/00_DOCUMENTATION_MAP.md
 - **Philosophy**: See empirica-dev/experimental/design-specs/THE_MIRROR_PRINCIPLE.md (full research context)
 
 ---

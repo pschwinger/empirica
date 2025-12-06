@@ -348,7 +348,7 @@ After installation, verify everything works:
 ## Next Steps
 
 1. **Quick Start:** Run `empirica session-create --ai-id myagent --level extended`
-2. **Read Methodology:** See `docs/production/00_COMPLETE_SUMMARY.md`
+2. **Read Methodology:** See `docs/production/00_DOCUMENTATION_MAP.md`
 3. **Try CASCADE Workflow:** See `docs/production/03_BASIC_USAGE.md`
 4. **Join Community:** (Add community links when available)
 
