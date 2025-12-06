@@ -524,9 +524,11 @@ class GitEnhancedReflexLogger:
             round_num = checkpoint.get('round', 1)
             note_ref = f"empirica/session/{self.session_id}/{phase}/{round_num}"
 
-            # Add note to HEAD commit with unique ref per checkpoint (no -f flag needed)
+            # Add note to HEAD commit with unique ref per checkpoint
+            # Use -f flag to allow updating notes if this ref already has a note on HEAD
+            # (This happens when multiple checkpoints are created before new commits)
             result = subprocess.run(
-                ["git", "notes", "--ref", note_ref, "add", "-m", checkpoint_json, "HEAD"],
+                ["git", "notes", "--ref", note_ref, "add", "-f", "-m", checkpoint_json, "HEAD"],
                 capture_output=True,
                 timeout=5,
                 cwd=self.git_repo_path,
