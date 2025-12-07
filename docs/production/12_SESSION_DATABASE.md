@@ -976,7 +976,7 @@ from empirica.data.session_database import SessionDatabase
 
 # Initialize
 db = SessionDatabase()
-session_id = db.create_session(ai_id="my_agent", bootstrap_level=2)
+session_id = db.create_session(ai_id="my_agent")
 
 cascade = CanonicalEpistemicCascade(enable_session_db=True)
 

@@ -1,0 +1,3 @@
+#!/bin/bash
+# Convenience wrapper - forwards to leaderboard
+exec ./scripts/dashboards/leaderboard.sh "$@"

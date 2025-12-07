@@ -152,7 +152,7 @@ def lambda_handler(event, context):
     cascade_context = event.get('context', {})
     
     # Create session for this invocation
-    session_id = db.create_session(ai_id="lambda", bootstrap_level=1)
+    session_id = db.create_session(ai_id="lambda")
     
     result = asyncio.run(
         cascade.run_epistemic_cascade(task, cascade_context)
@@ -168,19 +168,13 @@ def lambda_handler(event, context):
 
 ## Performance Optimization
 
-### 1. Session Bootstrap Level Selection
+### 1. Session Creation (v4.0)
+
+**Note:** In v4.0, all sessions use unified storage and lazy component loading. Session creation is instant (~100ms).
 
 ```bash
-# Create sessions with appropriate bootstrap levels
-
-# Development: Level 2 (full metacognitive tracking)
-empirica session-create --ai-id myai --bootstrap-level 2
-
-# Production: Level 1 (recommended - standard tracking)
-empirica session-create --ai-id myai --bootstrap-level 1
-
-# Minimal: Level 0 (minimal logging, fastest)
-empirica session-create --ai-id myai --bootstrap-level 0
+# Simple session creation (recommended)
+empirica session-create --ai-id myai --output json
 ```
 
 ```python
@@ -188,18 +182,11 @@ empirica session-create --ai-id myai --bootstrap-level 0
 from empirica.data.session_database import SessionDatabase
 
 db = SessionDatabase()
-
-# Production (recommended)
-session_id = db.create_session(ai_id="myai", bootstrap_level=1)
-
-# Development
-session_id = db.create_session(ai_id="myai", bootstrap_level=2)
-
-# Minimal
-session_id = db.create_session(ai_id="myai", bootstrap_level=0)
+session_id = db.create_session(ai_id="myai")
+# Note: bootstrap_level parameter exists for backward compatibility but has no effect
 ```
 
-**Recommendation:** Use **Level 1** for production (standard tracking, good performance).
+**Performance:** Session creation is already optimized. No configuration needed.
 
 ### 2. Investigation Limits
 
@@ -288,7 +275,7 @@ async def health_check():
     try:
         # Test session creation
         db = SessionDatabase()
-        session_id = db.create_session(ai_id="healthcheck", bootstrap_level=0)
+        session_id = db.create_session(ai_id="healthcheck")
         db.close()
         
         return {'status': 'healthy', 'session_id': session_id}
@@ -407,7 +394,7 @@ cascade = CanonicalEpistemicCascade(max_investigation_rounds=1)
 
 # Use lower bootstrap level for faster startup
 db = SessionDatabase()
-session_id = db.create_session(ai_id="production", bootstrap_level=1)
+session_id = db.create_session(ai_id="production")
 ```
 
 ### Slow Performance
@@ -477,7 +464,6 @@ logger = logging.getLogger('empirica')
 
 # Load config
 CONFIG = {
-    'bootstrap_level': int(os.getenv('EMPIRICA_BOOTSTRAP_LEVEL', '1')),
     'confidence_threshold': float(os.getenv('EMPIRICA_CONFIDENCE_THRESHOLD', '0.70')),
     'max_rounds': int(os.getenv('EMPIRICA_MAX_ROUNDS', '3')),
     'db_path': os.getenv('EMPIRICA_DB_PATH', '.empirica/sessions/sessions.db')
@@ -501,10 +487,7 @@ async def process_task(task: str, context: dict, ai_id: str = "production") -> d
     
     try:
         # Create session for this task
-        session_id = db.create_session(
-            ai_id=ai_id,
-            bootstrap_level=CONFIG['bootstrap_level']
-        )
+        session_id = db.create_session(ai_id=ai_id)
         
         result = await cascade.run_epistemic_cascade(task, context)
         logger.info(f"Task completed: {result['action']}, confidence: {result['confidence']:.2f}")

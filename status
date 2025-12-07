@@ -1,0 +1,3 @@
+#!/bin/bash
+# Convenience wrapper - forwards to status dashboard
+exec ./scripts/dashboards/status.sh "$@"

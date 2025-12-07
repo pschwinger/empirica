@@ -194,58 +194,16 @@ performance:
 
 ---
 
-## Bootstrap Levels
+## Session Creation (v4.0)
 
-Different bootstrap configurations for various use cases:
-
-### Minimal Bootstrap
+**Note:** In v4.0, session creation is simple and instant. All sessions use unified storage and lazy component loading.
 
 ```bash
-empirica session-create --level minimal
+# Simple session creation
+empirica session-create --ai-id myai --output json
 ```
 
-**Activates:**
-- Core cascade only
-- No auto-tracking
-- No enterprise components
-- Lightweight for testing
-
-### Standard Bootstrap (Default)
-
-```bash
-empirica session-create --level standard
-```
-
-**Activates:**
-- Core cascade
-- Auto-tracking (all 3 formats)
-- Essential components (Bayesian Guardian, Drift Monitor)
-- Reflex logging
-
-### Extended Bootstrap
-
-```bash
-empirica session-create --level extended
-```
-
-**Activates:**
-- Everything in standard
-- All 11 enterprise components
-- Full investigation system
-- Performance monitoring
-
-### Complete Bootstrap
-
-```bash
-empirica session-create --level complete
-```
-
-**Activates:**
-- Everything in extended
-- Cognitive benchmarking
-- Tmux dashboard
-- Advanced analytics
-- All experimental features
+**Configuration:** Use environment variables and YAML files (see MCO Architecture below), not bootstrap levels.
 
 ---
 

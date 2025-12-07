@@ -397,7 +397,7 @@ from empirica.data.session_database import SessionDatabase
 
 # Just create a session
 db = SessionDatabase()
-session_id = db.create_session(ai_id="myai", bootstrap_level=1)
+session_id = db.create_session(ai_id="myai")
 db.close()
 
 # Components load on-demand, no pre-loading needed
