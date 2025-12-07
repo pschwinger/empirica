@@ -331,12 +331,22 @@ empirica postflight --session-id <ID> --task-summary "completed"
 # Goals/subtasks (v4.0)
 empirica goals-create --session-id <ID> --objective "..." --complexity 0.65
 empirica goals-list <SESSION_ID>
+empirica goals-progress <GOAL_ID>
+empirica goals-discover --ai-id other-ai
 empirica subtask-add --goal-id <ID> --description "..." --importance high
 empirica subtask-complete --subtask-id <ID> --evidence "..."
 
-# Continuity
+# Continuity & Checkpoints
 empirica handoff-create --session-id <ID> --task-summary "..." --key-findings "..."
 empirica handoff-query --ai-id myagent --limit 5
+empirica sessions-resume <SESSION_ID>
+empirica checkpoint-create --session-id <ID> --phase preflight
+empirica checkpoint-load --session-id <ID>
+empirica checkpoint-list <SESSION_ID>
+
+# Identity/Crypto
+empirica identity-create --ai-id myai
+empirica identity-list
 ```
 
 ### MCP Tools
@@ -368,6 +378,57 @@ empirica handoff-query --ai-id myagent --limit 5
 **Continuity:**
 - `create_handoff_report` - Create handoff for next session
 - `query_handoff_reports` - Load previous handoffs
+
+**Goal Discovery (Cross-AI):**
+- `discover_goals` - Find goals from other AIs via git notes
+- `resume_goal` - Resume another AI's goal with handoff
+- `list_goals` - List all goals for a session
+
+**Identity/Crypto:**
+- `create_identity` - Create AI identity with Ed25519 keypair
+- `list_identities` - List all AI identities
+- `export_public_key` - Export public key for sharing
+- `verify_signature` - Verify signed session
+
+**Documentation:**
+- `get_empirica_introduction` - Get comprehensive intro to Empirica
+- `get_workflow_guidance` - Get CASCADE workflow guidance
+- `cli_help` - Get CLI command help
+
+---
+
+## Visualization Tools
+
+Empirica stores epistemic states in git/SQLite, enabling real-time visualization:
+
+**Statusline:**
+```bash
+# Show epistemic state in status bar (tmux/vim)
+scripts/statusline_empirica.py --session-id <ID>
+```
+
+**Dashboards:**
+```bash
+# Main dashboard
+scripts/dashboards/empirica.sh
+
+# Leaderboard (compare AI performance)
+scripts/dashboards/leaderboard.sh
+
+# Goals progress
+scripts/dashboards/empirica-goals-dashboard.sh
+
+# Git statistics
+scripts/dashboards/empirica-git-stats.sh
+```
+
+**Session Replay:**
+```bash
+# Replay session history with visualization
+scripts/session_replay.py --session-id <ID>
+```
+
+**→ How it works:** 3-layer storage (SQLite/Git/JSON) makes epistemic data queryable → enables real-time dashboards
 
 ---
 

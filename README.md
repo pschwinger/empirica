@@ -54,6 +54,31 @@ docker run -v $(pwd)/.empirica:/data/.empirica soulentheo/empirica:latest sessio
 
 ---
 
+## How It Works
+
+**Unified Storage Architecture** - Write once, query everywhere:
+
+```
+Epistemic Event (PREFLIGHT/CHECK/POSTFLIGHT)
+         ↓
+  3-Layer Atomic Write
+         ↓
+    ┌────┼────┐
+    │    │    │
+SQLite  Git  JSON
+ (query)(share)(audit)
+    │    │    │
+    └────┼────┘
+         ↓
+  Dashboards, Statuslines, Leaderboards
+```
+
+**Key Insight:** Metacognitive states stored in git become queryable, shareable, and traceable. Enables real-time dashboards, cross-AI coordination, and complete session history.
+
+**→ See:** [`docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`](docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md)
+
+---
+
 ## ✨ What Can Empirica Do?
 
 ### 📊 13-Vector Epistemic Assessment
