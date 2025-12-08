@@ -42,36 +42,66 @@ def handle_handoff_create_command(args):
 
         next_session_context = args.next_session_context
 
-        # Check if CASCADE workflow assessments exist
+        # Determine handoff type based on available assessments
         db = SessionDatabase()
         preflight = db.get_preflight_assessment(session_id)
+        checks = db.get_check_phase_assessments(session_id)
         postflight = db.get_postflight_assessment(session_id)
-        has_assessments = bool(preflight) and bool(postflight)
+        
+        # Determine handoff type
+        if planning_only:
+            handoff_type = "planning"
+            start_assessment = None
+            end_assessment = None
+        elif preflight and postflight:
+            # Complete CASCADE: PREFLIGHT → [CHECK*] → POSTFLIGHT
+            handoff_type = "complete"
+            start_assessment = preflight
+            end_assessment = postflight
+        elif preflight and checks:
+            # Investigation complete: PREFLIGHT → [CHECK*]
+            handoff_type = "investigation"
+            start_assessment = preflight
+            end_assessment = checks[-1]  # Most recent CHECK
+        elif preflight:
+            # Only PREFLIGHT (rare - aborted session)
+            handoff_type = "preflight_only"
+            start_assessment = preflight
+            end_assessment = None
+        else:
+            # No assessments at all
+            handoff_type = None
+            start_assessment = None
+            end_assessment = None
 
-        if not has_assessments and not planning_only:
-            # User didn't provide --planning-only, but no assessments exist
+        if handoff_type is None:
+            # No assessments found
             print("⚠️  No CASCADE workflow assessments found for this session")
             print()
-            print("Two options:")
+            print("Three handoff options:")
             print()
-            print("Option 1: Create a PLANNING HANDOFF (documentation, no epistemic deltas)")
+            print("Option 1: INVESTIGATION HANDOFF (PREFLIGHT + CHECK)")
+            print("  → For specialist handoff after investigation phase")
+            print("  $ empirica preflight → investigate → check → handoff-create")
+            print("  → Epistemic deltas: PREFLIGHT → CHECK (learning from investigation)")
+            print()
+            print("Option 2: COMPLETE HANDOFF (PREFLIGHT + POSTFLIGHT)")
+            print("  → For full workflow completion")
+            print("  $ empirica preflight → work → postflight → handoff-create")
+            print("  → Epistemic deltas: PREFLIGHT → POSTFLIGHT (full cycle learning)")
+            print()
+            print("Option 3: PLANNING HANDOFF (no assessments required)")
+            print("  → For documentation-only handoff")
             print("  $ empirica handoff-create --session-id ... --planning-only [other args]")
-            print("  → Stores documentation handoff for multi-session planning")
-            print()
-            print("Option 2: Create an EPISTEMIC HANDOFF (requires CASCADE workflow)")
-            print("  $ empirica preflight --prompt '...'")
-            print("  $ [do your work: investigate, act, etc.]")
-            print("  $ empirica postflight --prompt '...'")
-            print("  $ empirica handoff-create --session-id ... [other args]")
-            print("  → Stores epistemic deltas (before/after vectors)")
+            print("  → No epistemic deltas (documentation only)")
             print()
             return None
 
-        # Generate handoff report
+        # Generate handoff report based on type
         generator = EpistemicHandoffReportGenerator()
 
-        if planning_only or not has_assessments:
-            # Create planning handoff (no epistemic deltas)
+        if handoff_type == "planning":
+            # Planning handoff (no epistemic deltas)
             handoff = generator.generate_planning_handoff(
                 session_id=session_id,
                 task_summary=task_summary,
@@ -80,10 +110,42 @@ def handle_handoff_create_command(args):
                 next_session_context=next_session_context,
                 artifacts_created=artifacts
             )
-            handoff_type = "📋 Planning Handoff (documentation)"
-        else:
-            # Create epistemic handoff (with vector deltas)
+            handoff_display_name = "📋 Planning Handoff"
+        elif handoff_type == "investigation":
+            # Investigation handoff (PREFLIGHT → CHECK deltas)
             handoff = generator.generate_handoff_report(
+                session_id=session_id,
+                task_summary=task_summary,
+                key_findings=key_findings,
+                remaining_unknowns=remaining_unknowns,
+                next_session_context=next_session_context,
+                artifacts_created=artifacts,
+                start_assessment=start_assessment,
+                end_assessment=end_assessment,
+                handoff_subtype="investigation"
+            )
+            handoff['handoff_subtype'] = 'investigation'
+            handoff['epistemic_note'] = 'PREFLIGHT → CHECK deltas (investigation phase)'
+            handoff_display_name = "🔬 Investigation Handoff (PREFLIGHT→CHECK)"
+        elif handoff_type == "complete":
+            # Complete handoff (PREFLIGHT → POSTFLIGHT deltas)
+            handoff = generator.generate_handoff_report(
+                session_id=session_id,
+                task_summary=task_summary,
+                key_findings=key_findings,
+                remaining_unknowns=remaining_unknowns,
+                next_session_context=next_session_context,
+                artifacts_created=artifacts,
+                start_assessment=start_assessment,
+                end_assessment=end_assessment,
+                handoff_subtype="complete"
+            )
+            handoff['handoff_subtype'] = 'complete'
+            handoff['epistemic_note'] = 'PREFLIGHT → POSTFLIGHT deltas (full cycle)'
+            handoff_display_name = "📊 Complete Handoff (PREFLIGHT→POSTFLIGHT)"
+        elif handoff_type == "preflight_only":
+            # Only PREFLIGHT (aborted session)
+            handoff = generator.generate_planning_handoff(
                 session_id=session_id,
                 task_summary=task_summary,
                 key_findings=key_findings,
@@ -91,7 +153,9 @@ def handle_handoff_create_command(args):
                 next_session_context=next_session_context,
                 artifacts_created=artifacts
             )
-            handoff_type = "📊 Epistemic Handoff (with deltas)"
+            handoff['handoff_subtype'] = 'preflight_only'
+            handoff['epistemic_note'] = 'Only PREFLIGHT available (aborted session)'
+            handoff_display_name = "⚠️  Preflight-Only Handoff (incomplete)"
 
         # Store in BOTH git notes AND database
         storage = HybridHandoffStorage()
@@ -110,22 +174,30 @@ def handle_handoff_create_command(args):
                 "ok": True,
                 "session_id": session_id,
                 "handoff_id": handoff['session_id'],
-                "handoff_type": "planning" if (planning_only or not has_assessments) else "epistemic",
-                "token_count": len(handoff.get('compressed_json', '')) // 4,  # Rough estimate
+                "handoff_type": handoff_type,
+                "handoff_subtype": handoff.get('handoff_subtype', handoff_type),
+                "token_count": len(handoff.get('compressed_json', '')) // 4,
                 "storage": f"git:refs/notes/empirica/handoff/{session_id}",
-                "has_epistemic_deltas": has_assessments and not planning_only,
+                "has_epistemic_deltas": handoff_type in ["investigation", "complete"],
                 "epistemic_deltas": handoff.get('epistemic_deltas', {}),
+                "epistemic_note": handoff.get('epistemic_note', ''),
                 "calibration_status": handoff.get('calibration_status', 'N/A'),
                 "storage_sync": sync_result
             }
             print(json.dumps(result, indent=2))
         else:
-            print(f"✅ {handoff_type} created successfully")
+            print(f"✅ {handoff_display_name} created successfully")
             print(f"   Session: {session_id[:8]}...")
+            print(f"   Type: {handoff_type}")
+            if handoff.get('epistemic_note'):
+                print(f"   Note: {handoff['epistemic_note']}")
             print(f"   Token count: ~{len(handoff.get('compressed_json', '')) // 4} tokens")
             print(f"   Storage: git notes (refs/notes/empirica/handoff/)")
-            if has_assessments and not planning_only:
+            if handoff_type in ["investigation", "complete"]:
                 print(f"   Calibration: {handoff.get('calibration_status', 'N/A')}")
+                if handoff.get('epistemic_deltas'):
+                    deltas = handoff['epistemic_deltas']
+                    print(f"   Epistemic deltas: KNOW {deltas.get('know', 0):+.2f}, CONTEXT {deltas.get('context', 0):+.2f}, STATE {deltas.get('state', 0):+.2f}")
             else:
                 print(f"   Type: Documentation-only (no CASCADE workflow assessments)")
 

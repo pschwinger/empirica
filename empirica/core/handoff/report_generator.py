@@ -54,7 +54,10 @@ class EpistemicHandoffReportGenerator:
         key_findings: List[str],
         remaining_unknowns: List[str],
         next_session_context: str,
-        artifacts_created: Optional[List[str]] = None
+        artifacts_created: Optional[List[str]] = None,
+        start_assessment: Optional[Dict] = None,
+        end_assessment: Optional[Dict] = None,
+        handoff_subtype: str = "complete"
     ) -> Dict[str, Any]:
         """
         Generate comprehensive handoff report
@@ -66,12 +69,16 @@ class EpistemicHandoffReportGenerator:
             remaining_unknowns: What's still unclear
             next_session_context: Critical context for next session
             artifacts_created: Files/commits produced
+            start_assessment: PREFLIGHT assessment (optional, will query if not provided)
+            end_assessment: POSTFLIGHT or CHECK assessment (optional, will query if not provided)
+            handoff_subtype: "complete" (PREFLIGHT→POSTFLIGHT) or "investigation" (PREFLIGHT→CHECK)
         
         Returns:
             {
                 'session_id': str,
                 'ai_id': str,
                 'timestamp': str,
+                'handoff_subtype': str,  # "complete" or "investigation"
                 'task_summary': str,
                 'duration_seconds': float,
                 'epistemic_deltas': Dict[str, float],
@@ -88,37 +95,43 @@ class EpistemicHandoffReportGenerator:
                 'compressed_json': str  # Minimal JSON for storage
             }
         """
-        logger.info(f"📋 Generating handoff report for session {session_id[:8]}...")
+        logger.info(f"📋 Generating {handoff_subtype} handoff report for session {session_id[:8]}...")
         
-        # Fetch PREFLIGHT and POSTFLIGHT assessments
-        preflight = self._get_preflight_assessment(session_id)
-        postflight = self._get_postflight_assessment(session_id)
+        # Fetch assessments if not provided
+        if start_assessment is None:
+            start_assessment = self._get_preflight_assessment(session_id)
         
-        if not preflight or not postflight:
+        if end_assessment is None:
+            if handoff_subtype == "investigation":
+                # Get most recent CHECK
+                checks = self.db.get_check_phase_assessments(session_id)
+                end_assessment = checks[-1] if checks else None
+            else:
+                # Get POSTFLIGHT
+                end_assessment = self._get_postflight_assessment(session_id)
+        
+        if not start_assessment or not end_assessment:
             raise ValueError(
-                f"Missing assessments for session {session_id}. "
-                f"PREFLIGHT: {bool(preflight)}, POSTFLIGHT: {bool(postflight)}\n\n"
-                f"💡 Handoff reports require completed CASCADE workflow:\n"
-                f"   1. execute_preflight() → submit_preflight_assessment()\n"
-                f"   2. [Do your work with investigate/act phases]\n"
-                f"   3. execute_postflight() → submit_postflight_assessment()\n"
-                f"   4. create_handoff_report() ← You are here\n\n"
-                f"Without PREFLIGHT/POSTFLIGHT, there's no epistemic delta to measure."
+                f"Missing assessments for {handoff_subtype} handoff. "
+                f"PREFLIGHT: {bool(start_assessment)}, END: {bool(end_assessment)}\n\n"
+                f"💡 Handoff reports require assessments:\n"
+                f"   Investigation handoff: PREFLIGHT + CHECK\n"
+                f"   Complete handoff: PREFLIGHT + POSTFLIGHT\n"
             )
         
         # Calculate vector deltas
         deltas = self._calculate_deltas(
-            preflight.get('vectors', {}),
-            postflight.get('vectors', {})
+            start_assessment.get('vectors', {}),
+            end_assessment.get('vectors', {})
         )
         
-        # Check calibration (prioritize genuine introspection from POSTFLIGHT)
-        calibration = self._check_calibration(session_id, deltas, postflight)
+        # Check calibration
+        calibration = self._check_calibration(session_id, deltas, end_assessment)
         
         # Identify knowledge gaps filled
         gaps_filled = self._identify_filled_gaps(
-            preflight.get('vectors', {}),
-            postflight.get('vectors', {}),
+            start_assessment.get('vectors', {}),
+            end_assessment.get('vectors', {}),
             key_findings
         )
         
@@ -127,7 +140,7 @@ class EpistemicHandoffReportGenerator:
         
         # Generate recommendations
         recommendations = self._generate_recommendations(
-            postflight.get('vectors', {}),
+            end_assessment.get('vectors', {}),
             remaining_unknowns,
             calibration
         )
@@ -143,6 +156,7 @@ class EpistemicHandoffReportGenerator:
             'session_id': session_id,
             'ai_id': session_meta.get('ai_id', 'unknown'),
             'timestamp': datetime.now().isoformat(),
+            'handoff_subtype': handoff_subtype,
             'task_summary': task_summary,
             'duration_seconds': duration,
             'epistemic_deltas': deltas,
@@ -158,7 +172,7 @@ class EpistemicHandoffReportGenerator:
         }
         
         # Generate markdown
-        report['markdown'] = self._generate_markdown(report, preflight, postflight, calibration)
+        report['markdown'] = self._generate_markdown(report, start_assessment, end_assessment, calibration)
         
         # Generate compressed JSON (minimal, for storage)
         report['compressed_json'] = self._compress_report(report)
@@ -609,8 +623,8 @@ class EpistemicHandoffReportGenerator:
     def _generate_markdown(
         self,
         report: Dict,
-        preflight: Dict,
-        postflight: Dict,
+        start_assessment: Dict,
+        end_assessment: Dict,
         calibration: Dict
     ) -> str:
         """Generate full markdown report"""
@@ -621,8 +635,8 @@ class EpistemicHandoffReportGenerator:
         
         # Build vector delta table
         delta_table = self._build_delta_table(
-            preflight.get('vectors', {}),
-            postflight.get('vectors', {}),
+            start_assessment.get('vectors', {}),
+            end_assessment.get('vectors', {}),
             report['epistemic_deltas']
         )
         
@@ -719,8 +733,8 @@ class EpistemicHandoffReportGenerator:
     
     def _build_delta_table(
         self,
-        preflight: Dict,
-        postflight: Dict,
+        start_vectors: Dict,
+        end_vectors: Dict,
         deltas: Dict
     ) -> str:
         """Build markdown table of vector deltas"""
@@ -739,8 +753,8 @@ class EpistemicHandoffReportGenerator:
             lines.append(f"| **{tier_name}** | | | | |")
             
             for vec in vectors:
-                before = preflight.get(vec, 0.0)
-                after = postflight.get(vec, 0.0)
+                before = start_vectors.get(vec, 0.0)
+                after = end_vectors.get(vec, 0.0)
                 delta = deltas.get(vec, 0.0)
                 
                 # Status indicator
