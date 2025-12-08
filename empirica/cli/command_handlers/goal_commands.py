@@ -490,6 +490,77 @@ def handle_goals_list_command(args):
         handle_cli_error(e, "List goals", getattr(args, 'verbose', False))
 
 
+def handle_goals_get_subtasks_command(args):
+    """Handle goals-get-subtasks command - get detailed subtask information"""
+    try:
+        from empirica.core.tasks.repository import TaskRepository
+        
+        # Parse arguments
+        goal_id = args.goal_id
+        
+        # Use task repository to get subtasks
+        task_repo = TaskRepository()
+        subtasks = task_repo.get_goal_subtasks(goal_id)
+        
+        if not subtasks:
+            result = {
+                "ok": False,
+                "goal_id": goal_id,
+                "message": "No subtasks found for goal",
+                "subtasks": [],
+                "timestamp": time.time()
+            }
+        else:
+            # Convert subtasks to dict format
+            subtasks_dict = []
+            for task in subtasks:
+                subtasks_dict.append({
+                    "task_id": task.id,
+                    "description": task.description,
+                    "status": task.status.value,
+                    "created_at": task.created_timestamp,
+                    "completed_at": task.completed_timestamp if hasattr(task, 'completed_timestamp') else None,
+                    "dependencies": task.dependencies if hasattr(task, 'dependencies') else [],
+                    "metadata": task.metadata if hasattr(task, 'metadata') else {}
+                })
+            
+            completed_count = sum(1 for t in subtasks if t.status.value == "completed")
+            
+            result = {
+                "ok": True,
+                "goal_id": goal_id,
+                "message": "Subtasks retrieved successfully",
+                "subtasks_count": len(subtasks),
+                "completed_count": completed_count,
+                "in_progress_count": len(subtasks) - completed_count,
+                "subtasks": subtasks_dict,
+                "timestamp": time.time()
+            }
+        
+        # Format output
+        if hasattr(args, 'output') and args.output == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            if result.get('ok'):
+                print(f"✅ Found {result['subtasks_count']} subtask(s) for goal {goal_id[:8]}...")
+                print(f"   Progress: {result['completed_count']}/{result['subtasks_count']} completed")
+                print()
+                for i, task in enumerate(result['subtasks'], 1):
+                    status_icon = "✅" if task['status'] == "completed" else "⏳"
+                    print(f"{status_icon} {i}. {task['description']}")
+                    print(f"   Status: {task['status']} | Task ID: {task['task_id'][:8]}...")
+                    if task.get('metadata'):
+                        print(f"   Metadata: {task['metadata']}")
+            else:
+                print(f"❌ {result.get('message', 'Error retrieving subtasks')}")
+        
+        task_repo.close()
+        return result
+        
+    except Exception as e:
+        handle_cli_error(e, "Get subtasks", getattr(args, 'verbose', False))
+
+
 def handle_sessions_resume_command(args):
     """Handle sessions-resume command"""
     try:

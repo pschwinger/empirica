@@ -423,46 +423,102 @@ SESSION START:
 
 ## VI. GOALS/SUBTASKS (v4.0 - For Complex Work)
 
-**When to use:** High uncertainty (>0.6), multi-session work, complex investigations
+**Purpose:** Track work structure explicitly for resumption and coordination.
 
-**Quick Workflow:**
-```python
-from empirica.data.session_database import SessionDatabase
-db = SessionDatabase()
+### When to Create Goals
 
-# 1. Create goal after PREFLIGHT shows high uncertainty
-goal_id = db.create_goal(
+- Multi-session work (>1 hour)
+- Work with clear milestones
+- Coordination with other AIs
+- When unknowns require investigation
+
+### Creating Goals
+
+```bash
+# CLI
+empirica goals-create \
+  --session-id <SESSION_ID> \
+  --objective "Migrate website from Jinja2 to Astro" \
+  --scope-breadth 0.7 \
+  --scope-duration 0.6 \
+  --scope-coordination 0.3 \
+  --success-criteria '["Build passes", "All pages render", "Design preserved"]'
+
+# MCP
+create_goal(
     session_id=session_id,
-    objective="Understand OAuth2 flow",
-    scope_breadth=0.6,      # 0=single file, 1=codebase
-    scope_duration=0.4,     # 0=minutes, 1=months  
-    scope_coordination=0.3  # 0=solo, 1=heavy multi-agent
+    objective="...",
+    scope={"breadth": 0.7, "duration": 0.6, "coordination": 0.3},
+    success_criteria=["...", "..."]
 )
-
-# 2. Create subtasks for investigation
-subtask_id = db.create_subtask(goal_id, "Map OAuth2 endpoints", 'high')
-
-# 3. Log discoveries incrementally
-db.update_subtask_findings(subtask_id, ["Auth endpoint: /oauth/authorize"])
-db.update_subtask_unknowns(subtask_id, ["Token expiration unclear"])
-db.update_subtask_dead_ends(subtask_id, ["JWT - blocked by policy"])
-
-# 4. Use for CHECK decisions
-unknowns = db.query_unknowns_summary(session_id)  # {'total_unknowns': 2}
-# Evaluate: Are these blockers? → Decide proceed or investigate
-
-# 5. Include in handoff
-goal_tree = db.get_goal_tree(session_id)  # Complete investigation record
 ```
 
-**Benefits:**
-- Decision Quality: CHECK uses unknowns to inform readiness
-- Continuity: Next AI sees findings/unknowns/dead_ends
-- Audit Trail: Complete investigation path tracked
+**Scope Vectors (0.0-1.0):**
+- **breadth:** 0.0 = single function, 1.0 = entire codebase
+- **duration:** 0.0 = minutes/hours, 1.0 = weeks/months
+- **coordination:** 0.0 = solo work, 1.0 = heavy multi-agent coordination
+
+### Querying Goals/Subtasks (CRITICAL FOR RESUMPTION)
+
+**When resuming work, ALWAYS query to get context:**
+
+```bash
+# 1. List goals for session
+empirica goals-list --session-id <SESSION_ID> --output json
+
+# 2. Get subtask details (shows what's done/pending)
+empirica goals-get-subtasks --goal-id <GOAL_ID> --output json
+
+# 3. Get handoff findings/unknowns (breadcrumbs!)
+empirica handoff-query --session-id <SESSION_ID> --output json
+```
+
+**MCP Tools:**
+```python
+# List goals
+list_goals(session_id=session_id)
+
+# Get subtask details
+get_goal_subtasks(goal_id=goal_id)
+
+# Query handoff for findings/unknowns
+query_handoff_reports(session_id=session_id)
+```
+
+**What you get:**
+- **Completed subtasks** - What's already done (don't redo!)
+- **Pending subtasks** - What needs work
+- **Key findings** - Validated knowledge from investigation
+- **Remaining unknowns** - What still needs investigation (breadcrumbs!)
+
+**Example Query Results:**
+
+```json
+{
+  "subtasks": [
+    {"description": "Setup Astro", "status": "completed"},
+    {"description": "Migrate content", "status": "pending"},
+    {"description": "Test build", "status": "pending"}
+  ],
+  "key_findings": [
+    "Astro build time: 475ms (excellent)",
+    "Glassmorphic design preserved in components"
+  ],
+  "remaining_unknowns": [
+    "Content migration strategy for 19 files",
+    "Bento grid component implementation"
+  ]
+}
+```
+
+**Why This Matters:**
+- **Findings** = What you learned (build on this!)
+- **Unknowns** = What to investigate next (breadcrumbs!)
+- **Subtasks** = Work structure (avoid duplication!)
 
 ---
 
-## XI. MCP TOOLS REFERENCE
+## VIII. STATUSLINE INTEGRATION (Mirror Drift Monitor)
 
 ### Session Management
 - `session_create(ai_id, bootstrap_level, session_type)` - Create session
@@ -478,21 +534,18 @@ goal_tree = db.get_goal_tree(session_id)  # Complete investigation record
 - `submit_postflight_assessment(session_id, vectors, reasoning)` - Submit
 
 ### Goals & Tasks (Investigation Tracking v4.0)
-- `create_goal(session_id, objective, scope_breadth, scope_duration, scope_coordination)` - Create goal with scope vectors
-- `create_subtask(goal_id, description, importance)` - Create subtask ('critical'|'high'|'medium'|'low')
-- `update_subtask_findings(subtask_id, findings)` - Log discoveries (JSON array)
-- `update_subtask_unknowns(subtask_id, unknowns)` - Log questions for CHECK (JSON array)
-- `update_subtask_dead_ends(subtask_id, dead_ends)` - Log blocked paths (JSON array)
-- `get_goal_tree(session_id)` - Get complete tree with nested subtasks
-- `query_unknowns_summary(session_id)` - Get unknown count for CHECK decisions
-- `goals_list(session_id)` - List goals
-- `get_goal_progress(goal_id)` - Check progress
+- `create_goal(session_id, objective, scope, success_criteria)` - Create goal with scope vectors
+- `add_subtask(goal_id, description, importance)` - Add subtask ('critical'|'high'|'medium'|'low')
+- `complete_subtask(task_id, evidence)` - Mark subtask complete
+- `get_goal_progress(goal_id)` - Get goal progress (completion %)
+- `get_goal_subtasks(goal_id)` - Get detailed subtask list with status
+- `list_goals(session_id)` - List all goals for session
 
 ### Continuity
 - `create_git_checkpoint(session_id, phase, vectors, metadata)` - Checkpoint
-- `load_git_checkpoint(session_id)` - Load checkpoint
-- `create_handoff_report(session_id, task_summary, findings, ...)` - Handoff
-- `query_handoff_reports(ai_id, limit)` - Query handoffs
+- `load_git_checkpoint(session_id)` - Load checkpoint (use alias: "latest:active:ai-id")
+- `create_handoff_report(session_id, task_summary, findings, unknowns, next_context)` - Create handoff
+- `query_handoff_reports(session_id OR ai_id, limit)` - Query handoffs (gets findings/unknowns!)
 
 ### Edit Guard (Metacognitive File Editing)
 - `edit_with_confidence(file_path, old_str, new_str, context_source, session_id)` - Edit with epistemic assessment
@@ -551,19 +604,20 @@ result = edit_with_confidence(
 - `investigate-log --session-id <ID> --finding "..." --unknown "..."`
 - `act-log --session-id <ID> --action "..." --evidence "..."`
 
-### Goals
-- `goals-create --session-id <ID> --objective "..." --success-criteria [...]`
-- `goals-add-subtask --goal-id <ID> --description "..."`
+### Goals & Subtasks
+- `goals-create --session-id <ID> --objective "..." --scope-breadth 0.7 --success-criteria [...]`
+- `goals-add-subtask --goal-id <ID> --description "..." --importance high`
 - `goals-complete-subtask --task-id <ID> --evidence "..."`
-- `goals-list --session-id <ID>`
-- `goals-progress --goal-id <ID>`
+- `goals-get-subtasks --goal-id <ID> --output json` - **Get detailed subtask list**
+- `goals-list --session-id <ID> --output json` - **List goals for session**
+- `goals-progress --goal-id <ID>` - Get completion progress
 
-### Continuity
+### Continuity (Critical for Resumption)
 - `checkpoint-create --session-id <ID> --phase "..." --vectors {...}`
-- `checkpoint-load --session-id <ID>`
+- `checkpoint-load --session-id <ID>` - Use alias: `latest:active:copilot`
 - `checkpoint-list --session-id <ID>`
-- `handoff-create --session-id <ID> --task-summary "..." --key-findings [...]`
-- `handoff-query --ai-id <ID> --limit 5`
+- `handoff-create --session-id <ID> --task-summary "..." --key-findings [...] --remaining-unknowns [...]`
+- `handoff-query --session-id <ID> --output json` - **Get findings/unknowns breadcrumbs**
 
 ### Utilities
 - `onboard` - Interactive introduction to Empirica

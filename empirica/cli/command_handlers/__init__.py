@@ -30,6 +30,7 @@ from .goal_commands import (
     handle_goals_add_subtask_command,
     handle_goals_complete_subtask_command,
     handle_goals_progress_command,
+    handle_goals_get_subtasks_command,
     handle_goals_list_command,
     handle_sessions_resume_command
 )
@@ -113,6 +114,7 @@ __all__ = [
     'handle_goals_add_subtask_command',
     'handle_goals_complete_subtask_command',
     'handle_goals_progress_command',
+    'handle_goals_get_subtasks_command',
     'handle_goals_list_command',
     'handle_goals_discover_command',
     'handle_goals_resume_command',

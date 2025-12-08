@@ -499,6 +499,11 @@ def _add_checkpoint_parsers(subparsers):
     goals_progress_parser.add_argument('--goal-id', required=True, help='Goal UUID')
     goals_progress_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
+    # Goals get-subtasks command (NEW)
+    goals_get_subtasks_parser = subparsers.add_parser('goals-get-subtasks', help='Get detailed subtask information')
+    goals_get_subtasks_parser.add_argument('--goal-id', required=True, help='Goal UUID')
+    goals_get_subtasks_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
     # Goals list command
     goals_list_parser = subparsers.add_parser('goals-list', help='List goals')
     goals_list_parser.add_argument('--session-id', help='Filter by session ID')
@@ -699,6 +704,7 @@ def main(args=None):
             'goals-add-subtask': handle_goals_add_subtask_command,
             'goals-complete-subtask': handle_goals_complete_subtask_command,
             'goals-progress': handle_goals_progress_command,
+            'goals-get-subtasks': handle_goals_get_subtasks_command,
             'goals-list': handle_goals_list_command,
             'goals-discover': handle_goals_discover_command,
             'goals-resume': handle_goals_resume_command,

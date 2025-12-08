@@ -269,6 +269,18 @@ async def list_tools() -> List[types.Tool]:
         ),
 
         types.Tool(
+            name="get_goal_subtasks",
+            description="Get detailed subtask information for a goal",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "goal_id": {"type": "string", "description": "Goal UUID"}
+                },
+                "required": ["goal_id"]
+            }
+        ),
+
+        types.Tool(
             name="list_goals",
             description="List goals for session",
             inputSchema={
@@ -1047,6 +1059,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "add_subtask": ["goals-add-subtask"],
         "complete_subtask": ["goals-complete-subtask"],
         "get_goal_progress": ["goals-progress"],
+        "get_goal_subtasks": ["goals-get-subtasks"],
         "list_goals": ["goals-list"],
 
         # Sessions
