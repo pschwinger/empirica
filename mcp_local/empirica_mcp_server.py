@@ -513,6 +513,85 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
+        # ========== Project-Level Tracking (Route to CLI) ==========
+
+        types.Tool(
+            name="project_bootstrap",
+            description="Bootstrap project context with epistemic breadcrumbs for starting a new session",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "string", "description": "Project UUID"},
+                    "mode": {"type": "string", "enum": ["session_start", "live"], "description": "Bootstrap mode: session_start (fast, recent items) or live (complete, all items)"}
+                },
+                "required": ["project_id"]
+            }
+        ),
+
+        types.Tool(
+            name="finding_log",
+            description="Log a project finding (what was learned/discovered)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "string", "description": "Project UUID"},
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "finding": {"type": "string", "description": "What was learned/discovered"},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID"},
+                    "subtask_id": {"type": "string", "description": "Optional subtask UUID"}
+                },
+                "required": ["project_id", "session_id", "finding"]
+            }
+        ),
+
+        types.Tool(
+            name="unknown_log",
+            description="Log a project unknown (what's still unclear)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "string", "description": "Project UUID"},
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "unknown": {"type": "string", "description": "What is unclear/unknown"},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID"},
+                    "subtask_id": {"type": "string", "description": "Optional subtask UUID"}
+                },
+                "required": ["project_id", "session_id", "unknown"]
+            }
+        ),
+
+        types.Tool(
+            name="deadend_log",
+            description="Log a project dead end (what didn't work)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "string", "description": "Project UUID"},
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "approach": {"type": "string", "description": "Approach that was attempted"},
+                    "why_failed": {"type": "string", "description": "Why it didn't work"},
+                    "goal_id": {"type": "string", "description": "Optional goal UUID"},
+                    "subtask_id": {"type": "string", "description": "Optional subtask UUID"}
+                },
+                "required": ["project_id", "session_id", "approach", "why_failed"]
+            }
+        ),
+
+        types.Tool(
+            name="refdoc_add",
+            description="Add a reference document to project knowledge base",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "string", "description": "Project UUID"},
+                    "doc_path": {"type": "string", "description": "Path to documentation file"},
+                    "doc_type": {"type": "string", "description": "Type of doc (guide, reference, example, config, etc.)"},
+                    "description": {"type": "string", "description": "Description of what's in the doc"}
+                },
+                "required": ["project_id", "doc_path"]
+            }
+        ),
+
         # ========== Edit Guard (Metacognitive Edit Verification) ==========
 
         types.Tool(
@@ -1122,6 +1201,13 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "list_identities": ["identity-list"],
         "export_public_key": ["identity-export"],
         "verify_signature": ["identity-verify"],
+
+        # Project-Level Tracking
+        "project_bootstrap": ["project-bootstrap"],
+        "finding_log": ["finding-log"],
+        "unknown_log": ["unknown-log"],
+        "deadend_log": ["deadend-log"],
+        "refdoc_add": ["refdoc-add"],
     }
     
     # Commands that take positional arguments (not flags)
@@ -1151,12 +1237,20 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "key_findings": "key-findings",  # MCP uses key_findings, CLI uses key-findings (for handoff-create)
         "next_session_context": "next-session-context",  # MCP uses next_session_context, CLI uses next-session-context
         "artifacts_created": "artifacts",  # MCP uses artifacts_created, CLI uses artifacts (for handoff-create)
+        "project_id": "project-id",  # MCP uses project_id, CLI uses project-id (for project commands)
+        "goal_id": "goal-id",  # MCP uses goal_id, CLI uses goal-id (for project finding/unknown/deadend)
+        "subtask_id": "subtask-id",  # MCP uses subtask_id, CLI uses subtask-id (for project finding/unknown/deadend)
+        "session_id": "session-id",  # MCP uses session_id, CLI uses session-id (for project finding/unknown/deadend)
+        "doc_path": "doc-path",  # MCP uses doc_path, CLI uses doc-path (for refdoc-add)
+        "doc_type": "doc-type",  # MCP uses doc_type, CLI uses doc-type (for refdoc-add)
+        "why_failed": "why-failed",  # MCP uses why_failed, CLI uses why-failed (for deadend-log)
     }
     
     # Arguments to skip per command (not supported by CLI)
     skip_args = {
         "check-submit": ["confidence_to_proceed"],  # check-submit doesn't use confidence_to_proceed
         "checkpoint-create": ["vectors"],  # checkpoint-create doesn't accept --vectors, should be in metadata
+        "project-bootstrap": ["mode"],  # project-bootstrap doesn't accept --mode (MCP-only parameter for future use)
     }
 
     cmd = [EMPIRICA_CLI] + tool_map.get(tool_name, [tool_name])
@@ -1202,7 +1296,8 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "preflight-submit", "check", "check-submit", "postflight-submit",
         "goals-create", "goals-add-subtask", "goals-complete-subtask",
         "goals-progress", "goals-list", "sessions-resume",
-        "handoff-create", "handoff-query"
+        "handoff-create", "handoff-query",
+        "project-bootstrap", "finding-log", "unknown-log", "deadend-log", "refdoc-add"
     }
 
     cli_command = tool_map.get(tool_name, [tool_name])[0]
