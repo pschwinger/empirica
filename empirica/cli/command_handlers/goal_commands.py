@@ -518,10 +518,17 @@ def handle_goals_get_subtasks_command(args):
                     "task_id": task.id,
                     "description": task.description,
                     "status": task.status.value,
+                    "importance": task.epistemic_importance.value,
                     "created_at": task.created_timestamp,
                     "completed_at": task.completed_timestamp if hasattr(task, 'completed_timestamp') else None,
                     "dependencies": task.dependencies if hasattr(task, 'dependencies') else [],
-                    "metadata": task.metadata if hasattr(task, 'metadata') else {}
+                    "estimated_tokens": task.estimated_tokens if hasattr(task, 'estimated_tokens') else None,
+                    "actual_tokens": task.actual_tokens if hasattr(task, 'actual_tokens') else None,
+                    "completion_evidence": task.completion_evidence if hasattr(task, 'completion_evidence') else None,
+                    "notes": task.notes if hasattr(task, 'notes') else "",
+                    "findings": task.findings if hasattr(task, 'findings') else [],
+                    "unknowns": task.unknowns if hasattr(task, 'unknowns') else [],
+                    "dead_ends": task.dead_ends if hasattr(task, 'dead_ends') else []
                 })
             
             completed_count = sum(1 for t in subtasks if t.status.value == "completed")
@@ -548,9 +555,14 @@ def handle_goals_get_subtasks_command(args):
                 for i, task in enumerate(result['subtasks'], 1):
                     status_icon = "✅" if task['status'] == "completed" else "⏳"
                     print(f"{status_icon} {i}. {task['description']}")
-                    print(f"   Status: {task['status']} | Task ID: {task['task_id'][:8]}...")
-                    if task.get('metadata'):
-                        print(f"   Metadata: {task['metadata']}")
+                    print(f"   Status: {task['status']} | Importance: {task.get('importance', 'medium')}")
+                    print(f"   Task ID: {task['task_id'][:8]}...")
+                    if task.get('findings'):
+                        print(f"   Findings: {len(task['findings'])} discovered")
+                    if task.get('unknowns'):
+                        print(f"   Unknowns: {len(task['unknowns'])} remaining")
+                    if task.get('dead_ends'):
+                        print(f"   Dead ends: {len(task['dead_ends'])} avoided")
             else:
                 print(f"❌ {result.get('message', 'Error retrieving subtasks')}")
         

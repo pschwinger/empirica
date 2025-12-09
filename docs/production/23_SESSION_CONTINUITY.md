@@ -81,6 +81,8 @@ prev = result['sessions'][0]
 - ✅ Multi-agent coordination built-in
 - ✅ Queryable by AI, date, task pattern
 
+**Flexible Handoff Types:** Empirica supports three handoff patterns (investigation, complete, planning). See [`FLEXIBLE_HANDOFF_GUIDE.md`](../guides/FLEXIBLE_HANDOFF_GUIDE.md) for details on when to use each type.
+
 ---
 
 ## Storage Architecture

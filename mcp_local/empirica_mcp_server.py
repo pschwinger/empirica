@@ -432,6 +432,39 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
+        # ========== Mistakes Tracking (Learning from Failures) ==========
+
+        types.Tool(
+            name="log_mistake",
+            description="Log a mistake for learning and future prevention. Records what went wrong, why it was wrong, cost estimate, root cause epistemic vector, and prevention strategy. Creates training data for calibration and pattern recognition.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session UUID"},
+                    "mistake": {"type": "string", "description": "What was done wrong"},
+                    "why_wrong": {"type": "string", "description": "Explanation of why it was wrong"},
+                    "cost_estimate": {"type": "string", "description": "Estimated time/effort wasted (e.g., '2 hours', '30 minutes')"},
+                    "root_cause_vector": {"type": "string", "enum": ["KNOW", "DO", "CONTEXT", "CLARITY", "COHERENCE", "SIGNAL", "DENSITY", "STATE", "CHANGE", "COMPLETION", "IMPACT", "UNCERTAINTY"], "description": "Epistemic vector that caused the mistake"},
+                    "prevention": {"type": "string", "description": "How to prevent this mistake in the future"},
+                    "goal_id": {"type": "string", "description": "Optional goal identifier this mistake relates to"}
+                },
+                "required": ["session_id", "mistake", "why_wrong"]
+            }
+        ),
+
+        types.Tool(
+            name="query_mistakes",
+            description="Query logged mistakes for learning and calibration. Retrieve mistakes by session, goal, or root cause vector to identify patterns and prevent repeat failures.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Filter by session UUID"},
+                    "goal_id": {"type": "string", "description": "Filter by goal UUID"},
+                    "limit": {"type": "integer", "description": "Maximum number of results (default: 10)", "minimum": 1, "maximum": 100}
+                }
+            }
+        ),
+
         # ========== Phase 2: Cryptographic Trust (Route to CLI) ==========
 
         types.Tool(
@@ -1076,6 +1109,10 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "create_handoff_report": ["handoff-create"],
         "query_handoff_reports": ["handoff-query"],
 
+        # Mistakes Tracking
+        "log_mistake": ["mistake-log"],
+        "query_mistakes": ["mistake-query"],
+
         # Phase 1: Cross-AI Coordination
         "discover_goals": ["goals-discover"],
         "resume_goal": ["goals-resume"],
@@ -1102,7 +1139,11 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "bootstrap_level": "bootstrap-level",  # MCP uses bootstrap_level, CLI uses bootstrap-level
         "task_id": "task-id",  # MCP uses task_id, CLI uses task-id (for goals-complete-subtask)
         "round_num": "round",  # MCP uses round_num, CLI uses round (for checkpoint-create)
-        "remaining_unknowns": "remaining-unknowns",  # MCP uses remaining_unknowns, CLI uses remaining-unknowns (for handoff-create)
+        "remaining_unknowns": "remaining-unknowns",  # MCP uses remaining_unknowns, CLI uses remaining-unknowns
+        "root_cause_vector": "root-cause-vector",  # MCP uses root_cause_vector, CLI uses root-cause-vector
+        "why_wrong": "why-wrong",  # MCP uses why_wrong, CLI uses why-wrong
+        "cost_estimate": "cost-estimate",  # MCP uses cost_estimate, CLI uses cost-estimate
+        "goal_id": "goal-id",  # MCP uses goal_id, CLI uses goal-id (for handoff-create)
         "confidence_to_proceed": "confidence",  # MCP uses confidence_to_proceed, CLI uses confidence (for check command)
         "investigation_cycle": "cycle",  # MCP uses investigation_cycle, CLI uses cycle (for check-submit)
         "task_summary": "task-summary",  # MCP uses task_summary, CLI uses task-summary (for handoff-create and postflight)

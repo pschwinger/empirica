@@ -1,0 +1,80 @@
+<svg viewBox="0 0 900 700" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 900px; height: auto;">
+  <!-- Background -->
+  <rect width="900" height="700" fill="#1a1a25" stroke="#6366f1" stroke-width="2" rx="12"/>
+  
+  <!-- Title -->
+  <text x="450" y="40" text-anchor="middle" fill="#f8fafc" font-size="22" font-weight="bold">Epistemic State ≠ Git Diff</text>
+  <text x="450" y="60" text-anchor="middle" fill="#94a3b8" font-size="13">The critical distinction between content tracking and confidence tracking</text>
+  <line x1="50" y1="75" x2="850" y2="75" stroke="#334155" stroke-width="1"/>
+  
+  <!-- Left side: Git Diff -->
+  <rect x="50" y="100" width="380" height="280" fill="#1e293b" stroke="#22c55e" stroke-width="3" rx="10"/>
+  <text x="240" y="130" font-size="16" font-weight="bold" text-anchor="middle" fill="#22c55e">Git Diff (What Changed)</text>
+  
+  <!-- Code diff box -->
+  <rect x="70" y="145" width="340" height="80" fill="#0f172a" rx="5"/>
+  <text x="80" y="165" font-size="12" fill="#ef4444" font-family="monospace">- const AUTH_TIMEOUT = 3600;</text>
+  <text x="80" y="185" font-size="12" fill="#22c55e" font-family="monospace">+ const AUTH_TIMEOUT = 7200;</text>
+  <text x="80" y="210" font-size="11" fill="#94a3b8" font-family="monospace">@@ auth.js:15 @@</text>
+  
+  <!-- Git diff info -->
+  <text x="240" y="250" font-size="13" font-weight="bold" text-anchor="middle" fill="#22c55e">Tells you:</text>
+  <text x="80" y="270" font-size="11" fill="#94a3b8">✓ WHAT: Timeout doubled</text>
+  <text x="80" y="290" font-size="11" fill="#94a3b8">✓ WHEN: Commit timestamp</text>
+  <text x="80" y="310" font-size="11" fill="#94a3b8">✓ WHO: Commit author</text>
+  
+  <text x="240" y="340" font-size="13" font-weight="bold" text-anchor="middle" fill="#ef4444">Doesn't tell you:</text>
+  <text x="80" y="360" font-size="11" fill="#ef4444">✗ WHY: Tested or speculative?</text>
+  
+  <!-- Token count -->
+  <rect x="150" y="395" width="180" height="35" fill="#22c55e" rx="5"/>
+  <text x="240" y="418" font-size="13" font-weight="bold" text-anchor="middle" fill="#f8fafc">~50 tokens</text>
+  
+  <!-- Right side: Epistemic Vectors -->
+  <rect x="470" y="100" width="380" height="280" fill="#1e293b" stroke="#6366f1" stroke-width="3" rx="10"/>
+  <text x="660" y="130" font-size="16" font-weight="bold" text-anchor="middle" fill="#6366f1">Epistemic Vectors (Why + Confidence)</text>
+  
+  <!-- JSON box -->
+  <rect x="490" y="145" width="340" height="125" fill="#0f172a" rx="5"/>
+  <text x="500" y="165" font-size="11" fill="#0ea5e9" font-family="monospace">{</text>
+  <text x="510" y="180" font-size="11" fill="#94a3b8" font-family="monospace">"know": 0.6,</text>
+  <text x="510" y="195" font-size="11" fill="#94a3b8" font-family="monospace">"do": 0.7,</text>
+  <text x="510" y="210" font-size="11" fill="#94a3b8" font-family="monospace">"uncertainty": 0.4,</text>
+  <text x="510" y="225" font-size="11" fill="#94a3b8" font-family="monospace">"clarity": 0.8,</text>
+  <text x="510" y="240" font-size="11" fill="#94a3b8" font-family="monospace">"reasoning": "..."</text>
+  <text x="500" y="255" font-size="11" fill="#0ea5e9" font-family="monospace">}</text>
+  
+  <!-- Epistemic info -->
+  <text x="660" y="290" font-size="13" font-weight="bold" text-anchor="middle" fill="#6366f1">Tells you:</text>
+  <text x="500" y="310" font-size="11" fill="#94a3b8">✓ WHY: Reasoning behind change</text>
+  <text x="500" y="330" font-size="11" fill="#94a3b8">✓ CONFIDENCE: How sure (0.0-1.0)</text>
+  <text x="500" y="350" font-size="11" fill="#94a3b8">✓ UNCERTAINTY: What's unclear</text>
+  <text x="500" y="370" font-size="11" fill="#94a3b8">✓ LEARNING: Know/Do growth</text>
+  
+  <!-- Token count -->
+  <rect x="570" y="395" width="180" height="35" fill="#6366f1" rx="5"/>
+  <text x="660" y="418" font-size="13" font-weight="bold" text-anchor="middle" fill="#f8fafc">~300 tokens</text>
+  
+  <!-- Bottom section: The Key Insight -->
+  <rect x="50" y="460" width="800" height="220" fill="#1e293b" stroke="#8b5cf6" stroke-width="2" rx="10"/>
+  <text x="450" y="490" font-size="18" font-weight="bold" text-anchor="middle" fill="#8b5cf6">The Key Insight</text>
+  
+  <rect x="80" y="510" width="360" height="150" fill="#0f172a" stroke="#22c55e" stroke-width="2" rx="8"/>
+  <text x="260" y="535" font-size="14" font-weight="bold" text-anchor="middle" fill="#22c55e">Git: "What changed"</text>
+  <text x="90" y="560" font-size="12" fill="#94a3b8">• Tracks file modifications</text>
+  <text x="90" y="580" font-size="12" fill="#94a3b8">• Perfect for code versioning</text>
+  <text x="90" y="600" font-size="12" fill="#94a3b8">• Minimal context overhead</text>
+  <text x="90" y="620" font-size="12" fill="#94a3b8">• Standard developer workflow</text>
+  <text x="90" y="640" font-size="12" fill="#22c55e">✓ Essential but insufficient</text>
+  
+  <rect x="460" y="510" width="360" height="150" fill="#0f172a" stroke="#6366f1" stroke-width="2" rx="8"/>
+  <text x="640" y="535" font-size="14" font-weight="bold" text-anchor="middle" fill="#6366f1">Empirica: "Why + How sure"</text>
+  <text x="470" y="560" font-size="12" fill="#94a3b8">• Tracks epistemic state</text>
+  <text x="470" y="580" font-size="12" fill="#94a3b8">• Captures reasoning + confidence</text>
+  <text x="470" y="600" font-size="12" fill="#94a3b8">• Measures learning deltas</text>
+  <text x="470" y="620" font-size="12" fill="#94a3b8">• Enables calibration + continuity</text>
+  <text x="470" y="640" font-size="12" fill="#6366f1">✓ Complements git perfectly</text>
+  
+  <!-- Bottom note -->
+  <text x="450" y="695" text-anchor="middle" fill="#94a3b8" font-size="12">Empirica stores epistemic notes in git notes (no code pollution) + SQLite (queryable)</text>
+</svg>

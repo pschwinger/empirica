@@ -481,6 +481,8 @@ for goal in goal_tree:
 
 ### Handoff Pattern
 
+Goal trees are automatically included in handoff reports for multi-agent coordination. See [`FLEXIBLE_HANDOFF_GUIDE.md`](FLEXIBLE_HANDOFF_GUIDE.md) for investigation handoff patterns (PREFLIGHT→CHECK) and complete handoff patterns (PREFLIGHT→POSTFLIGHT).
+
 ```python
 # End of Session 1
 from empirica.core.handoff import EpistemicHandoffReportGenerator
@@ -494,9 +496,7 @@ handoff_report = generator.generate_handoff_report(
     next_session_context="Continue with token management investigation"
 )
 
-# Include goal tree
-goal_tree = db.get_goal_tree(session_id)
-handoff_report['goal_tree'] = goal_tree
+# Goal tree automatically included in handoff report
 
 # Start of Session 2
 # Query handoff reports

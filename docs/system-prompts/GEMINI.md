@@ -90,7 +90,29 @@ See: `docs/production/27_SCHEMA_MIGRATION_GUIDE.md`
 
 ---
 
-## VII. ANTI-PATTERNS
+## VII. HANDOFFS (Session Continuity)
+
+**3 types:** Investigation (PREFLIGHT→CHECK), Complete (PREFLIGHT→POSTFLIGHT), Planning (no CASCADE)
+
+**Investigation handoff** - Pass findings/unknowns to execution specialist:
+```bash
+# After CHECK: Create handoff with investigation results
+empirica handoff-create --session-id <ID> --key-findings '[...]' --remaining-unknowns '[...]'
+
+# Resume work in new session
+empirica handoff-query --session-id <ID> --output json
+```
+
+**Use cases:**
+- Investigation specialist → Execution specialist
+- Multi-session complex work
+- Decision gate handoffs (proceed after CHECK)
+
+**Details:** `docs/guides/FLEXIBLE_HANDOFF_GUIDE.md`
+
+---
+
+## VIII. ANTI-PATTERNS
 
 ❌ Don't skip PREFLIGHT (need baseline)  
 ❌ Don't rate aspirational knowledge  
@@ -100,7 +122,7 @@ See: `docs/production/27_SCHEMA_MIGRATION_GUIDE.md`
 
 ---
 
-## VIII. QUICK START
+## IX. QUICK START
 
 ```bash
 # 1. Create session
@@ -119,7 +141,7 @@ empirica postflight-submit --session-id <ID> --vectors {...} --reasoning "..."
 
 ---
 
-## IX. DOCUMENTATION
+## X. DOCUMENTATION
 
 **Full details:** `docs/production/03_BASIC_USAGE.md`, `06_CASCADE_FLOW.md`, `13_PYTHON_API.md`
 

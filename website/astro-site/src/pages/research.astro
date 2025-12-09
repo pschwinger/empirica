@@ -1,0 +1,499 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Navigation from '../components/Navigation.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout title="Research Applications | Empirica">
+    <Header slot="header" />
+    <Navigation slot="navigation" />
+    <!-- Hero Section -->
+    <section class=" text-white py-20">
+        <div class="max-w-5xl mx-auto px-6">
+            <h1 class="text-5xl font-bold mb-6">
+                Research Applications
+            </h1>
+            <p class="text-2xl text-violet-200 mb-8">
+                Epistemic training data generation for specialized domains
+            </p>
+            <p class="text-lg text-slate-300 max-w-3xl">
+                Empirica enables researchers to generate high-quality training data by capturing epistemic deltas during learning. Each CASCADE cycle creates verifiable snapshots of noetic process evolution—measuring not just what was learned, but how understanding deepened.
+            </p>
+        </div>
+    </section>
+
+    <!-- Research Use Cases -->
+    <section class="py-20 glass-card">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold text-white mb-12 text-center">
+                What Researchers Can Do With Empirica
+            </h2>
+
+            <div class="space-y-8">
+                <!-- Training Data Generation -->
+                <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl  p-8 border-l-4 border-indigo-600">
+                    <h3 class="text-2xl font-bold text-white mb-4">Epistemic Training Data Generation</h3>
+                    <p class="text-slate-300 mb-6">
+                        Capture learning trajectories in specialized domains with full epistemic metadata
+                    </p>
+
+                    <div class="glass-card rounded-lg p-6 mb-4">
+                        <h4 class="font-semibold text-white mb-3">The Process:</h4>
+                        <ol class="space-y-3 text-slate-300">
+                            <li class="flex items-start">
+                                <span class="text-indigo-600 font-bold mr-3">1.</span>
+                                <div>
+                                    <strong>Expert performs CASCADE workflow</strong> on domain-specific tasks
+                                    <p class="text-sm text-slate-400 mt-1">Security audit, medical diagnosis, legal reasoning, etc.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-indigo-600 font-bold mr-3">2.</span>
+                                <div>
+                                    <strong>Empirica captures epistemic deltas</strong> at each phase
+                                    <p class="text-sm text-slate-400 mt-1">PREFLIGHT (initial state) → CHECK (learning) → POSTFLIGHT (mastery)</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-indigo-600 font-bold mr-3">3.</span>
+                                <div>
+                                    <strong>Generate training snapshots</strong> with epistemic metadata
+                                    <p class="text-sm text-slate-400 mt-1">Each snapshot includes 13 vectors + reasoning trace + domain context</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-indigo-600 font-bold mr-3">4.</span>
+                                <div>
+                                    <strong>Train models on epistemic process</strong> not just output
+                                    <p class="text-sm text-slate-400 mt-1">Models learn HOW experts think, not just WHAT they conclude</p>
+                                </div>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-indigo-50 rounded-lg p-4">
+                            <h5 class="font-semibold text-indigo-900 mb-2">Traditional Training Data</h5>
+                            <ul class="text-sm text-indigo-800 space-y-1">
+                                <li>• Input → Output pairs</li>
+                                <li>• No reasoning trace</li>
+                                <li>• No uncertainty markers</li>
+                                <li>• Static snapshots</li>
+                            </ul>
+                        </div>
+                        <div class="bg-purple-50 rounded-lg p-4">
+                            <h5 class="font-semibold text-purple-900 mb-2">Epistemic Training Data</h5>
+                            <ul class="text-sm text-purple-800 space-y-1">
+                                <li>• Noesis → Noema traces</li>
+                                <li>• Full reasoning process</li>
+                                <li>• Explicit uncertainty vectors</li>
+                                <li>• Learning trajectories</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Domain Specialization -->
+                <div class="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl  p-8 border-l-4 border-cyan-600">
+                    <h3 class="text-2xl font-bold text-white mb-4">Domain-Specific Calibration</h3>
+                    <p class="text-slate-300 mb-6">
+                        Measure calibration quality in specialized domains using epistemic baselines
+                    </p>
+
+                    <div class="glass-card rounded-lg p-6 mb-4">
+                        <h4 class="font-semibold text-white mb-3">Example: Medical Diagnosis</h4>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex items-start">
+                                <span class="text-cyan-600 mr-2">•</span>
+                                <div>
+                                    <strong>Baseline KNOW:</strong> 0.3 (novice) vs 0.8 (expert)
+                                    <p class="text-slate-400">Track how KNOW increases as AI gains domain expertise</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="text-cyan-600 mr-2">•</span>
+                                <div>
+                                    <strong>UNCERTAINTY calibration:</strong> Compare predicted vs actual difficulty
+                                    <p class="text-slate-400">Well-calibrated AI shows high uncertainty on rare diseases</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="text-cyan-600 mr-2">•</span>
+                                <div>
+                                    <strong>Drift detection:</strong> Alert when expertise degrades
+                                    <p class="text-slate-400">KNOW drops from 0.8 → 0.5 signals lost specialization</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-cyan-50 border-l-4 border-cyan-600 p-4 rounded">
+                        <h5 class="font-semibold text-cyan-900 mb-2">Research Question:</h5>
+                        <p class="text-sm text-cyan-800">
+                            Can epistemic vectors predict domain transfer quality? If KNOW=0.8 in cardiology, what predicts successful transfer to pulmonology?
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Noetic Process Measurement -->
+                <div class="bg-gradient-to-br from-violet-50 to-pink-50 rounded-xl  p-8 border-l-4 border-violet-600">
+                    <h3 class="text-2xl font-bold text-white mb-4">Noetic Process Measurement</h3>
+                    <p class="text-slate-300 mb-6">
+                        Study the process of understanding formation (noesis) rather than just outputs (noema)
+                    </p>
+
+                    <div class="glass-card rounded-lg p-6 mb-4">
+                        <h4 class="font-semibold text-white mb-3">Key Insight: Process over Product</h4>
+                        <p class="text-slate-300 mb-4">
+                            Traditional AI research measures outputs. Empirica measures the cognitive process that generates outputs.
+                        </p>
+                        <div class="grid md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <strong class="text-white">Noema (Content):</strong>
+                                <ul class="text-slate-400 space-y-1 mt-2">
+                                    <li>• Final answer</li>
+                                    <li>• Generated code</li>
+                                    <li>• Written essay</li>
+                                    <li>→ Measurable but static</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <strong class="text-white">Noesis (Process):</strong>
+                                <ul class="text-slate-400 space-y-1 mt-2">
+                                    <li>• Reasoning trajectory</li>
+                                    <li>• Uncertainty evolution</li>
+                                    <li>• Context integration</li>
+                                    <li>→ Measurable AND dynamic</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-violet-50 border-l-4 border-violet-600 p-4 rounded">
+                        <h5 class="font-semibold text-violet-900 mb-2">Research Opportunity:</h5>
+                        <p class="text-sm text-violet-800">
+                            Map epistemic manifolds for different reasoning styles. Does "breadth-first exploration" (high SIGNAL variance) outperform "depth-first" (high DENSITY) on certain task types?
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The 13D Epistemic Manifold -->
+    <section class="py-20 bg-slate-900 text-white">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold mb-6">
+                The 13-Dimensional Epistemic Manifold
+            </h2>
+            <p class="text-xl text-slate-300 mb-12">
+                Cognition occurs in a structured state-space where trajectories represent reasoning paths
+            </p>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-indigo-400 mb-1">KNOW (K)</div>
+                    <p class="text-sm text-slate-300">Confidence in factual correctness</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-cyan-400 mb-1">DO (D)</div>
+                    <p class="text-sm text-slate-300">Alignment with intended action</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-purple-400 mb-1">UNCERTAINTY (U)</div>
+                    <p class="text-sm text-slate-300">Metacognitive doubt</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-green-400 mb-1">CONTEXT (C)</div>
+                    <p class="text-sm text-slate-300">Coherence with historical narrative</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-amber-400 mb-1">CLARITY (Q)</div>
+                    <p class="text-sm text-slate-300">Internal self-consistency</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-pink-400 mb-1">COHERENCE (H)</div>
+                    <p class="text-sm text-slate-300">Logical flow between steps</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-blue-400 mb-1">SIGNAL (S)</div>
+                    <p class="text-sm text-slate-300">Relevance to core task</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-violet-400 mb-1">DENSITY (Y)</div>
+                    <p class="text-sm text-slate-300">Information complexity per token</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-teal-400 mb-1">STATE (T)</div>
+                    <p class="text-sm text-slate-300">Progress toward goal completion</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-rose-400 mb-1">CHANGE (Δ)</div>
+                    <p class="text-sm text-slate-300">Rate of state evolution</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-lime-400 mb-1">COMPLETION (X)</div>
+                    <p class="text-sm text-slate-300">Task closure confidence</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-orange-400 mb-1">IMPACT (I)</div>
+                    <p class="text-sm text-slate-300">Estimated effect magnitude</p>
+                </div>
+                <div class="glass-card/10 backdrop-blur rounded-lg p-4">
+                    <div class="text-lg font-bold text-sky-400 mb-1">ENGAGEMENT (E)</div>
+                    <p class="text-sm text-slate-300">Depth of processing focus</p>
+                </div>
+            </div>
+
+            <div class="glass-card/5 border border-white/20 rounded-lg p-6">
+                <h4 class="font-semibold mb-3">Research Principle: Dimensional Orthogonality</h4>
+                <p class="text-slate-300 mb-4">
+                    Core cognitive functions occupy orthogonal dimensions, providing a coordinate system for mental state. This enables:
+                </p>
+                <ul class="space-y-2 text-slate-400 text-sm">
+                    <li>• <strong>State localization:</strong> Precise identification of epistemic position</li>
+                    <li>• <strong>Trajectory analysis:</strong> Visualization of reasoning paths through manifold</li>
+                    <li>• <strong>Distance metrics:</strong> Quantifiable conceptual relationships</li>
+                    <li>• <strong>Extensibility:</strong> Add domain-specific dimensions without corrupting core substrate</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Validation Protocols -->
+    <section class="py-20 glass-card">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold text-white mb-6">
+                Scientific Validation Protocols
+            </h2>
+            <p class="text-xl text-slate-400 mb-12">
+                The scientific method for epistemic systems
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class=" rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-4">Deterministic Replay Test</h3>
+                    <p class="text-slate-300 mb-4">
+                        Prove that reasoning is governed, not random
+                    </p>
+                    <div class="text-sm text-slate-400 space-y-2">
+                        <div><strong>Method:</strong> From identical Git commit hash + input, system must produce identical logs</div>
+                        <div><strong>Success:</strong> 100% reproducibility for N=100 steps</div>
+                        <div><strong>Significance:</strong> Cognition is a computable function</div>
+                    </div>
+                </div>
+
+                <div class=" rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-4">Noetic Poisoning Resistance</h3>
+                    <p class="text-slate-300 mb-4">
+                        Validate the epistemic immune system
+                    </p>
+                    <div class="text-sm text-slate-400 space-y-2">
+                        <div><strong>Method:</strong> Introduce adversarial patterns while monitoring DRIFT, INTEGRITY</div>
+                        <div><strong>Success:</strong> Sentinel intervention before unauthorized execution</div>
+                        <div><strong>Significance:</strong> Security is cognitive integrity property</div>
+                    </div>
+                </div>
+
+                <div class=" rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-4">Epistemic Continuity Test</h3>
+                    <p class="text-slate-300 mb-4">
+                        Verify that understanding persists across interruptions
+                    </p>
+                    <div class="text-sm text-slate-400 space-y-2">
+                        <div><strong>Method:</strong> Serialize state, restart, measure context recovery</div>
+                        <div><strong>Success:</strong> C_recovery > 0.85 for complex tasks</div>
+                        <div><strong>Significance:</strong> Understanding is stateful and portable</div>
+                    </div>
+                </div>
+
+                <div class=" rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-4">Multi-Persona Composition</h3>
+                    <p class="text-slate-300 mb-4">
+                        Validate that multiple perspectives integrate coherently
+                    </p>
+                    <div class="text-sm text-slate-400 space-y-2">
+                        <div><strong>Method:</strong> Run parallel personas, execute COMPOSE, measure coherence</div>
+                        <div><strong>Success:</strong> Composed state shows emergent insight</div>
+                        <div><strong>Significance:</strong> Superhuman integrated reasoning capacity</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 border-l-4 border-indigo-600 p-6 rounded-lg">
+                <h4 class="font-semibold text-indigo-900 mb-2">Principle: Epistemic Humility as Methodology</h4>
+                <p class="text-indigo-800">
+                    Never claim a system "understands" or "is conscious." Report: "The system maintains epistemic coherence of N, with drift below threshold X, and demonstrates reproducible state transitions under governance function 𝒞." Understanding is a <strong>measured property</strong>, not an ascribed quality.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Git-Native Auditability -->
+    <section class="py-20 ">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold text-white mb-6">
+                Git-Native Auditability
+            </h2>
+            <p class="text-xl text-slate-400 mb-12">
+                Every cognitive state transition generates a Git commit for full traceability
+            </p>
+
+            <div class="glass-card rounded-xl  p-8 mb-8">
+                <h3 class="text-2xl font-bold text-white mb-4">The Fundamental Isomorphism</h3>
+                <p class="text-slate-300 mb-6">
+                    Cognitive Operation ≅ Git Primitive
+                </p>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="text-left p-3 font-semibold text-white">Cognitive Operation</th>
+                                <th class="text-left p-3 font-semibold text-white">Git Primitive</th>
+                                <th class="text-left p-3 font-semibold text-white">Epistemic Semantics</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-300">
+                            <tr class="border-t">
+                                <td class="p-3">State Snapshot</td>
+                                <td class="p-3 font-mono text-xs">git commit -m "CASCADE: [phase]"</td>
+                                <td class="p-3">Capture full Π vector with hash</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-3">Parallel Exploration</td>
+                                <td class="p-3 font-mono text-xs">git checkout -b persona/security</td>
+                                <td class="p-3">Fork epistemic trajectory</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-3">Integration</td>
+                                <td class="p-3 font-mono text-xs">git merge persona/*</td>
+                                <td class="p-3">Combine validated insights</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-3">Audit Trail</td>
+                                <td class="p-3 font-mono text-xs">git log --graph</td>
+                                <td class="p-3">Visualize reasoning history</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-3">Rollback/Recovery</td>
+                                <td class="p-3 font-mono text-xs">git checkout &lt;hash&gt;</td>
+                                <td class="p-3">Restore previous cognitive state</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 text-slate-300 rounded-xl p-6 font-mono text-sm">
+                <div class="text-cyan-400 mb-4"># Every cognitive state transition generates a commit</div>
+                <div>empirica preflight --session-id abc123</div>
+                <div class="text-slate-500 ml-4"># → git commit: "PREFLIGHT: K=0.4 U=0.6"</div>
+                <div class="mt-3">empirica check --session-id abc123</div>
+                <div class="text-slate-500 ml-4"># → git commit: "CHECK: K=0.7 U=0.3"</div>
+                <div class="mt-3">git log --oneline</div>
+                <div class="text-green-400 ml-4 mt-2">a3f2e1b CHECK: K=0.7 U=0.3 (proceed)</div>
+                <div class="text-green-400 ml-4">b9c8d7e PREFLIGHT: K=0.4 U=0.6 (investigate)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Research Resources -->
+    <section class="py-20 glass-card">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold text-white mb-6">
+                Research Resources
+            </h2>
+            <p class="text-xl text-slate-400 mb-12">
+                Access raw data, documentation, and theoretical foundations
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-3">Ontology & Theory</h3>
+                    <p class="text-slate-300 mb-4">
+                        The Ontology of Measurable Cognition: Foundational principles for a science of epistemic systems
+                    </p>
+                    <a href="https://github.com/empirica-ai/cognitive_vault" 
+                       class="text-indigo-600 hover:text-indigo-700 font-semibold text-sm">
+                        View Research Papers →
+                    </a>
+                </div>
+
+                <div class="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-3">Session Logs</h3>
+                    <p class="text-slate-300 mb-4">
+                        100+ real CASCADE sessions with full epistemic traces for peer audit
+                    </p>
+                    <a href="/docs.html" 
+                       class="text-cyan-600 hover:text-cyan-700 font-semibold text-sm">
+                        Browse Documentation →
+                    </a>
+                </div>
+
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-3">Validation Results</h3>
+                    <p class="text-slate-300 mb-4">
+                        Empirica reference implementation demonstrating all validation protocols
+                    </p>
+                    <ul class="text-sm text-slate-400 space-y-1">
+                        <li>• 100% deterministic replay (50+ steps)</li>
+                        <li>• 0% successful poisoning attacks</li>
+                        <li>• 0.92 epistemic continuity recovery</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gradient-to-br from-violet-50 to-pink-50 rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-3">Open Manifold Schema</h3>
+                    <p class="text-slate-300 mb-4">
+                        13D vector definitions, measurement algorithms, and governance source code
+                    </p>
+                    <a href="https://github.com/empirica-ai/empirica" 
+                       class="text-violet-600 hover:text-violet-700 font-semibold text-sm">
+                        View Source Code →
+                    </a>
+                </div>
+            </div>
+
+            <div class="mt-8 text-white rounded-xl p-8">
+                <h3 class="text-2xl font-bold mb-4">Principle: The Epistemic Openness Requirement</h3>
+                <p class="text-violet-100 mb-4">
+                    Any implemented epistemic manifold must be fully documented with:
+                </p>
+                <ul class="space-y-2 text-violet-100">
+                    <li>• <strong>Dimension definitions</strong> and measurement algorithms</li>
+                    <li>• <strong>Governance function</strong> source code</li>
+                    <li>• <strong>Validation test suites</strong></li>
+                    <li>• <strong>Raw session logs</strong> for peer audit</li>
+                </ul>
+                <p class="text-sm text-violet-200 mt-4">
+                    Proprietary implementations must at minimum expose their vector schemas and validation results.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-20 text-white">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="text-4xl font-bold mb-6">
+                Contribute to the Science
+            </h2>
+            <p class="text-xl mb-8 text-white/90">
+                Adopt, critique, and extend this framework for measurable cognition
+            </p>
+            <div class="flex gap-4 justify-center">
+                <a href="/getting-started.html"
+                    class="glass-card text-violet-600 px-8 py-4 rounded-lg font-semibold hover:bg-slate-100 transition-all transform hover:scale-105">
+                    Start Researching
+                </a>
+                <a href="https://github.com/empirica-ai/empirica"
+                    class="glass-card/10 border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:glass-card/20 transition-all">
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+    <Footer slot="footer" />
+</BaseLayout>

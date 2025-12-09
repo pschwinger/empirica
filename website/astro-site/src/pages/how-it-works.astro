@@ -1,0 +1,361 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Navigation from '../components/Navigation.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout title="How It Works - CASCADE Workflow | Empirica">
+    <Header slot="header" />
+    <Navigation slot="navigation" />
+    <!-- Hero Section -->
+    <section class=" text-white py-20">
+        <div class="max-w-5xl mx-auto px-6">
+            <h1 class="text-5xl font-bold mb-6">
+                How Empirica Works
+            </h1>
+            <p class="text-2xl text-slate-300 mb-8">
+                The CASCADE workflow: Explicit epistemic checkpoints at key decision points
+            </p>
+            <p class="text-lg text-slate-400 max-w-3xl">
+                CASCADE doesn't prescribe how you think - it observes your natural work and adds structured self-assessment at three critical moments: before you start, when you're ready to commit, and after you're done.
+            </p>
+        </div>
+    </section>
+
+    <!-- The Three Phases -->
+    <section class="py-20 ">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold text-white mb-12 text-center">
+                The Three Phases
+            </h2>
+
+            <!-- PREFLIGHT -->
+            <div class="mb-16">
+                <div class="glass-card rounded-xl  p-8 border-l-4 border-indigo-600">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mr-4">
+                            1
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-bold text-white">PREFLIGHT</h3>
+                            <p class="text-slate-400">Before starting work</p>
+                        </div>
+                    </div>
+                    
+                    <p class="text-lg text-slate-300 mb-6">
+                        <strong>Purpose:</strong> Assess what you ACTUALLY know before beginning
+                    </p>
+
+                    <div class=" rounded-lg p-6 mb-6">
+                        <h4 class="font-semibold text-white mb-3">What it measures:</h4>
+                        <ul class="space-y-2 text-slate-300">
+                            <li class="flex items-start">
+                                <span class="text-indigo-600 mr-2">•</span>
+                                <span><strong>KNOW:</strong> Domain knowledge (0.4 = "I've heard of OAuth2 but don't know the details")</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-indigo-600 mr-2">•</span>
+                                <span><strong>DO:</strong> Implementation capability (0.5 = "Could probably figure it out with docs")</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-indigo-600 mr-2">•</span>
+                                <span><strong>UNCERTAINTY:</strong> Explicit ambiguity (0.6 = HIGH - many unknowns)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-indigo-600 mr-2">•</span>
+                                <span><strong>Plus 10 more vectors:</strong> Context, clarity, coherence, signal, density, state, change, completion, impact, engagement</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-indigo-50 border-l-4 border-indigo-600 p-4 rounded">
+                        <p class="text-slate-800">
+                            <strong>Key principle:</strong> "I could figure it out" ≠ "I know it". Be honest about current knowledge, not aspirational.
+                        </p>
+                    </div>
+
+                    <div class="mt-6">
+                        <h4 class="font-semibold text-white mb-2">Decision:</h4>
+                        <ul class="space-y-1 text-slate-300">
+                            <li>• High uncertainty? → Create goal, start investigation</li>
+                            <li>• Low uncertainty? → Proceed directly to implementation</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHECK -->
+            <div class="mb-16">
+                <div class="glass-card rounded-xl  p-8 border-l-4 border-cyan-600">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-cyan-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mr-4">
+                            2
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-bold text-white">CHECK</h3>
+                            <p class="text-slate-400">Mid-work decision gate</p>
+                        </div>
+                    </div>
+                    
+                    <p class="text-lg text-slate-300 mb-6">
+                        <strong>Purpose:</strong> Validate readiness to proceed before major commitment
+                    </p>
+
+                    <div class=" rounded-lg p-6 mb-6">
+                        <h4 class="font-semibold text-white mb-3">What it measures:</h4>
+                        <ul class="space-y-2 text-slate-300">
+                            <li class="flex items-start">
+                                <span class="text-cyan-600 mr-2">•</span>
+                                <span><strong>Confidence to proceed:</strong> 0.0-1.0 (≥0.7 = ready to implement)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-cyan-600 mr-2">•</span>
+                                <span><strong>Remaining unknowns:</strong> Queries goal tree for evidence-based decision</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-cyan-600 mr-2">•</span>
+                                <span><strong>Updated vectors:</strong> KNOW, DO, UNCERTAINTY after investigation</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-cyan-50 border-l-4 border-cyan-600 p-4 rounded mb-6">
+                        <p class="text-slate-800">
+                            <strong>This is a GATE:</strong> CHECK isn't just another assessment - it's a decision point. Proceed or investigate more?
+                        </p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h5 class="font-semibold text-green-900 mb-2">Decision: PROCEED ✓</h5>
+                            <p class="text-sm text-green-800">Confidence ≥ 0.7, low unknowns → Ready to implement</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <h5 class="font-semibold text-amber-900 mb-2">Decision: INVESTIGATE ⚠</h5>
+                            <p class="text-sm text-amber-800">Confidence < 0.7, high unknowns → Loop back to investigation</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- POSTFLIGHT -->
+            <div class="mb-16">
+                <div class="glass-card rounded-xl  p-8 border-l-4 border-purple-600">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mr-4">
+                            3
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-bold text-white">POSTFLIGHT</h3>
+                            <p class="text-slate-400">After completing work</p>
+                        </div>
+                    </div>
+                    
+                    <p class="text-lg text-slate-300 mb-6">
+                        <strong>Purpose:</strong> Measure what you ACTUALLY learned
+                    </p>
+
+                    <div class=" rounded-lg p-6 mb-6">
+                        <h4 class="font-semibold text-white mb-3">What it measures:</h4>
+                        <ul class="space-y-2 text-slate-300">
+                            <li class="flex items-start">
+                                <span class="text-purple-600 mr-2">•</span>
+                                <span><strong>Final state:</strong> Re-assess all 13 vectors after completion</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-purple-600 mr-2">•</span>
+                                <span><strong>Learning delta:</strong> PREFLIGHT → POSTFLIGHT comparison</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-purple-600 mr-2">•</span>
+                                <span><strong>Calibration:</strong> Did predicted difficulty match actual?</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-purple-50 border-l-4 border-purple-600 p-4 rounded">
+                        <h5 class="font-semibold text-purple-900 mb-2">Example Learning Delta:</h5>
+                        <ul class="text-sm text-purple-800 space-y-1">
+                            <li>• KNOW: 0.4 → 0.85 (learned OAuth2 implementation)</li>
+                            <li>• DO: 0.5 → 0.9 (built working auth system)</li>
+                            <li>• UNCERTAINTY: 0.6 → 0.15 (resolved most ambiguities)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Goals & Subtasks -->
+    <section id="goals" class="py-20 glass-card">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold text-white mb-6">
+                Goals & Subtasks
+            </h2>
+            <p class="text-xl text-slate-400 mb-12">
+                Track investigation structure explicitly for resumption and coordination
+            </p>
+
+            <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-8 mb-8">
+                <h3 class="text-2xl font-bold text-white mb-4">During Investigation</h3>
+                <p class="text-slate-300 mb-6">
+                    Goals help you track what you're learning, what's still unclear, and what approaches didn't work:
+                </p>
+
+                <div class="space-y-4">
+                    <div class="glass-card rounded-lg p-4 border-l-4 border-green-500">
+                        <h4 class="font-semibold text-green-900 mb-2">✓ Findings</h4>
+                        <p class="text-sm text-slate-300">"Discovered OAuth2 requires PKCE for public clients"</p>
+                    </div>
+                    <div class="glass-card rounded-lg p-4 border-l-4 border-amber-500">
+                        <h4 class="font-semibold text-amber-900 mb-2">? Unknowns</h4>
+                        <p class="text-sm text-slate-300">"Token refresh timing unclear - need to test edge cases"</p>
+                    </div>
+                    <div class="glass-card rounded-lg p-4 border-l-4 border-red-500">
+                        <h4 class="font-semibold text-red-900 mb-2">✗ Dead Ends</h4>
+                        <p class="text-sm text-slate-300">"JWT symmetric signing doesn't work for distributed systems"</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-indigo-50 border-l-4 border-indigo-600 p-6 rounded-lg">
+                <h4 class="font-semibold text-indigo-900 mb-2">Why this matters:</h4>
+                <ul class="space-y-2 text-indigo-800">
+                    <li>• <strong>Resumption:</strong> Next session can query findings/unknowns instead of re-reading full context</li>
+                    <li>• <strong>CHECK decisions:</strong> Evidence-based proceed/investigate based on remaining unknowns</li>
+                    <li>• <strong>Learning curves:</strong> Map epistemic growth against git commits</li>
+                    <li>• <strong>Multi-agent handoffs:</strong> Other AIs can discover your goals and continue your work</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Workflow Diagram -->
+    <section class="py-20 bg-slate-900 text-white">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold mb-12 text-center">
+                Complete CASCADE Flow
+            </h2>
+
+            <!-- SVG Diagram -->
+            <div class="mb-12 glass-card rounded-xl p-8">
+                <img src="/assets/cascade_workflow.svg" 
+                     alt="CASCADE Workflow Diagram" 
+                     class="w-full" />
+                <p class="text-sm text-slate-400 text-center mt-4 italic">
+                    7-phase epistemic reasoning: PREFLIGHT → THINK → PLAN → INVESTIGATE → CHECK → ACT → POSTFLIGHT
+                </p>
+            </div>
+
+            <!-- Text Representation -->
+            <div class="bg-slate-800 rounded-xl p-8 border border-slate-700">
+                <div class="space-y-6 font-mono text-sm">
+                    <div class="flex items-center">
+                        <div class="w-40 text-indigo-400 font-bold">SESSION START</div>
+                        <div class="flex-1 text-slate-400">Create session (instant, no ceremony)</div>
+                    </div>
+                    <div class="ml-8">
+                        <div class="flex items-center">
+                            <div class="w-32 text-indigo-400">└─ PREFLIGHT</div>
+                            <div class="flex-1 text-slate-400">Assess epistemic state (13 vectors)</div>
+                        </div>
+                    </div>
+                    <div class="ml-16">
+                        <div class="flex items-center">
+                            <div class="w-24 text-cyan-400">└─ [INVESTIGATE → CHECK]*</div>
+                            <div class="flex-1 text-slate-400">(0-N loops)</div>
+                        </div>
+                    </div>
+                    <div class="ml-24 space-y-2 text-slate-500">
+                        <div>├─ Create goal with scope vectors</div>
+                        <div>├─ Add subtasks (track findings/unknowns/dead_ends)</div>
+                        <div>├─ Investigate systematically</div>
+                        <div>├─ CHECK: Confidence ≥ 0.7?</div>
+                        <div>│   ├─ YES → Proceed to ACT</div>
+                        <div>│   └─ NO → Investigate more (loop)</div>
+                    </div>
+                    <div class="ml-16">
+                        <div class="flex items-center">
+                            <div class="w-24 text-green-400">└─ ACT</div>
+                            <div class="flex-1 text-slate-400">Do the work (log actions)</div>
+                        </div>
+                    </div>
+                    <div class="ml-16">
+                        <div class="flex items-center">
+                            <div class="w-24 text-purple-400">└─ POSTFLIGHT</div>
+                            <div class="flex-1 text-slate-400">Measure learning (re-assess vectors)</div>
+                        </div>
+                    </div>
+                    <div class="ml-24 space-y-2 text-slate-500">
+                        <div>├─ Calibration: PREFLIGHT → POSTFLIGHT delta</div>
+                        <div>├─ Storage: reflexes table + git notes + JSON</div>
+                        <div>└─ Handoff report: ~238 tokens (98.8% reduction)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Principles -->
+    <section class="py-20 glass-card">
+        <div class="max-w-5xl mx-auto px-6">
+            <h2 class="text-4xl font-bold text-white mb-12 text-center">
+                Core Principles
+            </h2>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class=" rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-3">1. Genuine Self-Assessment</h3>
+                    <p class="text-slate-300">
+                        Rate what you ACTUALLY know right now, not what you hope to figure out. High uncertainty is GOOD - it triggers investigation.
+                    </p>
+                </div>
+
+                <div class=" rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-3">2. CHECK is a Gate</h3>
+                    <p class="text-slate-300">
+                        Not just another assessment - it's a decision point. Proceed with confidence or loop back to investigate.
+                    </p>
+                </div>
+
+                <div class=" rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-3">3. Observes, Doesn't Prescribe</h3>
+                    <p class="text-slate-300">
+                        CASCADE doesn't tell you how to think. It adds checkpoints to your natural workflow for explicit tracking.
+                    </p>
+                </div>
+
+                <div class=" rounded-xl p-6">
+                    <h3 class="text-xl font-bold text-white mb-3">4. Learning Over Speed</h3>
+                    <p class="text-slate-300">
+                        Better to investigate systematically and build real knowledge than rush through and hope you're right.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-20 text-white">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h2 class="text-4xl font-bold mb-6">
+                Ready to Start?
+            </h2>
+            <p class="text-xl mb-8 text-white/90">
+                Try CASCADE workflow in your next complex task
+            </p>
+            <div class="flex gap-4 justify-center">
+                <a href="/getting-started.html"
+                    class="glass-card text-indigo-600 px-8 py-4 rounded-lg font-semibold hover:bg-slate-100 transition-all transform hover:scale-105">
+                    Get Started
+                </a>
+                <a href="/developers/cli-interface.html"
+                    class="glass-card/10 border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:glass-card/20 transition-all">
+                    CLI Documentation
+                </a>
+            </div>
+        </div>
+    </section>
+    <Footer slot="footer" />
+</BaseLayout>

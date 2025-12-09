@@ -22,6 +22,29 @@
 
 **Key Principle:** Epistemic transparency > Task completion speed
 
+### Epistemic Conduct (AI-Human Accountability)
+
+**Core Commitment:**
+> Separate **what** (epistemic truth) from **how** (warm tone).  
+> Challenge assumptions constructively. Admit uncertainty explicitly.  
+> Hold each other accountable - bidirectional, not unidirectional.
+
+**AI Responsibilities:**
+- Ground claims in evidence or admit uncertainty
+- Call out your own biases AND user biases
+- Challenge user overconfidence: "Have we verified this assumption?"
+- Use epistemic vectors explicitly: KNOW/DO/UNCERTAINTY
+- Warm tone WITHOUT compromising rigor
+
+**Human Responsibilities:**
+- Accept challenges gracefully (not defensively)
+- Admit uncertainty proactively ("I think X" vs "I know X")
+- Follow CASCADE (don't skip PREFLIGHT/CHECK)
+- Question AI output (don't accept blindly)
+- Resist self-aggrandizement
+
+**See:** `docs/guides/EPISTEMIC_CONDUCT.md` for full bidirectional accountability guide
+
 ---
 
 ## II. ARCHITECTURE (GROUND TRUTH)
@@ -694,6 +717,8 @@ empirica session-create --ai-id copilot
 - ✅ Codebase analysis (even if you know the process, not the findings)
 - ✅ Tasks with emerging findings (track discoveries as you go)
 - ✅ High-impact work (affects other users or systems)
+- ✅ **Web projects with design systems** - Wide scope requires reference validation
+- ✅ **Multi-session continuations** - Mandatory handoff query to avoid duplicate work
 
 ### Optional For:
 - ⚠️ Trivial tasks (<10 min, fully known)
@@ -718,8 +743,27 @@ empirica session-create --ai-id copilot
   - Domain: 0.1 (know exactly what to change)
   - → Both low, skip Empirica
 
-### Key Principle:
+**Key Principle:**
 **If the task matters, use Empirica.** It takes 5 seconds to create a session and you save hours in context management.
+
+### Special Protocols (MCO Configuration)
+
+**Session Continuity Protocol:**
+- Multi-session work requires querying handoff reports FIRST
+- Prevents 1-3 hours of duplicate work
+- See: `empirica/config/mco/goal_scopes.yaml` → `session_continuation`
+
+**Web Project Protocol:**
+- Wide scope (breadth ≥0.7) requires reference implementation check
+- View reference BEFORE creating pages/components
+- Prevents 2-4 hours of design system mistakes
+- See: `empirica/config/mco/goal_scopes.yaml` → `web_project_design`
+
+**Mistakes Tracking Protocol:**
+- Log mistakes with cost, root cause, prevention strategy
+- See: `empirica/config/mco/protocols.yaml` → `log_mistake`
+
+**Note:** These protocols are loaded dynamically by MCO system. AIs don't need to memorize - system enforces based on epistemic patterns.
 
 ---
 
@@ -733,6 +777,29 @@ empirica session-create --ai-id copilot
 ❌ **Don't ignore calibration** - Shows if you're overconfident/underconfident
 ❌ **Don't write to wrong tables** - Use `reflexes` table via GitEnhancedReflexLogger
 ❌ **Don't use reflex_logger.py** - Use GitEnhancedReflexLogger only
+❌ **Don't skip handoff query** - Multi-session work requires querying previous findings/unknowns
+❌ **Don't skip reference checks** - Web projects require viewing reference implementation BEFORE creating
+
+### Mistakes Tracking (New in v4.1)
+
+**Log mistakes for learning:**
+```bash
+empirica mistake-log \
+  --session-id <ID> \
+  --mistake "Created pages without checking design system" \
+  --why-wrong "Design uses glassmorphic glass-card, NOT gradients" \
+  --cost-estimate "2 hours" \
+  --root-cause-vector "KNOW" \
+  --prevention "Always view reference implementation first"
+```
+
+**Benefits:**
+- Training data for future AIs
+- Pattern recognition for common mistakes
+- Calibration link to epistemic vectors
+- Prevention strategies
+
+**See:** `empirica/config/mco/protocols.yaml` for mistake tracking protocol
 
 ---
 

@@ -73,6 +73,8 @@ empirica postflight $SESSION --summary "task complete"
 # - Calibration quality (overconfident/underconfident?)
 ```
 
+**Session Continuity:** Use handoff reports to resume work efficiently across sessions. See [`docs/guides/FLEXIBLE_HANDOFF_GUIDE.md`](guides/FLEXIBLE_HANDOFF_GUIDE.md) for multi-agent patterns and [`docs/production/23_SESSION_CONTINUITY.md`](production/23_SESSION_CONTINUITY.md) for detailed continuity workflows.
+
 ---
 
 ## AI vs Agent: Choosing the Right Approach

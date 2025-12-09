@@ -68,6 +68,8 @@ db.store_vectors(
 
 **Key Feature:** CHECK can query `unknowns_summary()` for evidence-based decisions
 
+**Multi-Agent Workflow:** CHECK phase enables investigation handoffs (PREFLIGHT→CHECK). See [`FLEXIBLE_HANDOFF_GUIDE.md`](../guides/FLEXIBLE_HANDOFF_GUIDE.md) for specialist handoff patterns.
+
 **Example:**
 ```python
 # After investigation, before implementation
@@ -153,9 +155,18 @@ db.store_vectors(
     reasoning="Learned OAuth2 flow, PKCE implementation, token management"
 )
 
-# Include goal tree in handoff
-goal_tree = db.get_goal_tree(session_id)
-# Next AI session can see complete investigation record
+# Generate handoff report for next session
+from empirica.core.handoff import EpistemicHandoffReportGenerator
+generator = EpistemicHandoffReportGenerator()
+
+handoff = generator.generate_handoff_report(
+    session_id=session_id,
+    task_summary="Implemented OAuth2 with PKCE",
+    key_findings=["OAuth2 flow working", "PKCE validated"],
+    next_session_context="Ready for testing phase"
+)
+
+# See FLEXIBLE_HANDOFF_GUIDE.md for handoff types and multi-agent patterns
 ```
 
 **Calibration:**

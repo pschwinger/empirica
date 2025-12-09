@@ -46,30 +46,31 @@ def handle_investigate_log_command(args):
             print("❌ No active cascade found. Run preflight first.")
             db.close()
             return
-        
+
+        # Extract cascade data
         cascade_id, context_json_str = result
         context = json.loads(context_json_str) if context_json_str else {}
-        
+
         # Append to investigation log
         context.setdefault("investigation_log", []).append({
             "timestamp": datetime.utcnow().isoformat(),
             "findings": findings,
             "evidence": evidence
         })
-        
+
         # Save to SQLite
         cursor.execute("""
-            UPDATE cascades 
+            UPDATE cascades
             SET context_json = ?, investigate_completed = 1
             WHERE cascade_id = ?
         """, (json.dumps(context), cascade_id))
-        
+
         db.conn.commit()
         db.close()
-        
+
         # Optional: Save to git notes
         try:
-            note_ref = f"refs/notes/empirica/cascades/{session_id}/{cascade_id}"
+            note_ref = f"refs/notes/empirica/cascades/{args.session_id}/{cascade_id}"
             note_data = {
                 "type": "investigate",
                 "findings": findings,
@@ -77,7 +78,7 @@ def handle_investigate_log_command(args):
                 "timestamp": datetime.utcnow().isoformat()
             }
             subprocess.run(
-                ['git', 'notes', '--ref', note_ref, 'append', '-m', 
+                ['git', 'notes', '--ref', note_ref, 'append', '-m',
                  f"INVESTIGATE: {json.dumps(note_data)}", 'HEAD'],
                 capture_output=True,
                 timeout=5

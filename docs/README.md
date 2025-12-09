@@ -30,6 +30,7 @@ For comprehensive documentation, see:
   - [03_BASIC_USAGE.md](production/03_BASIC_USAGE.md) - Detailed usage
   - [05_EPISTEMIC_VECTORS.md](production/05_EPISTEMIC_VECTORS.md) - 13 vectors explained
   - [06_CASCADE_FLOW.md](production/06_CASCADE_FLOW.md) - PREFLIGHT → CHECK → POSTFLIGHT
+  - [23_SESSION_CONTINUITY.md](production/23_SESSION_CONTINUITY.md) - Session resumption & handoffs
   - [13_PYTHON_API.md](production/13_PYTHON_API.md) - Python API guide
   - [19_API_REFERENCE.md](production/19_API_REFERENCE.md) - API overview
   - [19_API_REFERENCE_COMPLETE.md](production/19_API_REFERENCE_COMPLETE.md) - **Complete Python API (52 methods)** ⭐
@@ -45,6 +46,9 @@ For comprehensive documentation, see:
 
 - **[architecture/](architecture/)** - System architecture and design
 - **[guides/](guides/)** - Workflow guides and examples
+  - [FLEXIBLE_HANDOFF_GUIDE.md](guides/FLEXIBLE_HANDOFF_GUIDE.md) - Multi-agent coordination patterns
+  - [GOAL_TREE_USAGE_GUIDE.md](guides/GOAL_TREE_USAGE_GUIDE.md) - Investigation tracking
+  - ... and more workflow guides
 - **[reference/](reference/)** - Command reference and changelog
 - **[system-prompts/](system-prompts/)** - AI system prompt configuration
 

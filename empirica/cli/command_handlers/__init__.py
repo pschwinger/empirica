@@ -72,6 +72,20 @@ from .handoff_commands import (
     handle_handoff_create_command,
     handle_handoff_query_command
 )
+from .mistake_commands import (
+    handle_mistake_log_command,
+    handle_mistake_query_command
+)
+from .project_commands import (
+    handle_project_create_command,
+    handle_project_handoff_command,
+    handle_project_list_command,
+    handle_project_bootstrap_command,
+    handle_finding_log_command,
+    handle_unknown_log_command,
+    handle_deadend_log_command,
+    handle_refdoc_add_command
+)
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
     handle_monitor_reset_command, handle_monitor_cost_command
@@ -167,6 +181,20 @@ __all__ = [
     # Handoff Reports commands (Phase 1.6)
     'handle_handoff_create_command',
     'handle_handoff_query_command',
+    
+    # Mistake Logging commands (Learning from Failures)
+    'handle_mistake_log_command',
+    'handle_mistake_query_command',
+    
+    # Project Tracking commands (Multi-repo/multi-session)
+    'handle_project_create_command',
+    'handle_project_handoff_command',
+    'handle_project_list_command',
+    'handle_project_bootstrap_command',
+    'handle_finding_log_command',
+    'handle_unknown_log_command',
+    'handle_deadend_log_command',
+    'handle_refdoc_add_command',
     
     # Monitor commands
     'handle_monitor_command',

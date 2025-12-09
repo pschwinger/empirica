@@ -501,6 +501,111 @@ protocols:
       - "Goal must exist and be resumable"
       - "Epistemic state transfer must be complete"
 
+  # ---------------------------------------------------------------------------
+  # MISTAKES TRACKING PROTOCOL (Learning from Failures)
+  # ---------------------------------------------------------------------------
+  log_mistake:
+    name: "Log Mistake for Learning"
+    description: "Record mistake with cost, root cause, and prevention strategy"
+    category: "learning"
+    
+    input_schema:
+      type: "object"
+      required: ["session_id", "mistake", "why_wrong"]
+      properties:
+        session_id:
+          type: "string"
+          description: "Session identifier"
+        goal_id:
+          type: "string"
+          description: "Optional goal identifier this mistake relates to"
+        mistake:
+          type: "string"
+          description: "What was done wrong"
+        why_wrong:
+          type: "string"
+          description: "Explanation of why it was wrong"
+        cost_estimate:
+          type: "string"
+          description: "Estimated time/effort wasted (e.g., '2 hours', '30 minutes')"
+        root_cause_vector:
+          type: "string"
+          enum: ["KNOW", "DO", "CONTEXT", "CLARITY", "COHERENCE", "SIGNAL", "DENSITY", "STATE", "CHANGE", "COMPLETION", "IMPACT", "UNCERTAINTY"]
+          description: "Epistemic vector that caused the mistake"
+        prevention:
+          type: "string"
+          description: "How to prevent this mistake in the future"
+    
+    output_schema:
+      type: "object"
+      required: ["mistake_id", "success"]
+      properties:
+        mistake_id:
+          type: "string"
+          description: "Generated mistake identifier"
+        success:
+          type: "boolean"
+          description: "Whether mistake was logged successfully"
+        message:
+          type: "string"
+          description: "Logging status message"
+    
+    validation_rules:
+      - "Mistake description must be specific and actionable"
+      - "Why_wrong must explain epistemic failure"
+      - "Prevention must provide concrete strategy"
+      - "Root cause vector must map to epistemic gap"
+
+  query_mistakes:
+    name: "Query Logged Mistakes"
+    description: "Retrieve mistakes for learning and calibration"
+    category: "learning"
+    
+    input_schema:
+      type: "object"
+      properties:
+        session_id:
+          type: "string"
+          description: "Filter by session identifier"
+        goal_id:
+          type: "string"
+          description: "Filter by goal identifier"
+        root_cause_vector:
+          type: "string"
+          description: "Filter by epistemic vector"
+        limit:
+          type: "integer"
+          minimum: 1
+          maximum: 100
+          description: "Maximum results to return"
+    
+    output_schema:
+      type: "object"
+      required: ["mistakes", "count", "success"]
+      properties:
+        mistakes:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              mistake_id: {type: "string"}
+              mistake: {type: "string"}
+              why_wrong: {type: "string"}
+              cost_estimate: {type: "string"}
+              root_cause_vector: {type: "string"}
+              prevention: {type: "string"}
+              timestamp: {type: "number"}
+        count:
+          type: "integer"
+          description: "Total mistakes found"
+        success:
+          type: "boolean"
+          description: "Whether query was successful"
+    
+    validation_rules:
+      - "At least one filter must be provided"
+      - "Results ordered by timestamp descending"
+
 # =============================================================================
 # PROTOCOL VALIDATION RULES
 # =============================================================================

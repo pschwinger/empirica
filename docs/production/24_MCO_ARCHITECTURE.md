@@ -30,7 +30,7 @@ Personas define behavioral patterns and threshold adjustments for different work
 - `researcher` - Exploration-focused, higher uncertainty tolerance
 - `implementer` - Execution-focused, requires higher confidence
 - `analyst` - Analysis-focused, systematic investigation
-- `coordinator` - Multi-agent coordination, collaboration emphasis
+- `coordinator` - Multi-agent coordination, collaboration emphasis (see [`../guides/FLEXIBLE_HANDOFF_GUIDE.md`](../guides/FLEXIBLE_HANDOFF_GUIDE.md) for handoff patterns)
 - `learner` - Learning mode, lower initial confidence expectations
 - `expert` - Domain expert mode, higher baseline confidence
 

@@ -52,6 +52,11 @@ class SubTask:
     created_timestamp: float = field(default_factory=time.time)
     completed_timestamp: Optional[float] = None
     
+    # Epistemic investigation tracking (v4.0)
+    findings: List[str] = field(default_factory=list)  # Validated discoveries
+    unknowns: List[str] = field(default_factory=list)  # Remaining questions
+    dead_ends: List[str] = field(default_factory=list)  # Failed approaches
+    
     @staticmethod
     def create(
         goal_id: str,
@@ -83,7 +88,10 @@ class SubTask:
             'completion_evidence': self.completion_evidence,
             'notes': self.notes,
             'created_timestamp': self.created_timestamp,
-            'completed_timestamp': self.completed_timestamp
+            'completed_timestamp': self.completed_timestamp,
+            'findings': self.findings,
+            'unknowns': self.unknowns,
+            'dead_ends': self.dead_ends
         }
     
     @staticmethod
@@ -101,7 +109,10 @@ class SubTask:
             completion_evidence=data.get('completion_evidence'),
             notes=data.get('notes', ''),
             created_timestamp=data.get('created_timestamp', time.time()),
-            completed_timestamp=data.get('completed_timestamp')
+            completed_timestamp=data.get('completed_timestamp'),
+            findings=data.get('findings', []),
+            unknowns=data.get('unknowns', []),
+            dead_ends=data.get('dead_ends', [])
         )
 
 

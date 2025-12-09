@@ -134,6 +134,79 @@ scope_recommendations:
     
     rationale: "Production work requires balanced scope with standards"
 
+  # ---------------------------------------------------------------------------
+  # WEB PROJECT / DESIGN WORK = WIDE SCOPE + MANDATORY REFERENCE CHECK
+  # ---------------------------------------------------------------------------
+  web_project_design:
+    description: "Web development with design systems and multi-file components"
+    epistemic_pattern:
+      know: {max: 0.50}         # Often unfamiliar with design system
+      context: {min: 0.60}      # Need good context awareness
+      clarity: {max: 0.60}      # Design systems can be unclear initially
+      breadth_indicator: {min: 0.70}  # Wide scope across many files
+    
+    recommended_scope:
+      breadth: 0.75             # Wide scope - many files affected
+      duration: 0.6             # Medium-long duration
+      coordination: 0.4         # Moderate coordination (design + dev)
+    
+    protocol_requirements:
+      mandatory_handoff_query: true     # MUST query handoff reports first
+      mandatory_reference_check: true   # MUST view reference implementation first
+      preflight_enforcement: true       # MUST run PREFLIGHT if KNOW < 0.5 or UNCERTAINTY > 0.7
+    
+    workflow:
+      - "1. Query handoff reports for design system knowledge"
+      - "2. View reference implementation (e.g., index.astro) BEFORE creating"
+      - "3. Extract patterns (glassmorphic design, color palette, component structure)"
+      - "4. PREFLIGHT assessment if KNOW < 0.5 or UNCERTAINTY > 0.7"
+      - "5. Create with validated patterns, not assumptions"
+    
+    rationale: "Wide scope web work requires reference validation to prevent 2+ hour mistakes from wrong assumptions about design systems"
+    
+    mistake_prevention:
+      common_mistake: "Creating pages/components without checking design system first"
+      root_cause_vector: "KNOW"
+      typical_cost: "2-4 hours of rework"
+      prevention: "ALWAYS view reference implementation BEFORE creating new pages/components"
+
+  # ---------------------------------------------------------------------------
+  # MULTI-SESSION CONTINUATION = MANDATORY HANDOFF QUERY
+  # ---------------------------------------------------------------------------
+  session_continuation:
+    description: "Resuming work from previous session (multi-session project)"
+    epistemic_pattern:
+      context: {max: 0.50}      # Limited context from previous session
+      know: {max: 0.40}         # Don't know what previous AI discovered
+      uncertainty: {min: 0.60}  # High uncertainty about prior work
+    
+    recommended_scope:
+      breadth: 0.6              # Inherit scope from previous session
+      duration: 0.5             # Continue duration estimate
+      coordination: 0.5         # Multi-session implies coordination
+    
+    protocol_requirements:
+      mandatory_handoff_query: true     # MUST query handoff before starting
+      mandatory_goals_query: true       # MUST check goals/subtasks status
+      preflight_enforcement: true       # MUST run PREFLIGHT if KNOW < 0.5
+    
+    workflow:
+      - "1. Query handoff reports: empirica handoff-query --session-id <ID>"
+      - "2. Review key_findings (what was learned)"
+      - "3. Review remaining_unknowns (what needs investigation)"
+      - "4. Query goals/subtasks: empirica goals-list --session-id <ID>"
+      - "5. Check completed vs pending subtasks"
+      - "6. PREFLIGHT assessment with inherited context"
+      - "7. Continue work from stopping point, not from scratch"
+    
+    rationale: "Multi-session work requires explicit continuity protocol to avoid redoing completed work and losing discovered knowledge"
+    
+    mistake_prevention:
+      common_mistake: "Starting new session without querying handoff/goals"
+      root_cause_vector: "CONTEXT"
+      typical_cost: "1-3 hours of duplicate work or lost progress"
+      prevention: "MANDATORY handoff query at session start for multi-session projects"
+
 # =============================================================================
 # DYNAMIC ADJUSTMENT RULES
 # =============================================================================

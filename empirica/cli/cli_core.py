@@ -463,6 +463,119 @@ def _add_checkpoint_parsers(subparsers):
     handoff_query_parser.add_argument('--limit', type=int, default=5, help='Number of results (default: 5)')
     handoff_query_parser.add_argument('--output', choices=['text', 'json'], default='text', help='Output format')
 
+    # Mistake Logging Commands (Learning from Failures)
+    
+    # Mistake log command
+    mistake_log_parser = subparsers.add_parser(
+        'mistake-log',
+        help='Log a mistake for learning and future prevention'
+    )
+    mistake_log_parser.add_argument('--session-id', required=True, help='Session UUID')
+    mistake_log_parser.add_argument('--mistake', required=True, help='What was done wrong')
+    mistake_log_parser.add_argument('--why-wrong', required=True, help='Explanation of why it was wrong')
+    mistake_log_parser.add_argument('--cost-estimate', help='Estimated time/effort wasted (e.g., "2 hours")')
+    mistake_log_parser.add_argument('--root-cause-vector', help='Epistemic vector that caused the mistake (e.g., "KNOW", "CONTEXT")')
+    mistake_log_parser.add_argument('--prevention', help='How to prevent this mistake in the future')
+    mistake_log_parser.add_argument('--goal-id', help='Optional goal identifier this mistake relates to')
+    mistake_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Mistake query command
+    mistake_query_parser = subparsers.add_parser(
+        'mistake-query',
+        help='Query logged mistakes'
+    )
+    mistake_query_parser.add_argument('--session-id', help='Filter by session UUID')
+    mistake_query_parser.add_argument('--goal-id', help='Filter by goal UUID')
+    mistake_query_parser.add_argument('--limit', type=int, default=10, help='Number of results (default: 10)')
+    mistake_query_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+
+    # Project Tracking Commands (Multi-repo/multi-session)
+    
+    # Project create command
+    project_create_parser = subparsers.add_parser(
+        'project-create',
+        help='Create a new project for multi-repo tracking'
+    )
+    project_create_parser.add_argument('--name', required=True, help='Project name')
+    project_create_parser.add_argument('--description', help='Project description')
+    project_create_parser.add_argument('--repos', help='JSON array of repository names (e.g., \'["empirica", "empirica-dev"]\')')
+    project_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Project handoff command
+    project_handoff_parser = subparsers.add_parser(
+        'project-handoff',
+        help='Create project-level handoff report'
+    )
+    project_handoff_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_handoff_parser.add_argument('--summary', required=True, help='Project summary')
+    project_handoff_parser.add_argument('--key-decisions', help='JSON array of key decisions')
+    project_handoff_parser.add_argument('--patterns', help='JSON array of patterns discovered')
+    project_handoff_parser.add_argument('--remaining-work', help='JSON array of remaining work')
+    project_handoff_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Project list command
+    project_list_parser = subparsers.add_parser(
+        'project-list',
+        help='List all projects'
+    )
+    project_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Project bootstrap command
+    project_bootstrap_parser = subparsers.add_parser(
+        'project-bootstrap',
+        help='Show epistemic breadcrumbs for project'
+    )
+    project_bootstrap_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_bootstrap_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Finding log command
+    finding_log_parser = subparsers.add_parser(
+        'finding-log',
+        help='Log a project finding (what was learned/discovered)'
+    )
+    finding_log_parser.add_argument('--project-id', required=True, help='Project UUID')
+    finding_log_parser.add_argument('--session-id', required=True, help='Session UUID')
+    finding_log_parser.add_argument('--finding', required=True, help='What was learned/discovered')
+    finding_log_parser.add_argument('--goal-id', help='Optional goal UUID')
+    finding_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
+    finding_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Unknown log command
+    unknown_log_parser = subparsers.add_parser(
+        'unknown-log',
+        help='Log a project unknown (what\'s still unclear)'
+    )
+    unknown_log_parser.add_argument('--project-id', required=True, help='Project UUID')
+    unknown_log_parser.add_argument('--session-id', required=True, help='Session UUID')
+    unknown_log_parser.add_argument('--unknown', required=True, help='What is unclear/unknown')
+    unknown_log_parser.add_argument('--goal-id', help='Optional goal UUID')
+    unknown_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
+    unknown_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Dead end log command
+    deadend_log_parser = subparsers.add_parser(
+        'deadend-log',
+        help='Log a project dead end (what didn\'t work)'
+    )
+    deadend_log_parser.add_argument('--project-id', required=True, help='Project UUID')
+    deadend_log_parser.add_argument('--session-id', required=True, help='Session UUID')
+    deadend_log_parser.add_argument('--approach', required=True, help='What approach was tried')
+    deadend_log_parser.add_argument('--why-failed', required=True, help='Why it failed')
+    deadend_log_parser.add_argument('--goal-id', help='Optional goal UUID')
+    deadend_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
+    deadend_log_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
+    # Reference doc add command
+    refdoc_add_parser = subparsers.add_parser(
+        'refdoc-add',
+        help='Add a reference document to project'
+    )
+    refdoc_add_parser.add_argument('--project-id', required=True, help='Project UUID')
+    refdoc_add_parser.add_argument('--doc-path', required=True, help='Document path')
+    refdoc_add_parser.add_argument('--doc-type', help='Document type (architecture, guide, api, design)')
+    refdoc_add_parser.add_argument('--description', help='Document description')
+    refdoc_add_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+
     # NEW: Goal Management Commands (MCP v2 Integration)
     
     # Goals create command
@@ -730,6 +843,20 @@ def main(args=None):
             # Handoff Reports commands (Phase 1.6)
             'handoff-create': handle_handoff_create_command,
             'handoff-query': handle_handoff_query_command,
+            
+            # Mistake Logging commands (Learning from Failures)
+            'mistake-log': handle_mistake_log_command,
+            'mistake-query': handle_mistake_query_command,
+            
+            # Project Tracking commands (Multi-repo/multi-session)
+            'project-create': handle_project_create_command,
+            'project-handoff': handle_project_handoff_command,
+            'project-list': handle_project_list_command,
+            'project-bootstrap': handle_project_bootstrap_command,
+            'finding-log': handle_finding_log_command,
+            'unknown-log': handle_unknown_log_command,
+            'deadend-log': handle_deadend_log_command,
+            'refdoc-add': handle_refdoc_add_command,
             
             # User interface commands (for human users)
             'onboard': handle_onboard_command,

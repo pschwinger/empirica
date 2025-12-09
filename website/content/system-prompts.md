@@ -1,116 +1,365 @@
-# System Prompts
+# System Prompts - Customize Empirica for Your Use Case
 
-**Defining AI Behavior and Role**
+**When and how to customize the canonical Empirica system prompt**
 
-[← Back to Skills](skills.md) | [CLI Interface](cli-interface.md) | [AI vs Agent](ai_vs_agent.md)
-
----
-
-## What Are System Prompts?
-
-System prompts are the foundational instructions that define an AI's persona, capabilities, constraints, and operational mode. In Empirica, system prompts are not just static text but **dynamic configurations** that align the AI with the Epistemic Framework.
-
-**Key Functions:**
-- **Role Definition:** Sets the AI as a "Collaborative Partner" or "Execution Agent".
-- **Epistemic Enforcement:** Mandates the use of the 13-vector assessment.
-- **Workflow Mandates:** Enforces the CASCADE (PREFLIGHT → POSTFLIGHT) flow.
-- **Tool Awareness:** Informs the AI about available MCP tools and CLI commands.
+[Back to Home](index.md) | [Architecture →](architecture.md)
 
 ---
 
-## Why System Prompts Matter
+## Default: Use As-Is
 
-Without a proper system prompt, an LLM is a generic text generator. With an Empirica system prompt, it becomes a **metacognitive agent**.
+**99% of users should use the canonical prompt without modification.**
 
-**The Empirica Difference:**
-Standard prompts often encourage "helpfulness" at the cost of accuracy. Empirica prompts prioritize **epistemic honesty**—it is explicitly instructed to say "I don't know" and investigate, rather than hallucinate a helpful answer.
+The canonical prompt is designed to work for:
+- ✅ All AI models (Claude, Gemini, Qwen, GPT-4, etc.)
+- ✅ All task types (analysis, implementation, research)
+- ✅ All experience levels (beginner to expert)
+
+**Location:** `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md`
 
 ---
 
-## Role-Based Prompts
+## When to Customize
 
-Empirica provides optimized prompts for different AI roles.
+### 1. Domain-Specific Expertise Required
 
-### 1. Collaborative AI (High Reasoning)
-**Target:** Claude 3.5 Sonnet, GPT-4o, o1
-**Focus:** Planning, Architecture, Deep Reasoning
+**Scenario:** AI needs specialized domain knowledge  
+**Examples:** Medical research, legal analysis, financial modeling
+
+**Customization Pattern:**
 
 ```markdown
-You are a collaborative AI partner working WITH the user.
-You have high autonomy and reasoning capability.
+## I. ROLE
+**Role:** [Domain] Specialist with epistemic grounding
+**Domain:** [Specific expertise area]
+**Focus:** [Domain-specific priorities]
 
-MANDATE:
-1. Use the full CASCADE workflow (PREFLIGHT -> POSTFLIGHT).
-2. Assess your knowledge state honestly using the 13-vector framework.
-3. Ask clarifying questions when CLARITY is low.
-4. Plan architecture and make design decisions.
-5. Create goals and delegate subtasks to agents when appropriate.
-6. Track your epistemic growth and learning.
+Example:
+**Role:** Clinical Research Specialist with epistemic grounding
+**Domain:** Randomized controlled trials, systematic reviews, meta-analysis
+**Focus:** Evidence-based medicine, statistical rigor, CONSORT compliance
 ```
 
-### 2. Execution Agent (Action-Based)
-**Target:** Claude Haiku, GPT-4o-mini, Local Models
-**Focus:** Speed, Efficiency, Specific Tasks
+**What to keep:** All CASCADE workflow sections unchanged
+
+---
+
+### 2. Restricted Tool Environment
+
+**Scenario:** Limited MCP tool access (e.g., air-gapped environment)  
+**Examples:** Secure environments, custom deployments
+
+**Customization Pattern:**
 
 ```markdown
-You are an execution agent focused on completing specific tasks.
-You receive well-defined subtasks from lead AIs.
+## IV. TOOLS & PATTERNS
 
-MANDATE:
-1. Use simplified CASCADE (ACT-focused).
-2. Execute subtasks efficiently.
-3. Report evidence clearly upon completion.
-4. Ask for clarification ONLY if the task is blocked.
-5. Optimize for speed and efficiency.
+### Available MCP Tools (Limited):
+- **Session:** `create_session`, `get_epistemic_state`
+- **CASCADE:** `execute_preflight`, `execute_postflight`
+- **Note:** Git integration unavailable in this environment
+
+### Fallback Strategy:
+- Use SQLite for all persistence
+- Manual session continuity via handoff reports
+- No cross-AI discovery (single-agent mode)
+```
+
+**What to keep:** Epistemic principles and vector definitions unchanged
+
+---
+
+### 3. Custom Risk Thresholds
+
+**Scenario:** Team has different risk tolerance  
+**Examples:** High-stakes environments (medical, financial) or experimental research
+
+**High-Stakes (Conservative Thresholds):**
+
+```markdown
+### Decision Logic (High-Stakes)
+Comprehension: clarity ≥0.8 AND signal ≥0.7  # Stricter
+Foundation: know ≥0.7 AND context ≥0.8
+
+Drift Detection:
+- Drops >0.15 → Investigate  # More sensitive
+- Critical drift >0.3 → Stop immediately
+```
+
+**Experimental (Permissive Thresholds):**
+
+```markdown
+### Decision Logic (Experimental)
+Comprehension: clarity ≥0.5 OR signal ≥0.6  # More exploratory
+Foundation: know ≥0.4 OR context ≥0.5
+
+Drift Detection:
+- Drops >0.4 → Investigate  # Less sensitive
+- Critical drift >0.6 → Consider stopping
 ```
 
 ---
 
-## Dynamic System Prompts (Cognitive Vault)
+## Available System Prompts
 
-*Feature in Development*
+### 1. Canonical System Prompt (Recommended)
 
-Empirica is moving towards **Dynamic System Prompts** managed by the **Cognitive Vault**. Instead of a single static prompt, the system injects context-aware instructions based on the current task.
+**File:** `docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md`
 
-**Workflow:**
-1.  **Task Analysis:** User submits a task.
-2.  **Context Retrieval:** System identifies relevant domain (e.g., "Python Coding").
-3.  **Prompt Assembly:**
-    *   Base Persona (Collaborative AI)
-    *   + Epistemic Rules (13-Vectors)
-    *   + Domain Skills (Python Best Practices)
-    *   + Current Context (Project File Structure)
-4.  **Injection:** The assembled prompt is sent to the LLM.
+**Use For:** General-purpose AI work  
+**Length:** ~800 lines (comprehensive)  
+**Features:**
+- Full CASCADE workflow
+- 13 epistemic vectors
+- Goals & subtasks
+- Git integration
+- Mistakes tracking
+- Edit guard (metacognitive editing)
+
+**Best For:** Production use, multi-session work, complex tasks
 
 ---
 
-## Using System Prompts
+### 2. Minimalist System Prompt
 
-### In CLI
-When bootstrapping a session, Empirica automatically applies the correct system prompt for the selected profile.
+**File:** `docs/system-prompts/MINIMALIST_SYSTEM_PROMPT.md`
+
+**Use For:** Simple tasks, quick experiments  
+**Length:** ~200 lines (essential only)  
+**Features:**
+- Core CASCADE workflow
+- 13 vectors (definitions only)
+- No goals/subtasks
+- No git integration
+
+**Best For:** Single-session tasks, learning Empirica, minimal overhead
+
+---
+
+### 3. Web Edition Prompt
+
+**File:** `docs/system-prompts/EMPIRICA_WEB_EDITION.md`
+
+**Use For:** Browser-based AI assistants  
+**Length:** ~400 lines (web-optimized)  
+**Features:**
+- Browser localStorage instead of SQLite
+- No git integration
+- Simplified continuity
+- Mobile-friendly
+
+**Best For:** Web-based deployments, no file system access
+
+---
+
+### 4. Gemini-Optimized Prompt
+
+**File:** `docs/system-prompts/GEMINI.md`
+
+**Use For:** Google Gemini models  
+**Length:** ~600 lines (Gemini-specific)  
+**Features:**
+- Gemini-specific tool calling patterns
+- Adjusted for Gemini's strengths (multimodal, long context)
+- Optimized prompt structure for Gemini
+
+**Best For:** Using Empirica with Gemini models
+
+---
+
+## Customization Workflow
+
+### Step 1: Choose Base Prompt
 
 ```bash
-# Applies "high_reasoning_collaborative" prompt
-empirica session-create --profile high_reasoning_collaborative
+# Copy canonical prompt as starting point
+cp docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md \
+   docs/system-prompts/MY_CUSTOM_PROMPT.md
 ```
 
-### In MCP (Claude Desktop)
-You can configure Claude Desktop to use Empirica's system prompts by adding them to your project configuration or simply by instructing Claude to "Act as an Empirica Agent" once the MCP server is connected. The `get_empirica_introduction` tool also serves to prime the AI with the necessary context.
+### Step 2: Identify What to Change
+
+**Safe to customize:**
+- ✅ Role and domain expertise (Section I)
+- ✅ Tool availability (Section IV)
+- ✅ Risk thresholds (Section VI)
+- ✅ Examples and use cases
+- ✅ Integration patterns
+
+**Do NOT change:**
+- ❌ 13 vector definitions (Section II)
+- ❌ CASCADE phase sequence (PREFLIGHT → CHECK → POSTFLIGHT)
+- ❌ Storage architecture (reflexes table, git notes, JSON)
+- ❌ Core epistemic principles
+
+### Step 3: Test Thoroughly
+
+```bash
+# Create test session
+empirica session-create --ai-id test-custom-prompt
+
+# Run PREFLIGHT with custom prompt
+# Verify vectors are stored correctly
+empirica sessions-show --session-id <ID>
+
+# Check storage layers
+sqlite3 ~/.empirica/sessions/sessions.db \
+  "SELECT * FROM reflexes WHERE session_id='<ID>'"
+```
+
+### Step 4: Validate Calibration
+
+Run 5-10 sessions and check:
+- ✅ Vectors stored correctly
+- ✅ CASCADE phases complete
+- ✅ Checkpoints/handoffs work
+- ✅ Calibration tracking functional
 
 ---
 
-## Best Practices for Custom Prompts
+## Common Customization Patterns
 
-If you are writing custom system prompts to work with Empirica:
+### Pattern 1: Add Domain Expertise
 
-1.  **Enforce the Vectors:** Explicitly list the 13 vectors and require the AI to use them.
-2.  **Mandate Uncertainty Check:** "If UNCERTAINTY > 0.5, you MUST investigate."
-3.  **Define Output Format:** Require structured outputs (JSON/Markdown) for assessments.
-4.  **Prevent Hallucination:** "It is better to report a gap than to guess."
+```markdown
+## I. ROLE & DOMAIN
+
+**Base Role:** AI assistant with epistemic self-awareness (Empirica)
+
+**Domain Specialization:** [Your Domain]
+- [Expertise 1]
+- [Expertise 2]
+- [Expertise 3]
+
+**Domain-Specific Epistemic Concerns:**
+- [What counts as "knowing" in your domain?]
+- [What uncertainties matter most?]
+- [What evidence is required for claims?]
+
+## II. DOMAIN VECTORS (Extended)
+
+In addition to the 13 core vectors, track:
+- **domain_expertise:** [0.0-1.0] - Domain-specific knowledge depth
+- **domain_validation:** [0.0-1.0] - Evidence quality by domain standards
+
+**Store these in reflex_data JSON, not as separate SQLite columns**
+```
 
 ---
 
-**Next Steps:**
-- [See AI vs Agent Patterns](ai_vs_agent.md) for detailed role comparisons
-- [Explore Skills](skills.md) that reinforce these prompts
-- [Check Architecture](architecture.md) to see how prompts fit into the system
+### Pattern 2: Adjust Workflow for Speed
+
+```markdown
+## III. SIMPLIFIED CASCADE (Fast Mode)
+
+**For tasks <30 minutes:**
+
+1. **Quick PREFLIGHT** (2-3 vectors only)
+   - know, do, uncertainty (skip others)
+   
+2. **Skip CHECK** (only for short tasks)
+
+3. **Quick POSTFLIGHT** (same 3 vectors)
+   - Measure learning delta
+
+**Note:** Still writes to reflexes table for calibration tracking
+```
+
+---
+
+### Pattern 3: Multi-Agent Coordination
+
+```markdown
+## IV. MULTI-AGENT COORDINATION
+
+**Your Role in Team:** [Lead/Support/Specialist]
+
+**Coordination Protocol:**
+1. Query handoffs from other AIs: `query_handoff_reports(ai_id="<ID>")`
+2. Discover goals: `discover_goals(from_ai_id="<ID>")`
+3. Resume goals if needed: `resume_goal(goal_id="<ID>")`
+4. Create handoff for next AI: `create_handoff_report(...)`
+
+**Critical:** Always query before starting to avoid duplicate work
+```
+
+---
+
+## Testing Your Custom Prompt
+
+### Test Suite
+
+```bash
+# 1. Session creation
+empirica session-create --ai-id test
+
+# 2. PREFLIGHT (should work unchanged)
+empirica preflight --session-id <ID> --prompt "Test task"
+
+# 3. Submit vectors (verify all 13 stored)
+empirica preflight-submit --session-id <ID> \
+  --vectors '{"engagement":0.8,"know":0.6,...}' \
+  --reasoning "Test"
+
+# 4. Check storage
+empirica sessions-show --session-id <ID> --output json | jq '.epistemic_state'
+
+# 5. Verify git notes (if using git integration)
+git notes --ref=empirica/checkpoints/<SESSION_ID> show HEAD
+```
+
+---
+
+## Getting Help
+
+### Resources
+
+- **Customization Guide:** `docs/system-prompts/CUSTOMIZATION_GUIDE.md`
+- **Examples:** `docs/system-prompts/` (see different variants)
+- **Architecture:** `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`
+
+### Community
+
+- **Discord:** [Join Community](https://discord.gg/collaborative-ai)
+- **GitHub Discussions:** [Ask Questions](https://github.com/Nubaeon/empirica/discussions)
+- **Issues:** [Report Problems](https://github.com/Nubaeon/empirica/issues)
+
+---
+
+## Best Practices
+
+### ✅ Do
+
+- Start with canonical prompt
+- Test extensively before deploying
+- Document your changes
+- Share successful customizations with community
+- Keep epistemic principles intact
+
+### ❌ Don't
+
+- Change vector definitions
+- Skip CASCADE phases
+- Modify storage architecture
+- Remove epistemic transparency
+- Guess at thresholds (test empirically)
+
+---
+
+## Next Steps
+
+1. **Choose:** Select appropriate base prompt
+2. **Customize:** Make minimal changes for your use case
+3. **Test:** Run test sessions and validate
+4. **Deploy:** Use in production with monitoring
+5. **Share:** Contribute back to community
+
+**Learn More:**
+- [Getting Started](getting-started.md) - Basics
+- [CASCADE Workflow](how-it-works.md) - Core concepts
+- [Architecture](architecture.md) - Technical details
+- [Examples](examples.md) - Real-world use cases
+
+---
+
+**Customize when needed, but remember: epistemic transparency is the core principle. Don't compromise it.** 🧠

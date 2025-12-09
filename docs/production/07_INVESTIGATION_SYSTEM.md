@@ -20,6 +20,7 @@ Investigation is part of the implicit CASCADE - AI self-assesses "do I need to i
 - Investigation work tracked via subtasks
 - Progress stored in git checkpoints (automatic)
 - Cross-AI: AI-2 can resume AI-1's investigation via goal discovery
+- Multi-agent handoff: Use investigation handoffs (PREFLIGHT→CHECK) for specialist patterns (see [`../guides/FLEXIBLE_HANDOFF_GUIDE.md`](../guides/FLEXIBLE_HANDOFF_GUIDE.md))
 
 **Approach:** Strategic guidance (Approach B) - suggestive, not controlling. Configurable thresholds via `thresholds.yaml`, `goal_scopes.yaml`.
 

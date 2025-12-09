@@ -184,6 +184,12 @@ class SessionDatabase:
         except sqlite3.OperationalError:
             pass  # Column already exists
 
+        # Migration for sessions table: Add project_id column if missing
+        try:
+            cursor.execute("ALTER TABLE sessions ADD COLUMN project_id TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
         # Note: Deprecated tables (epistemic_assessments, preflight_assessments,
         # postflight_assessments, check_phase_assessments) have been removed.
         # All epistemic data is now stored in the unified reflexes table.
@@ -433,6 +439,142 @@ class SessionDatabase:
             )
         """)
 
+        # Table 18: mistakes_made (Learning from Failures)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS mistakes_made (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                goal_id TEXT,
+                mistake TEXT NOT NULL,
+                why_wrong TEXT NOT NULL,
+                cost_estimate TEXT,
+                root_cause_vector TEXT,
+                prevention TEXT,
+                created_timestamp REAL NOT NULL,
+                mistake_data TEXT NOT NULL,
+
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+                FOREIGN KEY (goal_id) REFERENCES goals(id)
+            )
+        """)
+
+        # Table 19: projects (Multi-Repo Long-Term Work Tracking)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                repos TEXT,
+                created_timestamp REAL NOT NULL,
+                last_activity_timestamp REAL,
+                status TEXT DEFAULT 'active',
+                metadata TEXT,
+                
+                total_sessions INTEGER DEFAULT 0,
+                total_goals INTEGER DEFAULT 0,
+                total_epistemic_deltas TEXT,
+                
+                project_data TEXT NOT NULL
+            )
+        """)
+
+        # Table 20: project_handoffs (Project-Level Epistemic Continuity)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS project_handoffs (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                created_timestamp REAL NOT NULL,
+                project_summary TEXT NOT NULL,
+                sessions_included TEXT NOT NULL,
+                total_learning_deltas TEXT,
+                key_decisions TEXT,
+                patterns_discovered TEXT,
+                mistakes_summary TEXT,
+                remaining_work TEXT,
+                repos_touched TEXT,
+                next_session_bootstrap TEXT,
+                handoff_data TEXT NOT NULL,
+                
+                FOREIGN KEY (project_id) REFERENCES projects(id)
+            )
+        """)
+
+        # Table 21: project_findings (What Was Learned/Discovered)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS project_findings (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                goal_id TEXT,
+                subtask_id TEXT,
+                finding TEXT NOT NULL,
+                created_timestamp REAL NOT NULL,
+                finding_data TEXT NOT NULL,
+                
+                FOREIGN KEY (project_id) REFERENCES projects(id),
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+                FOREIGN KEY (goal_id) REFERENCES goals(id),
+                FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
+            )
+        """)
+
+        # Table 22: project_unknowns (What's Still Unclear)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS project_unknowns (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                goal_id TEXT,
+                subtask_id TEXT,
+                unknown TEXT NOT NULL,
+                is_resolved BOOLEAN DEFAULT FALSE,
+                resolved_by TEXT,
+                created_timestamp REAL NOT NULL,
+                resolved_timestamp REAL,
+                unknown_data TEXT NOT NULL,
+                
+                FOREIGN KEY (project_id) REFERENCES projects(id),
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+                FOREIGN KEY (goal_id) REFERENCES goals(id),
+                FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
+            )
+        """)
+
+        # Table 23: project_dead_ends (What Didn't Work)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS project_dead_ends (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                session_id TEXT NOT NULL,
+                goal_id TEXT,
+                subtask_id TEXT,
+                approach TEXT NOT NULL,
+                why_failed TEXT NOT NULL,
+                created_timestamp REAL NOT NULL,
+                dead_end_data TEXT NOT NULL,
+                
+                FOREIGN KEY (project_id) REFERENCES projects(id),
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+                FOREIGN KEY (goal_id) REFERENCES goals(id),
+                FOREIGN KEY (subtask_id) REFERENCES subtasks(id)
+            )
+        """)
+
+        # Table 24: project_reference_docs (Key Documentation)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS project_reference_docs (
+                id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                doc_path TEXT NOT NULL,
+                doc_type TEXT,
+                description TEXT,
+                created_timestamp REAL NOT NULL,
+                doc_data TEXT NOT NULL,
+                
+                FOREIGN KEY (project_id) REFERENCES projects(id)
+            )
+        """)
+
         # Create indexes for performance
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_ai ON sessions(ai_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time)")
@@ -452,6 +594,19 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_subtasks_goal ON subtasks(goal_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_subtasks_status ON subtasks(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_mistakes_session ON mistakes_made(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_mistakes_goal ON mistakes_made(goal_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_projects_activity ON projects(last_activity_timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_handoffs_project ON project_handoffs(project_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_handoffs_timestamp ON project_handoffs(created_timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_findings_project ON project_findings(project_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_findings_session ON project_findings(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_unknowns_project ON project_unknowns(project_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_unknowns_resolved ON project_unknowns(is_resolved)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_dead_ends_project ON project_dead_ends(project_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_reference_docs_project ON project_reference_docs(project_id)")
 
         self.conn.commit()
         
@@ -2067,6 +2222,672 @@ class SessionDatabase:
             'total_unknowns': total_unknowns,
             'unknowns_by_goal': list(unknowns_by_goal.values())
         }
+
+    def create_project(
+        self,
+        name: str,
+        description: Optional[str] = None,
+        repos: Optional[List[str]] = None
+    ) -> str:
+        """
+        Create a new project for multi-repo/multi-session tracking.
+        
+        Args:
+            name: Project name (e.g., "Empirica Core")
+            description: Project description
+            repos: List of repository names (e.g., ["empirica", "empirica-dev"])
+            
+        Returns:
+            project_id: UUID string
+        """
+        project_id = str(uuid.uuid4())
+        
+        project_data = {
+            "name": name,
+            "description": description,
+            "repos": repos or []
+        }
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO projects (
+                id, name, description, repos, created_timestamp, 
+                last_activity_timestamp, project_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            project_id, name, description, json.dumps(repos or []),
+            time.time(), time.time(), json.dumps(project_data)
+        ))
+        
+        self.conn.commit()
+        logger.info(f"📁 Project created: {name} ({project_id[:8]}...)")
+        
+        return project_id
+    
+    def get_project(self, project_id: str) -> Optional[Dict]:
+        """Get project data"""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM projects WHERE id = ?", (project_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    
+    def link_session_to_project(self, session_id: str, project_id: str):
+        """Link a session to a project"""
+        self._validate_session_id(session_id)
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            UPDATE sessions SET project_id = ? WHERE session_id = ?
+        """, (project_id, session_id))
+        
+        # Update project activity timestamp and session count
+        cursor.execute("""
+            UPDATE projects 
+            SET last_activity_timestamp = ?,
+                total_sessions = total_sessions + 1
+            WHERE id = ?
+        """, (time.time(), project_id))
+        
+        self.conn.commit()
+        logger.info(f"🔗 Session {session_id[:8]}... linked to project {project_id[:8]}...")
+    
+    def get_project_sessions(self, project_id: str) -> List[Dict]:
+        """Get all sessions for a project"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT * FROM sessions WHERE project_id = ? ORDER BY start_time DESC
+        """, (project_id,))
+        return [dict(row) for row in cursor.fetchall()]
+    
+    def aggregate_project_learning_deltas(self, project_id: str) -> Dict[str, float]:
+        """
+        Compute total epistemic learning across all project sessions.
+        
+        Queries PREFLIGHT and POSTFLIGHT reflexes for each session,
+        computes deltas, and aggregates.
+        """
+        cursor = self.conn.cursor()
+        
+        # Get all sessions for project
+        cursor.execute("""
+            SELECT session_id FROM sessions WHERE project_id = ? ORDER BY start_time
+        """, (project_id,))
+        session_ids = [row[0] for row in cursor.fetchall()]
+        
+        if not session_ids:
+            return {}
+        
+        # Aggregate deltas across all sessions
+        total_deltas = {
+            'engagement': 0.0, 'know': 0.0, 'do': 0.0, 'context': 0.0, 'clarity': 0.0,
+            'coherence': 0.0, 'signal': 0.0, 'density': 0.0, 'state': 0.0,
+            'change': 0.0, 'completion': 0.0, 'impact': 0.0, 'uncertainty': 0.0
+        }
+        
+        for session_id in session_ids:
+            # Get PREFLIGHT vectors
+            cursor.execute("""
+                SELECT engagement, know, do, context, clarity, coherence, signal, density,
+                       state, change, completion, impact, uncertainty
+                FROM reflexes
+                WHERE session_id = ? AND phase = 'PREFLIGHT'
+                ORDER BY timestamp
+                LIMIT 1
+            """, (session_id,))
+            preflight = cursor.fetchone()
+            
+            # Get POSTFLIGHT vectors
+            cursor.execute("""
+                SELECT engagement, know, do, context, clarity, coherence, signal, density,
+                       state, change, completion, impact, uncertainty
+                FROM reflexes
+                WHERE session_id = ? AND phase = 'POSTFLIGHT'
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """, (session_id,))
+            postflight = cursor.fetchone()
+            
+            if preflight and postflight:
+                # Compute deltas and add to totals
+                for i, vector in enumerate(['engagement', 'know', 'do', 'context', 'clarity',
+                                            'coherence', 'signal', 'density', 'state', 'change',
+                                            'completion', 'impact', 'uncertainty']):
+                    if preflight[i] is not None and postflight[i] is not None:
+                        total_deltas[vector] += (postflight[i] - preflight[i])
+        
+        return total_deltas
+    
+    def create_project_handoff(
+        self,
+        project_id: str,
+        project_summary: str,
+        key_decisions: Optional[List[str]] = None,
+        patterns_discovered: Optional[List[str]] = None,
+        remaining_work: Optional[List[str]] = None
+    ) -> str:
+        """
+        Create project-level handoff report by aggregating session handoffs.
+        
+        Args:
+            project_id: Project identifier
+            project_summary: High-level summary of project state
+            key_decisions: List of major decisions made
+            patterns_discovered: Reusable patterns found
+            remaining_work: Outstanding tasks
+            
+        Returns:
+            handoff_id: UUID string
+        """
+        handoff_id = str(uuid.uuid4())
+        
+        # Get all sessions for project
+        sessions = self.get_project_sessions(project_id)
+        
+        # Aggregate session handoffs
+        sessions_included = []
+        for session in sessions:
+            # Query session handoff from git notes or database
+            # For now, just include session metadata
+            sessions_included.append({
+                "session_id": session['session_id'],
+                "start_time": session['start_time'],
+                "ai_id": session['ai_id']
+            })
+        
+        # Compute total learning deltas
+        total_deltas = self.aggregate_project_learning_deltas(project_id)
+        
+        # Get recent mistakes from project
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT mistake, cost_estimate, root_cause_vector, prevention
+            FROM mistakes_made m
+            JOIN sessions s ON m.session_id = s.session_id
+            WHERE s.project_id = ?
+            ORDER BY m.created_timestamp DESC
+            LIMIT 10
+        """, (project_id,))
+        mistakes_summary = [dict(row) for row in cursor.fetchall()]
+        
+        # Get repos touched
+        project = self.get_project(project_id)
+        repos_touched = json.loads(project['repos']) if project and project['repos'] else []
+        
+        # Build handoff data
+        handoff_data = {
+            "project_summary": project_summary,
+            "sessions_included": sessions_included,
+            "total_learning_deltas": total_deltas,
+            "key_decisions": key_decisions or [],
+            "patterns_discovered": patterns_discovered or [],
+            "mistakes_summary": mistakes_summary,
+            "remaining_work": remaining_work or [],
+            "repos_touched": repos_touched,
+            "next_session_bootstrap": {
+                "suggested_focus": remaining_work[0] if remaining_work else "Continue project work",
+                "context_breadcrumbs": key_decisions[-5:] if key_decisions else []
+            }
+        }
+        
+        cursor.execute("""
+            INSERT INTO project_handoffs (
+                id, project_id, created_timestamp, project_summary,
+                sessions_included, total_learning_deltas, key_decisions,
+                patterns_discovered, mistakes_summary, remaining_work,
+                repos_touched, next_session_bootstrap, handoff_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            handoff_id, project_id, time.time(), project_summary,
+            json.dumps(sessions_included), json.dumps(total_deltas),
+            json.dumps(key_decisions or []), json.dumps(patterns_discovered or []),
+            json.dumps(mistakes_summary), json.dumps(remaining_work or []),
+            json.dumps(repos_touched), json.dumps(handoff_data["next_session_bootstrap"]),
+            json.dumps(handoff_data)
+        ))
+        
+        self.conn.commit()
+        logger.info(f"📋 Project handoff created: {handoff_id[:8]}...")
+        
+        return handoff_id
+    
+    def get_latest_project_handoff(self, project_id: str) -> Optional[Dict]:
+        """Get the most recent project handoff"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT * FROM project_handoffs 
+            WHERE project_id = ? 
+            ORDER BY created_timestamp DESC 
+            LIMIT 1
+        """, (project_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    
+    def bootstrap_project_breadcrumbs(self, project_id: str, mode: str = "session_start") -> Dict:
+        """
+        Generate epistemic breadcrumbs for starting a new session on existing project.
+        
+        Args:
+            project_id: Project identifier
+            mode: "session_start" (fast, recent items) or "live" (complete, all items)
+        
+        Returns quick context: findings, unknowns, dead_ends, mistakes, decisions, incomplete work.
+        """
+        project = self.get_project(project_id)
+        if not project:
+            return {"error": "Project not found"}
+        
+        # Get latest handoff
+        latest_handoff = self.get_latest_project_handoff(project_id)
+        
+        if mode == "session_start":
+            # FAST: Recent items only for quick bootstrap
+            findings = self.get_project_findings(project_id, limit=10)
+            unknowns = self.get_project_unknowns(project_id, resolved=False)  # Only unresolved
+            dead_ends = self.get_project_dead_ends(project_id, limit=5)
+            
+            # Get recent mistakes (top 5)
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT mistake, prevention, cost_estimate, root_cause_vector
+                FROM mistakes_made m
+                JOIN sessions s ON m.session_id = s.session_id
+                WHERE s.project_id = ?
+                ORDER BY m.created_timestamp DESC
+                LIMIT 5
+            """, (project_id,))
+            recent_mistakes = [dict(row) for row in cursor.fetchall()]
+            
+            reference_docs = self.get_project_reference_docs(project_id)
+            
+        elif mode == "live":
+            # COMPLETE: All items for full context
+            findings = self.get_project_findings(project_id)
+            unknowns = self.get_project_unknowns(project_id)  # All unknowns
+            dead_ends = self.get_project_dead_ends(project_id)
+            
+            # Get ALL mistakes
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT mistake, prevention, cost_estimate, root_cause_vector
+                FROM mistakes_made m
+                JOIN sessions s ON m.session_id = s.session_id
+                WHERE s.project_id = ?
+                ORDER BY m.created_timestamp DESC
+            """, (project_id,))
+            recent_mistakes = [dict(row) for row in cursor.fetchall()]
+            
+            reference_docs = self.get_project_reference_docs(project_id)
+        
+        else:
+            return {"error": f"Invalid mode: {mode}"}
+        
+        # Get incomplete goals
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT g.objective, g.id,
+                   (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
+                   (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'complete') as completed_subtasks
+            FROM goals g
+            JOIN sessions s ON g.session_id = s.session_id
+            WHERE s.project_id = ? AND g.status != 'complete'
+            ORDER BY g.created_timestamp DESC
+        """, (project_id,))
+        incomplete_goals = [dict(row) for row in cursor.fetchall()]
+        
+        # Build breadcrumbs
+        handoff_data = json.loads(latest_handoff['handoff_data']) if latest_handoff else {}
+        
+        breadcrumbs = {
+            "project": {
+                "name": project['name'],
+                "description": project['description'],
+                "repos": json.loads(project['repos']) if project['repos'] else [],
+                "total_sessions": project['total_sessions'],
+                "learning_deltas": json.loads(project['total_epistemic_deltas']) if project.get('total_epistemic_deltas') else {}
+            },
+            "last_activity": {
+                "summary": latest_handoff['project_summary'] if latest_handoff else "No handoff yet",
+                "timestamp": latest_handoff['created_timestamp'] if latest_handoff else None,
+                "next_focus": handoff_data.get("next_session_bootstrap", {}).get("suggested_focus", "Continue project work")
+            },
+            "findings": [f['finding'] for f in findings],
+            "unknowns": [
+                {
+                    "unknown": u['unknown'],
+                    "is_resolved": bool(u['is_resolved'])
+                }
+                for u in unknowns
+            ],
+            "dead_ends": [
+                {
+                    "approach": d['approach'],
+                    "why_failed": d['why_failed']
+                }
+                for d in dead_ends
+            ],
+            "mistakes_to_avoid": [
+                {
+                    "mistake": m['mistake'],
+                    "prevention": m['prevention'],
+                    "cost": m['cost_estimate'],
+                    "root_cause": m['root_cause_vector']
+                }
+                for m in recent_mistakes
+            ],
+            "key_decisions": handoff_data.get("key_decisions", [])[-5:] if handoff_data else [],
+            "reference_docs": [
+                {
+                    "path": d['doc_path'],
+                    "type": d['doc_type'],
+                    "description": d['description']
+                }
+                for d in reference_docs
+            ],
+            "incomplete_work": [
+                {
+                    "goal": g['objective'],
+                    "progress": f"{g['completed_subtasks']}/{g['total_subtasks']}"
+                }
+                for g in incomplete_goals
+            ],
+            "mode": mode
+        }
+        
+        return breadcrumbs
+
+    def log_finding(
+        self,
+        project_id: str,
+        session_id: str,
+        finding: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None
+    ) -> str:
+        """Log a project finding (what was learned/discovered)"""
+        finding_id = str(uuid.uuid4())
+        
+        finding_data = {
+            "finding": finding,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id
+        }
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO project_findings (
+                id, project_id, session_id, goal_id, subtask_id,
+                finding, created_timestamp, finding_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            finding_id, project_id, session_id, goal_id, subtask_id,
+            finding, time.time(), json.dumps(finding_data)
+        ))
+        
+        self.conn.commit()
+        logger.info(f"📝 Finding logged: {finding[:50]}...")
+        
+        return finding_id
+    
+    def log_unknown(
+        self,
+        project_id: str,
+        session_id: str,
+        unknown: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None
+    ) -> str:
+        """Log a project unknown (what's still unclear)"""
+        unknown_id = str(uuid.uuid4())
+        
+        unknown_data = {
+            "unknown": unknown,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id
+        }
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO project_unknowns (
+                id, project_id, session_id, goal_id, subtask_id,
+                unknown, created_timestamp, unknown_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            unknown_id, project_id, session_id, goal_id, subtask_id,
+            unknown, time.time(), json.dumps(unknown_data)
+        ))
+        
+        self.conn.commit()
+        logger.info(f"❓ Unknown logged: {unknown[:50]}...")
+        
+        return unknown_id
+    
+    def resolve_unknown(self, unknown_id: str, resolved_by: str):
+        """Mark an unknown as resolved"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            UPDATE project_unknowns 
+            SET is_resolved = TRUE, resolved_by = ?, resolved_timestamp = ?
+            WHERE id = ?
+        """, (resolved_by, time.time(), unknown_id))
+        
+        self.conn.commit()
+        logger.info(f"✅ Unknown resolved: {unknown_id[:8]}...")
+    
+    def log_dead_end(
+        self,
+        project_id: str,
+        session_id: str,
+        approach: str,
+        why_failed: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None
+    ) -> str:
+        """Log a project dead end (what didn't work)"""
+        dead_end_id = str(uuid.uuid4())
+        
+        dead_end_data = {
+            "approach": approach,
+            "why_failed": why_failed,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id
+        }
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO project_dead_ends (
+                id, project_id, session_id, goal_id, subtask_id,
+                approach, why_failed, created_timestamp, dead_end_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            dead_end_id, project_id, session_id, goal_id, subtask_id,
+            approach, why_failed, time.time(), json.dumps(dead_end_data)
+        ))
+        
+        self.conn.commit()
+        logger.info(f"💀 Dead end logged: {approach[:50]}...")
+        
+        return dead_end_id
+    
+    def add_reference_doc(
+        self,
+        project_id: str,
+        doc_path: str,
+        doc_type: Optional[str] = None,
+        description: Optional[str] = None
+    ) -> str:
+        """Add a reference document to project"""
+        doc_id = str(uuid.uuid4())
+        
+        doc_data = {
+            "doc_path": doc_path,
+            "doc_type": doc_type,
+            "description": description
+        }
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO project_reference_docs (
+                id, project_id, doc_path, doc_type, description,
+                created_timestamp, doc_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            doc_id, project_id, doc_path, doc_type, description,
+            time.time(), json.dumps(doc_data)
+        ))
+        
+        self.conn.commit()
+        logger.info(f"📄 Reference doc added: {doc_path}")
+        
+        return doc_id
+    
+    def get_project_findings(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
+        """Get all findings for a project"""
+        cursor = self.conn.cursor()
+        query = "SELECT * FROM project_findings WHERE project_id = ? ORDER BY created_timestamp DESC"
+        if limit:
+            query += f" LIMIT {limit}"
+        cursor.execute(query, (project_id,))
+        return [dict(row) for row in cursor.fetchall()]
+    
+    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None) -> List[Dict]:
+        """Get unknowns for a project (optionally filter by resolved status)"""
+        cursor = self.conn.cursor()
+        if resolved is None:
+            cursor.execute("""
+                SELECT * FROM project_unknowns 
+                WHERE project_id = ? 
+                ORDER BY created_timestamp DESC
+            """, (project_id,))
+        else:
+            cursor.execute("""
+                SELECT * FROM project_unknowns 
+                WHERE project_id = ? AND is_resolved = ?
+                ORDER BY created_timestamp DESC
+            """, (project_id, resolved))
+        return [dict(row) for row in cursor.fetchall()]
+    
+    def get_project_dead_ends(self, project_id: str, limit: Optional[int] = None) -> List[Dict]:
+        """Get all dead ends for a project"""
+        cursor = self.conn.cursor()
+        query = "SELECT * FROM project_dead_ends WHERE project_id = ? ORDER BY created_timestamp DESC"
+        if limit:
+            query += f" LIMIT {limit}"
+        cursor.execute(query, (project_id,))
+        return [dict(row) for row in cursor.fetchall()]
+    
+    def get_project_reference_docs(self, project_id: str) -> List[Dict]:
+        """Get all reference docs for a project"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT * FROM project_reference_docs 
+            WHERE project_id = ? 
+            ORDER BY created_timestamp DESC
+        """, (project_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
+    def log_mistake(
+        self,
+        session_id: str,
+        mistake: str,
+        why_wrong: str,
+        cost_estimate: Optional[str] = None,
+        root_cause_vector: Optional[str] = None,
+        prevention: Optional[str] = None,
+        goal_id: Optional[str] = None
+    ) -> str:
+        """
+        Log a mistake for learning and future prevention.
+        
+        Args:
+            session_id: Session identifier
+            mistake: What was done wrong
+            why_wrong: Explanation of why it was wrong
+            cost_estimate: Estimated time/effort wasted (e.g., "2 hours")
+            root_cause_vector: Epistemic vector that caused the mistake (e.g., "KNOW", "CONTEXT")
+            prevention: How to prevent this mistake in the future
+            goal_id: Optional goal identifier this mistake relates to
+            
+        Returns:
+            mistake_id: UUID string
+        """
+        self._validate_session_id(session_id)
+        mistake_id = str(uuid.uuid4())
+        
+        # Build mistake_data JSON
+        mistake_data = {
+            "mistake": mistake,
+            "why_wrong": why_wrong,
+            "cost_estimate": cost_estimate,
+            "root_cause_vector": root_cause_vector,
+            "prevention": prevention
+        }
+        
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO mistakes_made (
+                id, session_id, goal_id, mistake, why_wrong,
+                cost_estimate, root_cause_vector, prevention,
+                created_timestamp, mistake_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            mistake_id, session_id, goal_id, mistake, why_wrong,
+            cost_estimate, root_cause_vector, prevention,
+            time.time(), json.dumps(mistake_data)
+        ))
+        
+        self.conn.commit()
+        logger.info(f"📝 Mistake logged: {mistake[:50]}...")
+        
+        return mistake_id
+    
+    def get_mistakes(
+        self,
+        session_id: Optional[str] = None,
+        goal_id: Optional[str] = None,
+        limit: int = 10
+    ) -> List[Dict]:
+        """
+        Retrieve logged mistakes.
+        
+        Args:
+            session_id: Optional filter by session
+            goal_id: Optional filter by goal
+            limit: Maximum number of results
+            
+        Returns:
+            List of mistake dictionaries
+        """
+        cursor = self.conn.cursor()
+        
+        if session_id and goal_id:
+            cursor.execute("""
+                SELECT * FROM mistakes_made
+                WHERE session_id = ? AND goal_id = ?
+                ORDER BY created_timestamp DESC
+                LIMIT ?
+            """, (session_id, goal_id, limit))
+        elif session_id:
+            cursor.execute("""
+                SELECT * FROM mistakes_made
+                WHERE session_id = ?
+                ORDER BY created_timestamp DESC
+                LIMIT ?
+            """, (session_id, limit))
+        elif goal_id:
+            cursor.execute("""
+                SELECT * FROM mistakes_made
+                WHERE goal_id = ?
+                ORDER BY created_timestamp DESC
+                LIMIT ?
+            """, (goal_id, limit))
+        else:
+            cursor.execute("""
+                SELECT * FROM mistakes_made
+                ORDER BY created_timestamp DESC
+                LIMIT ?
+            """, (limit,))
+        
+        return [dict(row) for row in cursor.fetchall()]
 
     def close(self):
         """Close database connection"""

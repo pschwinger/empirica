@@ -616,16 +616,25 @@ empirica checkpoint-signatures --session-id <ID> --output json
 
 ### 30. `handoff-create`
 
-Create handoff report (epistemic or planning).
+Create handoff report for session continuity and multi-agent coordination.
+
+**Handoff Types:** Auto-detects type based on CASCADE assessments (investigation/complete/planning). See [`../guides/FLEXIBLE_HANDOFF_GUIDE.md`](../guides/FLEXIBLE_HANDOFF_GUIDE.md) for details.
 
 ```bash
-# Epistemic handoff (requires CASCADE workflow)
+# Complete handoff (PREFLIGHT → POSTFLIGHT)
 empirica handoff-create \
   --session-id <ID> \
   --task-summary "Implemented OAuth2 flow" \
   --key-findings '["Flow complete", "All edge cases handled"]' \
   --remaining-unknowns '["Rate limiting unclear"]' \
   --next-session-context "Ready to implement rate limiting"
+
+# Investigation handoff (PREFLIGHT → CHECK) for specialist handoff
+empirica handoff-create \
+  --session-id <ID> \
+  --task-summary "Investigated OAuth2 security patterns" \
+  --key-findings '["PKCE required", "Token rotation needed"]' \
+  --next-session-context "Ready for implementation by specialist"
 
 # Planning handoff (no CASCADE required)
 empirica handoff-create \

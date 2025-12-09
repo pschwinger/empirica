@@ -36,6 +36,8 @@ empirica postflight <session_id> --summary "Completed code review"
 # - Learning summary
 ```
 
+**Session Continuity:** After POSTFLIGHT, create handoff reports for efficient context transfer. See [`../guides/FLEXIBLE_HANDOFF_GUIDE.md`](../guides/FLEXIBLE_HANDOFF_GUIDE.md) for multi-agent handoff patterns.
+
 ---
 
 ## Output Formats

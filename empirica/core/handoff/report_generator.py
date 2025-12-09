@@ -125,7 +125,7 @@ class EpistemicHandoffReportGenerator:
             end_assessment.get('vectors', {})
         )
         
-        # Check calibration
+        # Check calibration (pass end_assessment to detect investigation handoffs)
         calibration = self._check_calibration(session_id, deltas, end_assessment)
         
         # Identify knowledge gaps filled
@@ -343,52 +343,64 @@ class EpistemicHandoffReportGenerator:
         
         return deltas
     
-    def _check_calibration(self, session_id: str, deltas: Dict[str, float], postflight: Dict) -> Dict:
+    def _check_calibration(self, session_id: str, deltas: Dict[str, float], end_assessment: Dict) -> Dict:
         """
         Get calibration status - prioritize genuine introspection, validate with heuristics
         
+        For investigation handoffs (PREFLIGHT→CHECK), calibration is not applicable
+        since CHECK is a decision gate, not a learning measurement.
+        
         Returns:
             {
-                'status': 'well_calibrated' | 'overconfident' | 'underconfident',
+                'status': 'well_calibrated' | 'overconfident' | 'underconfident' | 'investigation-only',
                 'reasoning': str,
-                'source': 'introspection' | 'heuristic',
+                'source': 'introspection' | 'heuristic' | 'n/a',
                 'heuristic_validation': Optional[str]  # If introspection available
             }
         """
+        # Check if this is investigation handoff (CHECK phase)
+        # Investigation handoffs don't have calibration - they're decision gates
+        if end_assessment and end_assessment.get('phase') == 'CHECK':
+            return {
+                'status': 'investigation-only',
+                'reasoning': 'Investigation handoff (PREFLIGHT→CHECK) - calibration not applicable',
+                'source': 'n/a'
+            }
+        
         # PRIMARY: Use AI's genuine self-assessment from POSTFLIGHT
         # This is what the AI actually believed about their calibration during introspection
         try:
             vectors_data = self.db.get_latest_vectors(session_id, phase="POSTFLIGHT")
             if vectors_data:
                 metadata = vectors_data.get('metadata', {})
-                if metadata.get('calibration_accuracy'):
+                if metadata and isinstance(metadata, dict) and metadata.get('calibration_accuracy'):
                     genuine_status = metadata['calibration_accuracy']
                     genuine_reasoning = vectors_data.get('reasoning', 'Genuine self-assessment from POSTFLIGHT')
                 
-                # Run heuristic validation for cross-check
-                heuristic_result = self._heuristic_calibration_check(deltas)
-                
-                # Check if introspection matches heuristic
-                mismatch_note = None
-                if heuristic_result['status'] != genuine_status:
-                    mismatch_note = f"Note: Heuristic suggests '{heuristic_result['status']}' but AI assessed '{genuine_status}' - trusting introspection"
-                    logger.info(f"Calibration mismatch for {session_id[:8]}...: {mismatch_note}")
-                
-                return {
-                    'status': genuine_status,
-                    'reasoning': genuine_reasoning,
-                    'source': 'introspection',
-                    'heuristic_validation': mismatch_note
-                }
+                    # Run heuristic validation for cross-check
+                    heuristic_result = self._heuristic_calibration_check(deltas)
+                    
+                    # Check if introspection matches heuristic
+                    mismatch_note = None
+                    if heuristic_result['status'] != genuine_status:
+                        mismatch_note = f"Note: Heuristic suggests '{heuristic_result['status']}' but AI assessed '{genuine_status}' - trusting introspection"
+                        logger.info(f"Calibration mismatch for {session_id[:8]}...: {mismatch_note}")
+                    
+                    return {
+                        'status': genuine_status,
+                        'reasoning': genuine_reasoning,
+                        'source': 'introspection',
+                        'heuristic_validation': mismatch_note
+                    }
         
         except Exception as e:
             logger.debug(f"Could not fetch genuine calibration: {e}")
         
-        # FALLBACK: Heuristic if genuine POSTFLIGHT calibration missing
-        logger.warning(f"No genuine calibration for {session_id[:8]}... - using heuristic fallback")
+        # FALLBACK: Heuristic calibration check
+        # Use heuristic without warning for investigation handoffs
         heuristic_result = self._heuristic_calibration_check(deltas)
         heuristic_result['source'] = 'heuristic'
-        heuristic_result['reasoning'] += " (fallback - no genuine POSTFLIGHT introspection found)"
+        heuristic_result['reasoning'] += " (heuristic-based assessment)"
         
         return heuristic_result
     
