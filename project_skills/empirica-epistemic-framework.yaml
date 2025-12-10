@@ -1,0 +1,18 @@
+id: empirica-epistemic-framework
+title: Empirica Epistemic Framework
+tags:
+- empirica
+- epistemics
+- framework
+preconditions: []
+steps: []
+gotchas: []
+references: []
+summary: "---\nname: empirica-epistemic-framework\ndescription: Empirica for Claude\
+  \ chat - Know what you know. Use CASCADE workflow (PREFLIGHT\u2192INVESTIGATE\u2192\
+  CHECK\u2192ACT\u2192POSTFLIGHT) to assess knowledge state before tasks and measure\
+  \ learning after. Tracks 4 core epistemic vectors (KNOW, DO, CONTEXT, UNCERTAINTY).\
+  \ Shows calibration improvement in real-time. This is the chat entry point\u2014\
+  the full system (CLI, IDE MCP, Python API) offers 13-vector assessment, goal orchestration,\
+  \ git checkpointing, and advanced governance. Try it now, explore the full framework\
+  \ at empirica.dev.\n---"
