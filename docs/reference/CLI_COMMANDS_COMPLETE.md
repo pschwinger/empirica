@@ -483,6 +483,46 @@ empirica investigate-log \
 
 ---
 
+## Project Embeddings (Qdrant)
+
+Build semantic vectors for documentation and epistemic memory.
+
+```bash
+empirica project-embed \
+  --project-id <UUID> \
+  [--output json]
+```
+
+Options:
+- --project-id: Project identifier
+- --output: default|json
+
+ENV:
+- EMPIRICA_QDRANT_URL: Qdrant service URL (e.g., http://localhost:6333)
+- EMPIRICA_EMBEDDINGS_PROVIDER: openai|local (default: local for dev)
+- EMPIRICA_EMBEDDINGS_MODEL: embedding model (e.g., text-embedding-3-small)
+- OPENAI_API_KEY: required if provider=openai
+
+## Project Semantic Search
+
+Search for relevant docs/memory by task description.
+
+```bash
+empirica project-search \
+  --project-id <UUID> \
+  --task "Implement JWT refresh" \
+  [--type all|docs|memory] \
+  [--limit 5] \
+  [--output json]
+```
+
+Options:
+- --project-id: Project identifier
+- --task: Task description (free text)
+- --type: all (default), docs, or memory
+- --limit: number of results (default: 5)
+- --output: default|json
+
 ## Checkpoints & Git
 
 ### 23. `checkpoint-create`

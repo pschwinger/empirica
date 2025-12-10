@@ -40,6 +40,8 @@ from datetime import datetime, timedelta, UTC
 
 from .reflex_frame import VectorState, Action
 from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema as EpistemicAssessment
+from empirica.core.git_ops.signed_operations import SignedGitOperations
+from empirica.core.persona.signing_persona import SigningPersona
 
 logger = logging.getLogger(__name__)
 
@@ -60,36 +62,47 @@ class GitEnhancedReflexLogger:
     def __init__(
         self,
         session_id: str,
-        enable_git_notes: bool = False,
+        enable_git_notes: bool = True,
         base_log_dir: str = ".empirica_reflex_logs",
-        git_repo_path: Optional[str] = None
+        git_repo_path: Optional[str] = None,
+        signing_persona: Optional[SigningPersona] = None
     ):
         """
         Initialize checkpoint logger.
-        
+
         Args:
             session_id: Session identifier
-            enable_git_notes: Enable git notes storage (default: False for backward compat)
+            enable_git_notes: Enable git notes storage (default: True, now required)
             base_log_dir: Base directory for checkpoint logs
             git_repo_path: Path to git repository (default: current directory)
+            signing_persona: Optional SigningPersona for cryptographically signed checkpoints
         """
         # Setup base log directory (no inheritance needed!)
         self.base_log_dir = Path(base_log_dir)
         self.base_log_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.session_id = session_id
-        self.enable_git_notes = enable_git_notes
+        self.enable_git_notes = enable_git_notes  # Now required
         self.git_repo_path = Path(git_repo_path or Path.cwd())
         self.git_available = self._check_git_available()
-        
+        self.signing_persona = signing_persona
+        self.signed_git_ops: Optional[SignedGitOperations] = None
+
+        # Initialize signed git operations if persona provided
+        if signing_persona and self.git_available:
+            try:
+                self.signed_git_ops = SignedGitOperations(repo_path=str(self.git_repo_path))
+            except Exception as e:
+                logger.warning(f"Failed to initialize SignedGitOperations: {e}")
+
         # Track current round for vector diff calculation
         self.current_round = 0
         self.current_phase = None
-        
-        if enable_git_notes and not self.git_available:
+
+        if not self.git_available:
             logger.warning(
-                "Git notes requested but git not available. "
-                "Falling back to SQLite storage."
+                "Git not available. "
+                "Falling back to SQLite storage only."
             )
     
     @property
@@ -141,35 +154,51 @@ class GitEnhancedReflexLogger:
         round_num: int,
         vectors: Dict[str, float],
         metadata: Optional[Dict[str, Any]] = None,
-        epistemic_tags: Optional[Dict[str, Any]] = None
+        epistemic_tags: Optional[Dict[str, Any]] = None,
+        noema: Optional[Dict[str, Any]] = None
     ) -> Optional[str]:
         """
-        Add compressed checkpoint to git notes and SQLite.
+        Add compressed checkpoint to git notes and SQLite with optional signing.
+
+        Storage Architecture (Pointer-based):
+        - Git: Authoritative source for signed epistemic states (immutable, verifiable)
+        - SQLite: Queryable index with pointers to git commits + noema metadata
+        - Qdrant: Semantic vectors for drift detection (added in future phase)
 
         Args:
             phase: Workflow phase (PREFLIGHT, CHECK, ACT, POSTFLIGHT)
             round_num: Current round number
-            vectors: Epistemic vector scores (12D)
+            vectors: Epistemic vector scores (13D)
             metadata: Additional metadata (task, decision, files changed, etc.)
             epistemic_tags: Semantic tags (findings, unknowns, deadends) for rehydration
+            noema: Optional noematic extraction (epistemic signature, learning efficiency, etc.)
 
         Returns:
-            Note ID (git SHA) if successful, None otherwise
+            Git commit SHA if signed, note SHA if unsigned, None if failed
         """
         self.current_phase = phase
         self.current_round = round_num
 
         # Create compressed checkpoint
-        checkpoint = self._create_checkpoint(phase, round_num, vectors, metadata, epistemic_tags)
-        
-        # Save to SQLite (always, for fallback)
-        self._save_checkpoint_to_sqlite(checkpoint)
-        
-        # Save to git notes (if enabled and available)
+        checkpoint = self._create_checkpoint(phase, round_num, vectors, metadata, epistemic_tags, noema)
+
+        # Save to git notes first (to get commit SHA for SQLite pointer)
+        git_commit_sha = None
         if self.enable_git_notes and self.git_available:
-            return self._git_add_note(checkpoint)
-        
-        return None
+            # If signing persona available, use signed git operations
+            if self.signed_git_ops and self.signing_persona:
+                git_commit_sha = self._git_add_signed_note(checkpoint, phase)
+            else:
+                git_commit_sha = self._git_add_note(checkpoint)
+
+        # Save to SQLite with git pointer (always, for queryability)
+        self._save_checkpoint_to_sqlite(
+            checkpoint=checkpoint,
+            git_commit_sha=git_commit_sha,
+            git_notes_ref=f"empirica/session/{self.session_id}/{phase}/{round_num}"
+        )
+
+        return git_commit_sha
     
     def _create_checkpoint(
         self,
@@ -177,7 +206,8 @@ class GitEnhancedReflexLogger:
         round_num: int,
         vectors: Dict[str, float],
         metadata: Optional[Dict[str, Any]] = None,
-        epistemic_tags: Optional[Dict[str, Any]] = None
+        epistemic_tags: Optional[Dict[str, Any]] = None,
+        noema: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Create compressed checkpoint (target: 200-500 tokens).
@@ -192,6 +222,11 @@ class GitEnhancedReflexLogger:
         - Capture epistemic tags (findings, unknowns, deadends)
         - Enable rehydration for next AI in handoff
         - Preserve reasoning trail for mutual validation
+
+        Phase 4 Enhancement:
+        - Embed noematic extraction (epistemic signature, learning efficiency)
+        - Support semantic storage for drift detection
+        - Enable replay scenarios for auditability
 
         Returns:
             Compressed checkpoint dictionary
@@ -211,15 +246,19 @@ class GitEnhancedReflexLogger:
             "meta": metadata or {},
             "epistemic_tags": epistemic_tags or {}
         }
-        
+
+        # Phase 4: Embed noematic extraction
+        if noema:
+            checkpoint["noema"] = noema
+
         # Phase 2.5: Capture git state
         if self.enable_git_notes and self.git_repo_path:
             checkpoint["git_state"] = self._capture_git_state()
             checkpoint["learning_delta"] = self._calculate_learning_delta(vectors)
-        
+
         # Add token count (self-measurement)
         checkpoint["token_count"] = self._estimate_token_count(checkpoint)
-        
+
         return checkpoint
     
     def _estimate_token_count(self, data: Dict) -> int:
@@ -449,18 +488,28 @@ class GitEnhancedReflexLogger:
             logger.warning(f"Failed to calculate learning delta: {e}")
             return {}
     
-    def _save_checkpoint_to_sqlite(self, checkpoint: Dict[str, Any]):
+    def _save_checkpoint_to_sqlite(
+        self,
+        checkpoint: Dict[str, Any],
+        git_commit_sha: Optional[str] = None,
+        git_notes_ref: Optional[str] = None
+    ):
         """
-        Save checkpoint to SQLite reflexes table (proper integration).
+        Save checkpoint pointer to SQLite reflexes table.
 
-        This method writes to the reflexes table in SessionDatabase,
-        making the assessment queryable by statusline and other systems.
+        Architecture (Pointer-based):
+        - Git: Authoritative source for full signed epistemic state (immutable)
+        - SQLite: Lightweight index with pointers + noema metadata for queries
+        - Qdrant: Semantic vectors for drift detection (future phase)
 
         Args:
             checkpoint: Compressed checkpoint dictionary containing:
                 - session_id, phase, round, timestamp
                 - vectors (all 13 epistemic dimensions)
+                - noema (epistemic signature, learning efficiency, etc.)
                 - metadata (task, decision, etc.)
+            git_commit_sha: Git commit SHA (pointer to authoritative source)
+            git_notes_ref: Git notes reference path for retrieval
         """
         try:
             from empirica.data.session_database import SessionDatabase
@@ -479,10 +528,19 @@ class GitEnhancedReflexLogger:
             db = SessionDatabase()
 
             try:
-                # Store vectors in reflexes table using proper API
-                # Pass metadata so findings/unknowns are stored in reflex_data
+                # Extract noema metadata for quick filtering
+                noema = checkpoint.get('noema', {})
+                epistemic_signature = noema.get('epistemic_signature')
+                learning_efficiency = noema.get('learning_efficiency')
+                inferred_persona = noema.get('inferred_persona')
+                investigation_domain = noema.get('investigation_domain')
+
+                # Prepare metadata with git pointers
                 metadata_dict = checkpoint.get('meta', {})
-                
+                metadata_dict['git_commit_sha'] = git_commit_sha
+                metadata_dict['git_notes_ref'] = git_notes_ref
+
+                # Store pointer + noema metadata in reflexes table
                 db.store_vectors(
                     session_id=session_id,
                     phase=phase,
@@ -494,8 +552,10 @@ class GitEnhancedReflexLogger:
                 )
 
                 logger.debug(
-                    f"Checkpoint saved to SQLite reflexes table: "
-                    f"session={session_id}, phase={phase}, round={round_num}"
+                    f"Checkpoint pointer saved to SQLite: "
+                    f"session={session_id}, phase={phase}, round={round_num}, "
+                    f"git_commit={git_commit_sha[:7] if git_commit_sha else 'none'}, "
+                    f"noema_sig={epistemic_signature}"
                 )
 
             finally:
@@ -532,8 +592,10 @@ class GitEnhancedReflexLogger:
             # Add note to HEAD commit with unique ref per checkpoint
             # Use -f flag to allow updating notes if this ref already has a note on HEAD
             # (This happens when multiple checkpoints are created before new commits)
+            # Use stdin instead of -m to avoid "Argument list too long" errors with large payloads
             result = subprocess.run(
-                ["git", "notes", "--ref", note_ref, "add", "-f", "-m", checkpoint_json, "HEAD"],
+                ["git", "notes", "--ref", note_ref, "add", "-f", "HEAD"],
+                input=checkpoint_json,
                 capture_output=True,
                 timeout=5,
                 cwd=self.git_repo_path,
@@ -564,7 +626,84 @@ class GitEnhancedReflexLogger:
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, json.JSONDecodeError) as e:
             logger.warning(f"Git note operation failed: {e}. Using fallback storage.")
             return None
-    
+
+    def _git_add_signed_note(self, checkpoint: Dict[str, Any], phase: str) -> Optional[str]:
+        """
+        Add cryptographically signed checkpoint to git notes.
+
+        Uses SignedGitOperations to:
+        1. Sign epistemic state with persona's Ed25519 key
+        2. Store signed state in hierarchical git notes
+        3. Enable verification chain for audit trail
+        4. Support noematic extraction queries
+
+        Args:
+            checkpoint: Checkpoint dictionary (includes vectors, noema, etc.)
+            phase: CASCADE phase (PREFLIGHT, CHECK, ACT, POSTFLIGHT)
+
+        Returns:
+            Note SHA if successful, None if failed
+        """
+        try:
+            if not self.signed_git_ops or not self.signing_persona:
+                logger.debug("Signed operations not available, falling back to unsigned")
+                return self._git_add_note(checkpoint)
+
+            # Extract epistemic state from checkpoint
+            epistemic_state = checkpoint.get("vectors", {})
+
+            # Prepare additional data for signing
+            additional_data = {
+                "session_id": self.session_id,
+                "round": checkpoint.get("round", 1),
+                "git_state": checkpoint.get("git_state"),
+                "learning_delta": checkpoint.get("learning_delta"),
+                "epistemic_tags": checkpoint.get("epistemic_tags"),
+                "noema": checkpoint.get("noema")
+            }
+
+            # Sign and commit state
+            commit_sha = self.signed_git_ops.commit_signed_state(
+                signing_persona=self.signing_persona,
+                epistemic_state=epistemic_state,
+                phase=phase,
+                message=f"Checkpoint round {checkpoint.get('round', 1)}",
+                additional_data=additional_data
+            )
+
+            # Also store in hierarchical git notes namespace for semantic queries
+            checkpoint_json = json.dumps(checkpoint)
+            round_num = checkpoint.get("round", 1)
+            note_ref = f"empirica/session/{self.session_id}/noema/{phase}/{round_num}"
+
+            # Add noema-specific note ref for semantic storage in Qdrant
+            # Use stdin instead of -m to avoid "Argument list too long" errors with large payloads
+            result = subprocess.run(
+                ["git", "notes", "--ref", note_ref, "add", "-f", "HEAD"],
+                input=checkpoint_json,
+                capture_output=True,
+                timeout=5,
+                cwd=self.git_repo_path,
+                text=True
+            )
+
+            if result.returncode != 0:
+                logger.warning(
+                    f"Failed to add noema-specific git note (ref={note_ref}): {result.stderr}"
+                )
+                # Still successful if signed commit worked, this is supplementary
+
+            logger.info(
+                f"✓ Signed checkpoint committed: {commit_sha[:7]} "
+                f"(session={self.session_id}, phase={phase}, persona={self.signing_persona.persona_id})"
+            )
+
+            return commit_sha
+
+        except Exception as e:
+            logger.warning(f"Failed to add signed git note: {e}. Falling back to unsigned.")
+            return self._git_add_note(checkpoint)
+
     def get_last_checkpoint(
         self,
         max_age_hours: int = 24,
@@ -572,20 +711,20 @@ class GitEnhancedReflexLogger:
     ) -> Optional[Dict[str, Any]]:
         """
         Load most recent checkpoint (git notes preferred, SQLite fallback).
-        
+
         Args:
             max_age_hours: Maximum age of checkpoint to consider (default: 24 hours)
             phase: Filter by specific phase (optional)
-        
+
         Returns:
             Compressed checkpoint (~450 tokens) or None if not found
         """
-        # Try git notes first
+        # Try git notes first - using hierarchical namespace retrieval
         if self.enable_git_notes and self.git_available:
-            checkpoint = self._git_get_latest_note(phase=phase)
+            checkpoint = self._git_get_latest_note_new(phase=phase)
             if checkpoint and self._is_fresh(checkpoint, max_age_hours):
                 return checkpoint
-        
+
         # Fallback to SQLite
         return self._load_checkpoint_from_sqlite(phase=phase, max_age_hours=max_age_hours)
     
@@ -694,30 +833,6 @@ class GitEnhancedReflexLogger:
         except (subprocess.TimeoutExpired, json.JSONDecodeError, KeyError) as e:
             logger.debug(f"Failed to retrieve git note: {e}")
             return None
-
-    def get_last_checkpoint(
-        self,
-        max_age_hours: int = 24,
-        phase: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Load most recent checkpoint (git notes preferred, SQLite fallback).
-
-        Args:
-            max_age_hours: Maximum age of checkpoint to consider (default: 24 hours)
-            phase: Filter by specific phase (optional)
-
-        Returns:
-            Compressed checkpoint (~450 tokens) or None if not found
-        """
-        # Try git notes first - updated for hierarchical namespace
-        if self.enable_git_notes and self.git_available:
-            checkpoint = self._git_get_latest_note_new(phase=phase)
-            if checkpoint and self._is_fresh(checkpoint, max_age_hours):
-                return checkpoint
-
-        # Fallback to SQLite
-        return self._load_checkpoint_from_sqlite(phase=phase, max_age_hours=max_age_hours)
 
     def _git_get_latest_note_new(self, phase: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """

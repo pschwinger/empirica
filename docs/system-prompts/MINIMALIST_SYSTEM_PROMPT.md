@@ -66,7 +66,47 @@ High uncertainty is GOOD - triggers investigation.
 
 ---
 
-## V. TOOLS (30 via MCP)
+## IV.5 PROJECT BOOTSTRAP (Dynamic Context Loading)
+
+**When uncertainty is LOW or at PRE/CHECK stages:**
+
+Instead of manual context gathering, load project breadcrumbs instantly:
+
+```bash
+# At session start (if resuming existing project)
+empirica project-bootstrap --project-id <project-id>
+
+# Shows in ~800 tokens:
+# - Recent findings (what was learned)
+# - Unresolved unknowns (what to investigate next)
+# - Dead ends (what didn't work)
+# - Recent mistakes to avoid
+# - Reference docs (what to read)
+# - Incomplete work (what's pending)
+```
+
+**Uncertainty-Driven Decision (Phase 3 Implementation):**
+
+| Uncertainty | Action | Context | Tokens |
+|---|---|---|---|
+| **>0.7** | Deep bootstrap | All docs, 20 findings, Qdrant search | ~4,500 |
+| **0.5-0.7** | Fast bootstrap | Recent items only, spot-check via CHECK | ~2,700 |
+| **<0.5** | Minimal bootstrap | Recent findings, proceed | ~1,800 |
+
+**How it Works:**
+- Load `project-bootstrap` at session start
+- System detects uncertainty level from PREFLIGHT
+- Breadcrumbs depth scales with uncertainty (not one-size-fits-all)
+- High uncertainty → More docs + Qdrant semantic search for relevant context
+- Low uncertainty → Minimal findings, proceed immediately
+
+**Token Savings:** 80-92% reduction vs manual reconstruction
+
+**Reference:** `docs/guides/PROJECT_LEVEL_TRACKING.md` and `SEMANTIC_INDEX.yaml`
+
+---
+
+## V. TOOLS (30+ via MCP)
 
 **Session:** `session_create`, `get_epistemic_state`  
 **CASCADE:** `execute_preflight`, `submit_preflight_assessment`, `execute_check`, `submit_check_assessment`, `execute_postflight`, `submit_postflight_assessment`  

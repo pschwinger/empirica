@@ -1,3 +1,2 @@
 empirica
-empirica-dev
 mcp_local

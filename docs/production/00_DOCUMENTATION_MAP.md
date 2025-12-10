@@ -681,6 +681,29 @@ CASCADE Phase (PREFLIGHT/CHECK/POSTFLIGHT)
 2. **Understand:** When to use goals (uncertainty >0.6, complex tasks)
 3. **Practice:** Create goal with subtasks, log findings/unknowns
 
+### For Parallel Investigation Branching (Phase 2 - NEW)
+
+**→ Full guide:** [`production/07_INVESTIGATION_SYSTEM.md`](07_INVESTIGATION_SYSTEM.md#phase-2-epistemic-branching-parallel-investigation)
+
+**When to use:** Multiple valid approaches, exploring alternative paths
+
+**Branching workflow:**
+1. Create parallel investigation branches with different preflight vectors
+2. Perform investigation work (implicit, natural)
+3. Checkpoint each branch with postflight vectors
+4. Trigger epistemic auto-merge - winner selected via:
+   - `merge_score = (learning_delta × quality × confidence) / cost_penalty`
+   - Uncertainty acts as dampener (high uncertainty suppresses scores)
+
+**CLI commands:**
+```bash
+empirica investigate-create-branch --session-id <sid> --investigation-path oauth2
+empirica investigate-checkpoint-branch --branch-id <bid> --postflight-vectors '{...}'
+empirica investigate-merge-branches --session-id <sid> --round 1
+```
+
+**Key insight:** Uncertainty is not just a measurement - it actively suppresses scores of ambiguous branches, preventing high-cost, low-confidence paths from winning.
+
 ### For Everything
 - **Start:** This documentation map (you're here!)
 - **Deep dive:** [`system-prompts/CANONICAL_SYSTEM_PROMPT.md`](../system-prompts/CANONICAL_SYSTEM_PROMPT.md) - v4.0 canonical reference
@@ -699,8 +722,8 @@ CASCADE Phase (PREFLIGHT/CHECK/POSTFLIGHT)
 
 ---
 
-**Last updated:** 2025-12-05  
-**Version:** v4.0  
+**Last updated:** 2025-12-10
+**Version:** v4.0.1 (Phase 2 Branching Added)
 **Status:** Production Ready
 
 ---

@@ -570,8 +570,66 @@ class SessionDatabase:
                 description TEXT,
                 created_timestamp REAL NOT NULL,
                 doc_data TEXT NOT NULL,
-                
+
                 FOREIGN KEY (project_id) REFERENCES projects(id)
+            )
+        """)
+
+        # Table 25: investigation_branches (Parallel investigation paths for epistemic auto-merge)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS investigation_branches (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                branch_name TEXT NOT NULL,
+                investigation_path TEXT NOT NULL,
+                git_branch_name TEXT NOT NULL,
+
+                -- Epistemic state for this branch
+                preflight_vectors TEXT NOT NULL,
+                postflight_vectors TEXT,
+
+                -- Cost tracking
+                tokens_spent INTEGER DEFAULT 0,
+                time_spent_minutes INTEGER DEFAULT 0,
+
+                -- Merge metadata
+                merge_score REAL,
+                epistemic_quality REAL,
+                is_winner BOOLEAN DEFAULT FALSE,
+
+                -- Timestamps and state
+                created_timestamp REAL NOT NULL,
+                checkpoint_timestamp REAL,
+                merged_timestamp REAL,
+                status TEXT DEFAULT 'active',
+
+                branch_metadata TEXT,
+
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+            )
+        """)
+
+        # Table 26: merge_decisions (Auto-merge decision history and rationale)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS merge_decisions (
+                id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                investigation_round INTEGER NOT NULL,
+
+                winning_branch_id TEXT NOT NULL,
+                winning_branch_name TEXT,
+                winning_score REAL NOT NULL,
+
+                other_branches TEXT,
+                decision_rationale TEXT NOT NULL,
+
+                auto_merged BOOLEAN DEFAULT TRUE,
+                created_timestamp REAL NOT NULL,
+
+                decision_metadata TEXT,
+
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+                FOREIGN KEY (winning_branch_id) REFERENCES investigation_branches(id)
             )
         """)
 
@@ -607,6 +665,17 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_unknowns_resolved ON project_unknowns(is_resolved)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_dead_ends_project ON project_dead_ends(project_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_reference_docs_project ON project_reference_docs(project_id)")
+
+        # Indexes for investigation_branches
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_investigation_branches_session ON investigation_branches(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_investigation_branches_status ON investigation_branches(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_investigation_branches_winner ON investigation_branches(is_winner)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_investigation_branches_merge_score ON investigation_branches(merge_score)")
+
+        # Indexes for merge_decisions
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_session ON merge_decisions(session_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_round ON merge_decisions(investigation_round)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_merge_decisions_winning_branch ON merge_decisions(winning_branch_id)")
 
         self.conn.commit()
         
@@ -2221,6 +2290,202 @@ class SessionDatabase:
         return {
             'total_unknowns': total_unknowns,
             'unknowns_by_goal': list(unknowns_by_goal.values())
+        }
+
+    # ========== Investigation Branches (Epistemic Auto-Merge) ==========
+
+    def create_branch(self, session_id: str, branch_name: str, investigation_path: str,
+                     git_branch_name: str, preflight_vectors: Dict) -> str:
+        """Create a new investigation branch
+
+        Args:
+            session_id: Session UUID
+            branch_name: Human-readable branch name
+            investigation_path: What is being investigated (e.g., 'oauth2')
+            git_branch_name: Git branch name
+            preflight_vectors: Epistemic vectors at branch start
+
+        Returns:
+            Branch ID
+        """
+        import uuid
+        import time
+        branch_id = str(uuid.uuid4())
+        now = time.time()
+
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO investigation_branches
+            (id, session_id, branch_name, investigation_path, git_branch_name,
+             preflight_vectors, created_timestamp, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+        """, (branch_id, session_id, branch_name, investigation_path, git_branch_name,
+              json.dumps(preflight_vectors), now))
+
+        self.conn.commit()
+        return branch_id
+
+    def checkpoint_branch(self, branch_id: str, postflight_vectors: Dict,
+                         tokens_spent: int, time_spent_minutes: int) -> bool:
+        """Checkpoint a branch after investigation
+
+        Args:
+            branch_id: Branch ID
+            postflight_vectors: Epistemic vectors after investigation
+            tokens_spent: Tokens used in investigation
+            time_spent_minutes: Time spent in investigation
+
+        Returns:
+            Success boolean
+        """
+        import time
+        now = time.time()
+
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            UPDATE investigation_branches
+            SET postflight_vectors = ?, tokens_spent = ?, time_spent_minutes = ?,
+                checkpoint_timestamp = ?
+            WHERE id = ?
+        """, (json.dumps(postflight_vectors), tokens_spent, time_spent_minutes, now, branch_id))
+
+        self.conn.commit()
+        return True
+
+    def calculate_branch_merge_score(self, branch_id: str) -> Dict:
+        """Calculate epistemic merge score for a branch
+
+        Score = (learning_delta × quality × confidence) / cost_penalty
+        Where: confidence = 1 - uncertainty (uncertainty is a DAMPENER)
+
+        Returns:
+            Dict with merge_score, quality, and rationale
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT preflight_vectors, postflight_vectors, tokens_spent
+            FROM investigation_branches WHERE id = ?
+        """, (branch_id,))
+
+        row = cursor.fetchone()
+        if not row or not row[1]:  # No postflight data yet
+            return {"merge_score": 0, "quality": 0, "rationale": "No postflight data"}
+
+        preflight = json.loads(row[0])
+        postflight = json.loads(row[1])
+        tokens_spent = row[2] or 0
+
+        # 1. Calculate learning delta
+        key_vectors = ['know', 'do', 'context', 'clarity', 'signal']
+        learning_deltas = []
+        for key in key_vectors:
+            pre_val = preflight.get(key, 0.5)
+            post_val = postflight.get(key, 0.5)
+            learning_deltas.append(post_val - pre_val)
+        learning_delta = sum(learning_deltas) / len(key_vectors)
+
+        # 2. Calculate quality
+        coherence = postflight.get('coherence', 0.5)
+        clarity = postflight.get('clarity', 0.5)
+        density = postflight.get('density', 0.5)
+        quality = (coherence + clarity + (1 - density)) / 3
+
+        # 3. Calculate confidence (1 - uncertainty, CRITICAL DAMPENER)
+        uncertainty = postflight.get('uncertainty', 0.5)
+        confidence = 1.0 - uncertainty
+
+        # 4. Calculate cost penalty
+        cost_penalty = max(1.0, tokens_spent / 2000.0)
+
+        # 5. Calculate final merge score
+        merge_score = (learning_delta * quality * confidence) / cost_penalty
+
+        return {
+            "merge_score": round(merge_score, 4),
+            "quality": round(quality, 4),
+            "learning_delta": round(learning_delta, 4),
+            "confidence": round(confidence, 4),
+            "uncertainty_dampener": round(uncertainty, 4)
+        }
+
+    def merge_branches(self, session_id: str, investigation_round: int = 1) -> Dict:
+        """Auto-merge best branch based on epistemic scores
+
+        Returns:
+            Dict with winning_branch_id, merge_decision_id, rationale
+        """
+        import uuid
+        import time
+
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT id, branch_name, investigation_path
+            FROM investigation_branches
+            WHERE session_id = ? AND status = 'active'
+        """, (session_id,))
+
+        branches = cursor.fetchall()
+        if not branches:
+            return {"error": "No active branches to merge"}
+
+        # Calculate scores for all branches
+        branch_scores = []
+        for branch_id, branch_name, investigation_path in branches:
+            score_data = self.calculate_branch_merge_score(branch_id)
+            if score_data.get('merge_score', 0) > 0:
+                branch_scores.append({
+                    'branch_id': branch_id,
+                    'branch_name': branch_name,
+                    'investigation_path': investigation_path,
+                    'score': score_data['merge_score'],
+                    'quality': score_data['quality'],
+                    'confidence': score_data['confidence'],
+                    'uncertainty': score_data['uncertainty_dampener']
+                })
+
+        if not branch_scores:
+            return {"error": "No branches with valid epistemic data"}
+
+        # Select winner (highest score)
+        winner = max(branch_scores, key=lambda x: x['score'])
+
+        # Mark winner in database
+        cursor.execute("""
+            UPDATE investigation_branches
+            SET is_winner = TRUE, status = 'merged', merged_timestamp = ?
+            WHERE id = ?
+        """, (time.time(), winner['branch_id']))
+
+        # Record merge decision
+        decision_id = str(uuid.uuid4())
+        other_branches = [b['branch_name'] for b in branch_scores if b['branch_id'] != winner['branch_id']]
+        rationale = (
+            f"Selected {winner['investigation_path']}: "
+            f"score={winner['score']:.4f}, "
+            f"quality={winner['quality']:.4f}, "
+            f"confidence={winner['confidence']:.4f} "
+            f"({len(other_branches)} other paths evaluated)"
+        )
+
+        cursor.execute("""
+            INSERT INTO merge_decisions
+            (id, session_id, investigation_round, winning_branch_id, winning_branch_name,
+             winning_score, other_branches, decision_rationale, auto_merged, created_timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE, ?)
+        """, (decision_id, session_id, investigation_round, winner['branch_id'],
+              winner['branch_name'], winner['score'], json.dumps(other_branches),
+              rationale, time.time()))
+
+        self.conn.commit()
+
+        return {
+            "success": True,
+            "winning_branch_id": winner['branch_id'],
+            "winning_branch_name": winner['branch_name'],
+            "winning_score": round(winner['score'], 4),
+            "merge_decision_id": decision_id,
+            "other_branches": other_branches,
+            "rationale": rationale
         }
 
     def create_project(

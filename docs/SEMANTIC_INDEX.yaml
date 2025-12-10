@@ -1,0 +1,400 @@
+# Empirica Semantic Documentation Index
+# Version: 1.0
+# Generated: 2025-12-10
+# Purpose: Enable fast semantic documentation discovery and prepare for Qdrant embeddings
+
+version: "1.0"
+generated: "2025-12-10T00:00:00Z"
+description: "Semantic index for Empirica documentation with tags, concepts, questions, and use cases"
+
+# Tag Vocabulary Guidelines:
+# - tags: Broad categorization (e.g., vectors, session, project)
+# - concepts: Specific technical concepts (e.g., preflight, breadcrumbs, epistemic-memory)
+# - questions: Common user questions this doc answers
+# - use_cases: Practical scenarios where this doc is relevant
+# - related: Related doc numbers (e.g., [06, 23, 30])
+
+index:
+
+  # Core Concepts (Most Fundamental)
+  
+  "production/05_EPISTEMIC_VECTORS.md":
+    title: "Epistemic Vectors"
+    tags: [vectors, assessment, know, do, uncertainty, core-concept]
+    concepts: 
+      - 13-vectors
+      - self-assessment
+      - preflight
+      - postflight
+      - calibration
+      - know-vs-do
+      - uncertainty-tracking
+    questions:
+      - "What are epistemic vectors?"
+      - "How do I assess KNOW vs DO?"
+      - "What does UNCERTAINTY measure?"
+      - "How to interpret vector values?"
+      - "What are the 13 epistemic vectors?"
+    use_cases:
+      - assessment
+      - calibration
+      - learning-measurement
+      - metacognition
+      - confidence-tracking
+    related: ["06", "23", "30"]
+    
+  "production/06_CASCADE_FLOW.md":
+    title: "CASCADE Flow"
+    tags: [cascade, workflow, preflight, check, postflight, core-concept]
+    concepts:
+      - cascade-phases
+      - preflight-assessment
+      - check-gate
+      - postflight-measurement
+      - act-phase
+      - think-phase
+      - plan-phase
+    questions:
+      - "What is CASCADE?"
+      - "When do I run PREFLIGHT?"
+      - "What is CHECK phase for?"
+      - "How to measure learning with POSTFLIGHT?"
+      - "What are the CASCADE phases?"
+    use_cases:
+      - workflow
+      - task-execution
+      - learning-measurement
+      - uncertainty-management
+      - systematic-work
+    related: ["05", "07", "23"]
+
+  # Project & Session Management
+  
+  "production/23_SESSION_CONTINUITY.md":
+    title: "Session Continuity"
+    tags: [session, continuity, handoff, resume, multi-session]
+    concepts:
+      - handoff-reports
+      - session-resume
+      - context-preservation
+      - epistemic-continuity
+      - session-linking
+    questions:
+      - "How to resume work from previous session?"
+      - "What are handoff reports?"
+      - "How to prevent context loss?"
+      - "How to link sessions together?"
+    use_cases:
+      - multi-session-work
+      - context-loss-prevention
+      - work-resumption
+      - team-handoff
+    related: ["30", "12", "26"]
+    
+  "guides/PROJECT_LEVEL_TRACKING.md":
+    title: "Project-Level Tracking"
+    tags: [project, multi-repo, bootstrap, breadcrumbs, epistemic-memory, long-term]
+    concepts:
+      - project-creation
+      - findings
+      - unknowns
+      - dead-ends
+      - breadcrumbs
+      - session-linking
+      - learning-deltas
+      - reference-docs
+      - epistemic-memory
+    questions:
+      - "How to create a project?"
+      - "What are breadcrumbs?"
+      - "How to track multi-repo work?"
+      - "How to bootstrap project context?"
+      - "How to log findings and unknowns?"
+      - "What is epistemic memory?"
+    use_cases:
+      - multi-repo-projects
+      - long-term-development
+      - team-onboarding
+      - context-bootstrap
+      - knowledge-preservation
+      - cross-session-learning
+    related: ["23", "12", "26", "05"]
+
+  # Collaboration & Conduct
+  
+  "guides/EPISTEMIC_CONDUCT.md":
+    title: "Epistemic Conduct"
+    tags: [conduct, accountability, challenge, bias, uncertainty, collaboration]
+    concepts:
+      - bidirectional-accountability
+      - challenge-triggers
+      - self-correction
+      - overconfidence-detection
+      - epistemic-honesty
+      - bias-acknowledgment
+    questions:
+      - "How to challenge AI assumptions?"
+      - "What is epistemic conduct?"
+      - "How to admit uncertainty properly?"
+      - "How to avoid overconfidence?"
+      - "What is bidirectional accountability?"
+    use_cases:
+      - ai-human-collaboration
+      - bias-detection
+      - overconfidence-prevention
+      - quality-control
+      - epistemic-discipline
+    related: ["05", "06"]
+
+  # Database & Storage
+  
+  "production/12_SESSION_DATABASE.md":
+    title: "Session Database"
+    tags: [database, storage, sqlite, schema, sessions, goals]
+    concepts:
+      - database-schema
+      - sessions-table
+      - goals-table
+      - subtasks-table
+      - reflexes-table
+      - projects-table
+      - sqlite
+      - 3-layer-storage
+    questions:
+      - "What is the database schema?"
+      - "Where are sessions stored?"
+      - "How are goals linked to sessions?"
+      - "What is the reflexes table?"
+      - "How is project data stored?"
+    use_cases:
+      - data-storage
+      - query-patterns
+      - schema-understanding
+      - database-extension
+    related: ["30", "23", "13"]
+
+  # Getting Started
+  
+  "production/03_BASIC_USAGE.md":
+    title: "Basic Usage"
+    tags: [getting-started, cli, basic, quickstart, tutorial]
+    concepts:
+      - session-creation
+      - basic-workflow
+      - cli-commands
+      - first-steps
+    questions:
+      - "How do I get started with Empirica?"
+      - "How to create a session?"
+      - "What are the basic CLI commands?"
+      - "How to run PREFLIGHT?"
+    use_cases:
+      - onboarding
+      - first-time-users
+      - quick-start
+      - basic-workflow
+    related: ["05", "06", "13"]
+
+  # Investigation & Learning
+  
+  "production/07_INVESTIGATION_SYSTEM.md":
+    title: "Investigation System"
+    tags: [investigation, learning, unknowns, uncertainty, research]
+    concepts:
+      - investigation-workflow
+      - uncertainty-reduction
+      - findings-tracking
+      - unknowns-resolution
+      - epistemic-exploration
+    questions:
+      - "How to investigate unknowns?"
+      - "When should I investigate vs proceed?"
+      - "How to track investigation findings?"
+      - "What is the investigation workflow?"
+    use_cases:
+      - high-uncertainty-tasks
+      - research
+      - learning-exploration
+      - unknown-resolution
+    related: ["05", "06", "30"]
+
+  # API & Integration
+  
+  "production/13_PYTHON_API.md":
+    title: "Python API"
+    tags: [api, python, integration, programmatic, development]
+    concepts:
+      - python-api
+      - sessiondatabase-class
+      - programmatic-access
+      - api-methods
+    questions:
+      - "How to use Empirica from Python?"
+      - "What is the SessionDatabase API?"
+      - "How to create sessions programmatically?"
+      - "How to query epistemic data from Python?"
+    use_cases:
+      - programmatic-access
+      - python-integration
+      - custom-tools
+      - api-development
+    related: ["12", "30", "14"]
+
+  "guides/MCP_CONFIGURATION_EXAMPLES.md":
+    title: "MCP Configuration Examples"
+    tags: [mcp, integration, claude, cline, configuration]
+    concepts:
+      - mcp-protocol
+      - tool-configuration
+      - claude-desktop
+      - cline-integration
+    questions:
+      - "How to configure Empirica for Claude Desktop?"
+      - "How to set up MCP tools?"
+      - "What is MCP?"
+      - "How to integrate with Cline?"
+    use_cases:
+      - mcp-setup
+      - claude-integration
+      - tool-configuration
+      - cross-platform
+    related: ["03", "13"]
+
+  # Goals & Task Management
+  
+  "guides/GOAL_TREE_USAGE_GUIDE.md":
+    title: "Goal Tree Usage"
+    tags: [goals, subtasks, planning, task-management, organization]
+    concepts:
+      - goal-creation
+      - subtask-tracking
+      - goal-trees
+      - completion-tracking
+      - task-hierarchy
+    questions:
+      - "How to create goals?"
+      - "How to add subtasks?"
+      - "How to track goal progress?"
+      - "What is a goal tree?"
+    use_cases:
+      - task-planning
+      - complex-projects
+      - progress-tracking
+      - work-organization
+    related: ["30", "23", "12"]
+
+  # Configuration & Customization
+  
+  "production/15_CONFIGURATION.md":
+    title: "Configuration"
+    tags: [configuration, settings, customization, thresholds, profiles]
+    concepts:
+      - configuration-files
+      - threshold-tuning
+      - profile-settings
+      - mco-config
+      - yaml-configuration
+    questions:
+      - "How to configure Empirica?"
+      - "How to tune thresholds?"
+      - "Where are configuration files?"
+      - "How to customize settings?"
+    use_cases:
+      - customization
+      - threshold-tuning
+      - profile-management
+      - system-configuration
+    related: ["16", "14", "10"]
+
+  "production/10_PLUGIN_SYSTEM.md":
+    title: "Plugin System"
+    tags: [plugins, extensions, customization, modality-switcher]
+    concepts:
+      - plugin-architecture
+      - custom-plugins
+      - plugin-development
+      - extensibility
+    questions:
+      - "How to create plugins?"
+      - "What is the plugin system?"
+      - "How to extend Empirica?"
+      - "What plugins are available?"
+    use_cases:
+      - extensibility
+      - custom-features
+      - plugin-development
+      - system-extension
+    related: ["14", "15"]
+
+  # Troubleshooting & Help
+  
+  "production/21_TROUBLESHOOTING.md":
+    title: "Troubleshooting"
+    tags: [troubleshooting, debugging, errors, problems, help]
+    concepts:
+      - error-resolution
+      - common-issues
+      - debugging-tips
+      - problem-solving
+    questions:
+      - "Why isn't my session working?"
+      - "How to fix database errors?"
+      - "What does this error mean?"
+      - "How to debug issues?"
+    use_cases:
+      - error-resolution
+      - debugging
+      - problem-solving
+      - support
+    related: ["22", "03", "12"]
+
+  "production/22_FAQ.md":
+    title: "FAQ"
+    tags: [faq, questions, answers, help, reference]
+    concepts:
+      - frequently-asked-questions
+      - quick-answers
+      - common-questions
+    questions:
+      - "What is Empirica?"
+      - "Why use Empirica?"
+      - "How is Empirica different from X?"
+      - "Common questions about Empirica"
+    use_cases:
+      - quick-reference
+      - concept-clarification
+      - feature-comparison
+    related: ["03", "05", "30"]
+
+# Statistics
+total_docs_indexed: 15
+categories:
+  core_concepts: 2
+  project_management: 2
+  collaboration: 1
+  database: 1
+  getting_started: 1
+  investigation: 1
+  api: 2
+  task_management: 1
+  configuration: 2
+  troubleshooting: 2
+
+# Usage Examples:
+# 
+# Query by tag:
+#   docs = query_by_tag("bootstrap")  → Returns: PROJECT_LEVEL_TRACKING.md
+#   docs = query_by_tag("vectors")    → Returns: EPISTEMIC_VECTORS.md
+#
+# Query by question:
+#   docs = query_by_question("How to create a project?") → Returns: PROJECT_LEVEL_TRACKING.md
+#   docs = query_by_question("What are epistemic vectors?") → Returns: EPISTEMIC_VECTORS.md
+#
+# Query by use case:
+#   docs = query_by_use_case("multi-repo-projects") → Returns: PROJECT_LEVEL_TRACKING.md
+#   docs = query_by_use_case("onboarding") → Returns: BASIC_USAGE.md, PROJECT_LEVEL_TRACKING.md
+
+# Future Enhancements:
+# - Phase 2: Embed each doc in Qdrant using these tags as metadata
+# - Phase 3: Uncertainty-driven queries (high uncertainty → load docs with matching tags)
+# - Phase 4: Cross-project semantic search

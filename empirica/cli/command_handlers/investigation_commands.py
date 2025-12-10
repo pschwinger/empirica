@@ -229,3 +229,178 @@ def _investigate_concept(concept: str, context: str = None, verbose: bool = Fals
         
     except Exception as e:
         return {"error": str(e), "type": "concept"}
+
+
+# ========== Epistemic Branching Commands ==========
+
+def handle_investigate_create_branch_command(args):
+    """Handle investigate-create-branch command - Create parallel investigation path"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+
+        session_id = args.session_id
+        investigation_path = args.investigation_path
+        description = getattr(args, 'description', None)
+        preflight_vectors_str = args.preflight_vectors or "{}"
+
+        # Parse epistemic vectors
+        preflight_vectors = parse_json_safely(preflight_vectors_str)
+        if not isinstance(preflight_vectors, dict):
+            raise ValueError("Preflight vectors must be a JSON dict")
+
+        db = SessionDatabase()
+
+        # Generate branch names
+        branch_name = f"investigate-{investigation_path}"
+        git_branch_name = f"feature/investigate-{investigation_path}"
+
+        # Create branch in database
+        branch_id = db.create_branch(
+            session_id=session_id,
+            branch_name=branch_name,
+            investigation_path=investigation_path,
+            git_branch_name=git_branch_name,
+            preflight_vectors=preflight_vectors
+        )
+
+        db.close()
+
+        result = {
+            "ok": True,
+            "branch_id": branch_id,
+            "branch_name": branch_name,
+            "git_branch_name": git_branch_name,
+            "investigation_path": investigation_path,
+            "message": f"Created investigation branch: {git_branch_name}"
+        }
+
+        # Format output
+        if hasattr(args, 'output') and args.output == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"✅ Investigation branch created")
+            print(f"   Branch: {git_branch_name}")
+            print(f"   Path: {investigation_path}")
+            print(f"   ID: {branch_id[:8]}...")
+            if description:
+                print(f"   Description: {description}")
+
+        return result
+
+    except Exception as e:
+        handle_cli_error(e, "Create investigation branch", getattr(args, 'verbose', False))
+
+
+def handle_investigate_checkpoint_branch_command(args):
+    """Handle investigate-checkpoint-branch command - Checkpoint branch after investigation"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+
+        branch_id = args.branch_id
+        postflight_vectors_str = args.postflight_vectors or "{}"
+        tokens_spent = int(args.tokens_spent or 0)
+        time_spent = int(args.time_spent or 0)
+
+        # Parse vectors
+        postflight_vectors = parse_json_safely(postflight_vectors_str)
+        if not isinstance(postflight_vectors, dict):
+            raise ValueError("Postflight vectors must be a JSON dict")
+
+        db = SessionDatabase()
+
+        # Checkpoint the branch
+        success = db.checkpoint_branch(
+            branch_id=branch_id,
+            postflight_vectors=postflight_vectors,
+            tokens_spent=tokens_spent,
+            time_spent_minutes=time_spent
+        )
+
+        # Calculate merge score
+        if success:
+            score_data = db.calculate_branch_merge_score(branch_id)
+
+        db.close()
+
+        result = {
+            "ok": success,
+            "branch_id": branch_id,
+            "tokens_spent": tokens_spent,
+            "time_spent_minutes": time_spent,
+            "merge_score": score_data.get('merge_score', 0),
+            "quality": score_data.get('quality', 0),
+            "confidence": score_data.get('confidence', 0),
+            "message": f"Branch checkpointed with merge score: {score_data.get('merge_score', 0):.4f}"
+        }
+
+        # Format output
+        if hasattr(args, 'output') and args.output == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            print(f"✅ Branch checkpointed successfully")
+            print(f"   Merge Score: {score_data.get('merge_score', 0):.4f}")
+            print(f"   Quality: {score_data.get('quality', 0):.4f}")
+            print(f"   Confidence: {score_data.get('confidence', 0):.4f}")
+            print(f"   Uncertainty (dampener): {score_data.get('uncertainty_dampener', 0):.4f}")
+            print(f"   Tokens spent: {tokens_spent}")
+            print(f"   Time spent: {time_spent} minutes")
+
+        return result
+
+    except Exception as e:
+        handle_cli_error(e, "Checkpoint investigation branch", getattr(args, 'verbose', False))
+
+
+def handle_investigate_merge_branches_command(args):
+    """Handle investigate-merge-branches command - Auto-merge best branch based on epistemic scores"""
+    try:
+        from empirica.data.session_database import SessionDatabase
+
+        session_id = args.session_id
+        investigation_round = int(getattr(args, 'round', 1) or 1)
+
+        db = SessionDatabase()
+
+        # Perform epistemic auto-merge
+        merge_result = db.merge_branches(
+            session_id=session_id,
+            investigation_round=investigation_round
+        )
+
+        db.close()
+
+        if "error" in merge_result:
+            result = {
+                "ok": False,
+                "error": merge_result["error"]
+            }
+        else:
+            result = {
+                "ok": True,
+                "winning_branch_id": merge_result["winning_branch_id"],
+                "winning_branch_name": merge_result["winning_branch_name"],
+                "winning_score": merge_result["winning_score"],
+                "merge_decision_id": merge_result["merge_decision_id"],
+                "other_branches": merge_result["other_branches"],
+                "rationale": merge_result["rationale"],
+                "message": f"Auto-merged {merge_result['winning_branch_name']} (score: {merge_result['winning_score']:.4f})"
+            }
+
+        # Format output
+        if hasattr(args, 'output') and args.output == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            if result.get("ok"):
+                print(f"✅ Epistemic Auto-Merge Complete")
+                print(f"   Winner: {merge_result['winning_branch_name']}")
+                print(f"   Merge Score: {merge_result['winning_score']:.4f}")
+                print(f"   Decision ID: {merge_result['merge_decision_id'][:8]}...")
+                print(f"   Evaluated {len(merge_result['other_branches']) + 1} paths")
+                print(f"   Rationale: {merge_result['rationale']}")
+            else:
+                print(f"❌ Merge failed: {result.get('error')}")
+
+        return result
+
+    except Exception as e:
+        handle_cli_error(e, "Merge investigation branches", getattr(args, 'verbose', False))

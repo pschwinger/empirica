@@ -10,7 +10,7 @@
 
 ## Quick Links
 
-- **Complete Python API:** `docs/production/19_API_REFERENCE_COMPLETE.md` (comprehensive method signatures)
+- **Complete Python API:** `docs/production/20_API_REFERENCE_COMPLETE.md` (comprehensive method signatures)
 - **Complete CLI Reference:** `docs/reference/CLI_COMMANDS_COMPLETE.md` (all 49 commands)
 - **Storage Architecture:** `docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md`
 

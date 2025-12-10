@@ -518,6 +518,84 @@ query_handoff_reports(session_id=session_id)
 
 ---
 
+## VII.5 PROJECT BOOTSTRAP (Context Loading via MCP)
+
+**For Copilot development environments:** Load project breadcrumbs instantly
+
+```bash
+# At session start (if resuming project work)
+empirica project-bootstrap --project-id <PROJECT_ID> --output json
+
+# Returns breadcrumbs (~800 tokens):
+# - Recent findings (what was learned)
+# - Unresolved unknowns (what to investigate next - breadcrumbs!)
+# - Dead ends (what didn't work - learn from failures)
+# - Recent mistakes to avoid (root causes + prevention)
+# - Reference docs (what to read/update)
+# - Incomplete work (pending goals + progress)
+# - Learning deltas (how much we've grown)
+```
+
+**When to Load Bootstrap (Uncertainty-Driven):**
+
+| Uncertainty | Context Depth | Docs Loaded | Findings | Token Cost | Use Case |
+|---|---|---|---|---|---|
+| **>0.7 (High)** | Deep | 5 docs | 20 findings | ~4500 | New domain, need extensive context |
+| **0.5-0.7 (Medium)** | Moderate | 3 docs | 10 findings | ~2700 | Some knowledge, need guidance |
+| **<0.5 (Low)** | Minimal | 2 docs | 5 findings | ~1800 | High baseline knowledge |
+
+**Decision Logic:**
+
+**High uncertainty (>0.7):**
+- Load full breadcrumbs (`mode="live"`) with ALL findings, unknowns, dead ends
+- Query Qdrant semantic search for task-relevant docs + findings
+- Spend extra context on deep understanding before PREFLIGHT
+
+**Medium uncertainty (0.5-0.7):**
+- Load fast breadcrumbs (`mode="session_start"`) with recent items
+- Shows: 10 recent findings, unresolved unknowns only, 5 dead ends, 5 mistakes
+- Use CHECK phase to spot-check any gaps
+- Proceed once CHECK confidence ≥0.7
+
+**Low uncertainty (<0.5):**
+- Load minimal breadcrumbs (recent findings only)
+- Trust baseline knowledge
+- Proceed immediately after PREFLIGHT
+- Use CHECK only if encountering unknown unknowns
+
+**API Usage:**
+
+```python
+# Python API
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+breadcrumbs = db.bootstrap_project_breadcrumbs(project_id="...", mode="session_start")
+# mode: "session_start" (fast, recent items) or "live" (complete)
+db.close()
+
+# Returns dict with: project, findings, unknowns, dead_ends,
+# mistakes_to_avoid, reference_docs, incomplete_work, key_decisions
+```
+
+**Benefits:**
+- ✅ **92% token savings** (~800 vs ~10k manual reconstruction)
+- ✅ **Instant context** (no manual git/grep needed)
+- ✅ **Breadcrumbs** (unresolved unknowns guide investigation)
+- ✅ **Learning continuity** (learning deltas show growth)
+- ✅ **Mistake prevention** (recent mistakes with root causes)
+
+**Typical Flow:**
+```
+1. Create session: empirica session-create --ai-id copilot
+2. Load context: empirica project-bootstrap --project-id <ID>
+3. Run PREFLIGHT with bootstrap context
+4. Proceed with work
+5. Log findings as you discover them (enriches next bootstrap)
+```
+
+---
+
 ## VIII. STATUSLINE INTEGRATION (Mirror Drift Monitor)
 
 ### Session Management

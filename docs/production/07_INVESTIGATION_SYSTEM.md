@@ -341,6 +341,21 @@ if intuitive_know > belief.mean + 2σ:
 
 ---
 
+## Documentation Integration
+
+To prevent knowledge loss and doc sprawl, Empirica provides doc-check suggestions at CHECK/POSTFLIGHT:
+
+```bash
+empirica doc-check --project-id <UUID> --output json
+```
+
+It computes a doc_completeness_score and suggests updates:
+- Update investigation guides when many unresolved unknowns exist
+- Update project-level tracking when many findings are logged
+- Update CLI reference when new commands are added in this session
+
+Heuristic target: score ≥ 0.8 before marking a goal complete.
+
 ## Investigation Best Practices
 
 ### Do:
@@ -371,11 +386,112 @@ cascade = CanonicalEpistemicCascade(
 
 ---
 
+## Phase 2: Epistemic Branching (Parallel Investigation)
+
+**New in v4.0:** Support for parallel investigation branches with epistemic auto-merge.
+
+### When to Use Branching
+
+Branching helps when there are **multiple valid investigation approaches** and you want to:
+1. Explore each path systematically
+2. Measure which path yields best learning
+3. Auto-merge the highest-value path
+
+**Example Scenario:**
+```
+Task: Implement authentication
+Approach 1: OAuth2 (complex, secure, industry standard)
+Approach 2: JWT (simple, stateless, suitable for APIs)
+Approach 3: OIDC (enterprise, federated identity)
+
+Result: Create 3 branches, checkpoint each, merge highest scorer
+```
+
+### Branching Workflow
+
+```bash
+# 1. Create parallel investigation branches
+empirica investigate-create-branch \
+  --session-id <sid> \
+  --investigation-path oauth2 \
+  --preflight-vectors '{"engagement":0.95,"know":0.90,...}'
+
+empirica investigate-create-branch \
+  --session-id <sid> \
+  --investigation-path jwt \
+  --preflight-vectors '{"engagement":0.70,"know":0.65,...}'
+
+empirica investigate-create-branch \
+  --session-id <sid> \
+  --investigation-path oidc \
+  --preflight-vectors '{"engagement":0.88,"know":0.85,...}'
+
+# 2. Perform investigation work in each branch (implicit, natural work)
+
+# 3. Checkpoint each branch with postflight vectors
+empirica investigate-checkpoint-branch \
+  --branch-id <bid1> \
+  --postflight-vectors '{"engagement":0.96,"know":0.93,...}' \
+  --tokens-spent 2500 \
+  --time-spent 45
+
+# ... repeat for other branches
+
+# 4. Trigger epistemic auto-merge
+empirica investigate-merge-branches \
+  --session-id <sid> \
+  --round 1
+```
+
+### Epistemic Merge Score Formula
+
+```
+merge_score = (learning_delta × quality × confidence) / cost_penalty
+
+Where:
+- learning_delta = average gain in [know, do, context, clarity, signal]
+- quality = (coherence + clarity + (1 - density)) / 3
+- confidence = 1 - uncertainty (DAMPENER: uncertainty suppresses scores)
+- cost_penalty = max(1.0, tokens_spent / 2000.0)
+```
+
+**Key Insight:** Uncertainty acts as a **dampener**, not just a measurement. High-uncertainty branches get lower merge scores even with good learning, preventing ambiguous approaches from winning.
+
+### Branching Decision Gate
+
+After checkpointing all branches, `investigate-merge-branches`:
+1. Calculates `merge_score` for each branch
+2. Selects **highest scorer as winner**
+3. Records decision with full rationale
+4. Updates branch status to `merged`
+
+**Winner Selection Criteria:**
+- Highest `merge_score` (explicit calculation)
+- Learning-to-cost optimization (natural outcome of formula)
+- Uncertainty-aware (high uncertainty = lower score)
+
+### Multi-Round Branching
+
+For complex tasks, run multiple branching rounds:
+
+```bash
+# Round 1: OAuth2 vs JWT vs OIDC → Winner: JWT
+empirica investigate-merge-branches --session-id <sid> --round 1
+
+# Round 2: JWT implementation approaches → Winner: JWT-RS256
+empirica investigate-merge-branches --session-id <sid> --round 2
+
+# Each round is recorded in merge_decisions table
+```
+
+---
+
 ## Next Steps
 
 - **Custom Plugins:** [14_CUSTOM_PLUGINS.md](14_CUSTOM_PLUGINS.md)
 - **API Reference:** [13_PYTHON_API.md](13_PYTHON_API.md)
 - **Cascade Flow:** [06_CASCADE_FLOW.md](06_CASCADE_FLOW.md)
+- **Flexible Handoffs:** [../guides/FLEXIBLE_HANDOFF_GUIDE.md](../guides/FLEXIBLE_HANDOFF_GUIDE.md)
 
 ---
 

@@ -85,6 +85,8 @@ These are **formal epistemic assessments** stored in `reflexes` table:
 
 **Purpose:** Assess what you ACTUALLY know before starting.
 
+#### CLI Path
+
 ```bash
 # 1. Generate self-assessment prompt
 empirica preflight \
@@ -99,6 +101,37 @@ empirica preflight-submit \
   --session-id <SESSION_ID> \
   --vectors '{"engagement":0.8,"know":0.6,"do":0.7,...}' \
   --reasoning "Starting with moderate knowledge, high uncertainty about X"
+```
+
+#### MCP Path (Recommended for Claude)
+
+```python
+# Get assessment prompt
+result = mcp__empirica__execute_preflight(
+  session_id="<SESSION_ID>",
+  prompt="Your task description"
+)
+# Perform genuine assessment based on prompt
+
+# Submit assessment
+result = mcp__empirica__submit_preflight_assessment(
+  session_id="<SESSION_ID>",
+  vectors={"engagement":0.8, "know":0.6, "do":0.7, ...},
+  reasoning="Starting with moderate knowledge, high uncertainty about X"
+)
+```
+
+#### Python API Path
+
+```python
+from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+
+logger = GitEnhancedReflexLogger(session_id=session_id)
+logger.add_checkpoint(
+    phase="PREFLIGHT",
+    vectors={"engagement":0.8, "know":0.6, "do":0.7, ...},
+    reasoning="Task understanding and confidence assessment"
+)
 ```
 
 **13 Vectors (All 0.0-1.0):**
@@ -117,6 +150,8 @@ empirica preflight-submit \
 
 **Purpose:** Validate readiness to proceed vs investigate more.
 
+#### CLI Path
+
 ```bash
 # 1. Execute CHECK with findings/unknowns
 empirica check \
@@ -131,6 +166,24 @@ empirica check-submit \
   --vectors '{"know":0.75,"do":0.8,"uncertainty":0.2,...}' \
   --decision "proceed"  # or "investigate" to loop back
   --reasoning "Knowledge increased, ready to implement"
+```
+
+#### MCP Path
+
+```python
+result = mcp__empirica__execute_check(
+  session_id="<SESSION_ID>",
+  findings=["Found: API requires auth token", "Learned: OAuth2 flow"],
+  remaining_unknowns=["Still unclear: token refresh timing"],
+  confidence_to_proceed=0.75
+)
+
+result = mcp__empirica__submit_check_assessment(
+  session_id="<SESSION_ID>",
+  vectors={"know":0.75, "do":0.8, "uncertainty":0.2, ...},
+  decision="proceed",
+  reasoning="Knowledge increased, ready to implement"
+)
 ```
 
 **Storage:** `reflexes` table + git notes
@@ -148,20 +201,49 @@ empirica check-submit \
 
 **Purpose:** Measure what you ACTUALLY learned.
 
-```bash
-# 1. Execute POSTFLIGHT
-empirica postflight \
-  --session-id <SESSION_ID> \
-  --task-summary "Implemented OAuth2 authentication with refresh tokens"
+**Note:** The old `empirica postflight` (interactive) has been deprecated. Use `postflight-submit` (direct submission) or MCP tools (non-blocking).
 
-# 2. Submit POSTFLIGHT assessment (final vectors)
+#### CLI Path (Direct Submission)
+
+```bash
 empirica postflight-submit \
   --session-id <SESSION_ID> \
   --vectors '{"engagement":0.9,"know":0.85,"do":0.9,"uncertainty":0.15,...}' \
   --reasoning "Learned: token refresh requires secure storage, initially uncertain but now confident"
 ```
 
-**Storage:** `reflexes` table + git notes
+#### MCP Path (Recommended for Claude)
+
+```python
+# In Claude Code or MCP servers
+result = mcp__empirica__execute_postflight(
+  session_id="<SESSION_ID>"
+)
+# Get assessment prompt, perform genuine assessment
+
+result = mcp__empirica__submit_postflight_assessment(
+  session_id="<SESSION_ID>",
+  vectors={"engagement":0.9, "know":0.85, ...},
+  reasoning="Task summary and learning"
+)
+```
+
+#### Python API Path
+
+```python
+from empirica.data.session_database import SessionDatabase
+from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+
+# Log postflight vectors
+logger = GitEnhancedReflexLogger(session_id=session_id)
+logger.add_checkpoint(
+    phase="POSTFLIGHT",
+    vectors={"engagement":0.9, "know":0.85, "do":0.9, ...},
+    reasoning="Learned token refresh security, resolved initial uncertainty"
+)
+```
+
+**Storage:** `reflexes` table + git notes (unified across all paths)
 
 **Calibration:** Compare PREFLIGHT → POSTFLIGHT:
 - KNOW increase = domain knowledge learned
@@ -454,6 +536,62 @@ Statusline shows: 🧠 K:0.75 D:0.80 U:0.25 [STABLE]
 **Critical:** Statusline queries `reflexes` table. If CASCADE phases write to wrong table, statusline shows nothing.
 
 **Drift detection:** Compares confidence predictions vs actual outcomes.
+
+---
+
+## VII.1 PROJECT-LEVEL TRACKING (v4.1)
+
+Use this for multi-repo/long-term work (weeks to months) and team continuity.
+
+Quick start:
+
+```bash
+# Create project
+empirica project-create --name "My Project" --repos '["repo1", "repo2"]'
+
+# Bootstrap context (instant)
+empirica project-bootstrap --project-id <ID>
+# Shows: recent findings, unresolved unknowns, dead ends, mistakes, reference docs
+
+# Log epistemic memory during work
+empirica finding-log  --project-id <ID> --session-id <ID> --finding  "What was learned"
+empirica unknown-log  --project-id <ID> --session-id <ID> --unknown  "What remains unclear"
+empirica deadend-log  --project-id <ID> --session-id <ID> --approach "Tried X" --why-failed "Reason Y"
+empirica refdoc-add   --project-id <ID> --doc-path "docs/.." --doc-type "guide|code|config|reference"
+```
+
+Epistemic memory components:
+- Findings (learned), Unknowns (unclear), Dead Ends (didn't work), Mistakes (what to avoid), Reference Docs (what to read/update)
+
+Token efficiency: Project bootstrap ~800 tokens (vs ~10k manual reconstruction). Savings ~92%.
+
+See: docs/guides/PROJECT_LEVEL_TRACKING.md
+
+---
+
+## VII.2 SEMANTIC DOCUMENTATION INDEX (v4.1)
+
+Purpose: Fast documentation discovery via semantic tags; foundation for Qdrant and uncertainty-driven bootstrap.
+
+File: docs/SEMANTIC_INDEX.yaml
+
+Fields:
+- tags (broad): vectors, session, project, bootstrap, investigation, mcp, api, troubleshooting
+- concepts (technical): preflight, check-gate, breadcrumbs, epistemic-memory, 3-layer-storage
+- questions (user queries): "How do I create a project?", "What are epistemic vectors?"
+- use_cases (scenarios): multi-repo-projects, onboarding, long-term-development, error-resolution
+- related (doc numbers): ["06", "23", "30"]
+
+Query patterns:
+- By tag: bootstrap → PROJECT_LEVEL_TRACKING.md
+- By question: "How to resume session?" → SESSION_CONTINUITY.md
+- By use case: onboarding → BASIC_USAGE.md, PROJECT_LEVEL_TRACKING.md
+
+Token savings: ~73% for doc discovery (850 vs 3100 tokens).
+
+Future:
+- Phase 2: Qdrant embeddings for docs + findings/unknowns/mistakes
+- Phase 3: Uncertainty-driven bootstrap (high uncertainty → more context; low → less)
 
 ---
 

@@ -362,6 +362,66 @@ if not validation['coherent']:
 
 ---
 
+## Unified Submission Paths (v4.0+)
+
+CASCADE assessments support three unified submission paths - all write to same `reflexes` table:
+
+### 1. CLI Path (Direct Submission)
+```bash
+# PREFLIGHT
+empirica preflight-submit \
+  --session-id <sid> \
+  --vectors '{"engagement":0.8,"know":0.6,...}' \
+  --reasoning "Task understanding"
+
+# CHECK
+empirica check-submit \
+  --session-id <sid> \
+  --vectors '{"engagement":0.85,"know":0.75,...}' \
+  --decision "proceed" \
+  --reasoning "Investigation complete"
+
+# POSTFLIGHT
+empirica postflight-submit \
+  --session-id <sid> \
+  --vectors '{"engagement":0.9,"know":0.85,...}' \
+  --reasoning "Learned OAuth2 security best practices"
+```
+
+### 2. MCP Path (Recommended for Claude)
+```python
+# PREFLIGHT
+mcp__empirica__execute_preflight(session_id, prompt)
+mcp__empirica__submit_preflight_assessment(session_id, vectors, reasoning)
+
+# CHECK
+mcp__empirica__execute_check(session_id, findings, unknowns, confidence)
+mcp__empirica__submit_check_assessment(session_id, vectors, decision, reasoning)
+
+# POSTFLIGHT
+mcp__empirica__execute_postflight(session_id)
+mcp__empirica__submit_postflight_assessment(session_id, vectors, reasoning)
+```
+
+### 3. Python API Path
+```python
+from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+
+logger = GitEnhancedReflexLogger(session_id=session_id)
+logger.add_checkpoint(phase="PREFLIGHT", vectors={...}, reasoning="...")
+logger.add_checkpoint(phase="CHECK", vectors={...}, reasoning="...")
+logger.add_checkpoint(phase="POSTFLIGHT", vectors={...}, reasoning="...")
+```
+
+**All paths write to:** `reflexes` table + git notes + JSON (3-layer atomic writes)
+
+**Key Principle:** Use the path that fits your context:
+- **CLI:** Scripts, automation, direct execution
+- **MCP:** Claude Code, integrated with native tools, non-blocking
+- **Python:** Custom applications, deep integration
+
+---
+
 ## Integration with CASCADE
 
 MCO is fully integrated with the CASCADE workflow:

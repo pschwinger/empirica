@@ -86,11 +86,31 @@ from .project_commands import (
     handle_deadend_log_command,
     handle_refdoc_add_command
 )
+from .project_search import (
+    handle_project_search_command,
+)
+from .project_embed import (
+    handle_project_embed_command,
+)
+from .doc_commands import (
+    handle_doc_check_command,
+    handle_doc_plan_suggest_command,
+)
+from .skill_commands import (
+    handle_skill_suggest_command,
+    handle_skill_fetch_command,
+)
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
     handle_monitor_reset_command, handle_monitor_cost_command
 )
-from .investigation_commands import handle_investigate_command, handle_analyze_command
+from .investigation_commands import (
+    handle_investigate_command,
+    handle_analyze_command,
+    handle_investigate_create_branch_command,
+    handle_investigate_checkpoint_branch_command,
+    handle_investigate_merge_branches_command
+)
 from .performance_commands import handle_benchmark_command, handle_performance_command
 from .component_commands import handle_list_command, handle_explain_command, handle_demo_command
 from .utility_commands import (
@@ -195,6 +215,12 @@ __all__ = [
     'handle_unknown_log_command',
     'handle_deadend_log_command',
     'handle_refdoc_add_command',
+    'handle_project_search_command',
+    'handle_project_embed_command',
+    'handle_doc_check_command',
+    'handle_doc_plan_suggest_command',
+    'handle_skill_suggest_command',
+    'handle_skill_fetch_command',
     
     # Monitor commands
     'handle_monitor_command',
@@ -205,7 +231,10 @@ __all__ = [
     # Investigation commands
     'handle_investigate_command',
     'handle_analyze_command',
-    
+    'handle_investigate_create_branch_command',
+    'handle_investigate_checkpoint_branch_command',
+    'handle_investigate_merge_branches_command',
+
     # Performance commands
     'handle_benchmark_command',
     'handle_performance_command',

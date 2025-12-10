@@ -313,6 +313,47 @@ The decision logic embodies Empirica's core principle: **know what you know, kno
 
 ---
 
+## Sentinel Role in CASCADE (v4.0+)
+
+**Important clarification:** Sentinel is a **monitoring and calibration system**, not an intervention gate for CASCADE phases.
+
+### Where Sentinel Does NOT Intervene
+
+❌ **POSTFLIGHT**: Sentinel does NOT gate AI's own learning assessment
+- AI has completed work and measured learning deltas
+- These are epistemic facts, not predictions to be second-guessed
+- Calibration is tracked for future reference, not as a gate
+
+❌ **Arbitrary Task Interruption**: Sentinel doesn't pause arbitrary decisions
+- Only monitors for systemic red flags (e.g., all vectors increasing uniformly = confabulation pattern)
+- Does not gate individual assessments
+
+### Where Sentinel DOES Help
+
+✅ **Calibration Monitoring**: Track AI calibration accuracy over time
+- Compare PREFLIGHT predictions vs POSTFLIGHT reality
+- Detect patterns: "This AI overestimates DO" or "Underestimates uncertainty"
+- Inform model profile adjustments (see `24_MCO_ARCHITECTURE.md`)
+
+✅ **Anomaly Detection**: Flag unusual patterns
+- Same vectors submitted multiple times (copy-paste confabulation)
+- Impossible deltas (negative learning in all vectors)
+- Assessment time vs token budget mismatch (work too fast = rushed assessment?)
+
+✅ **Multi-AI Coordination**: Help resolve conflicts in shared goals
+- When two AIs create conflicting goal decisions
+- Track which AI's prediction was more accurate
+- Inform handoff routing for next AI
+
+### Sentinel = Learner, Not Judge
+
+Sentinel's core role: **Learn from each AI's calibration to improve future recommendations**
+
+**Not**: "Your assessment is wrong, try again"
+**But**: "I've learned you tend to underestimate task complexity. I'll adjust my recommendations next time"
+
+---
+
 ## Implementation Details
 
 For implementation details, see:
