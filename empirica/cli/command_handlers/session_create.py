@@ -10,21 +10,55 @@ from ..cli_utils import handle_cli_error
 def handle_session_create_command(args):
     """Create a new session"""
     try:
+        import os
+        import subprocess
         from empirica.data.session_database import SessionDatabase
-        
+
         ai_id = args.ai_id
         user_id = getattr(args, 'user_id', None)
         bootstrap_level = getattr(args, 'bootstrap_level', 1)
         output_format = getattr(args, 'output', 'default')
-        
+
         db = SessionDatabase()
         session_id = db.create_session(
             ai_id=ai_id,
             bootstrap_level=bootstrap_level,
             components_loaded=6  # Standard component count
         )
+
+        # Try to auto-detect project from git remote URL
+        project_id = None
+        try:
+            # Get git remote URL
+            result = subprocess.run(
+                ['git', 'remote', 'get-url', 'origin'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                git_url = result.stdout.strip()
+                # Find project by matching repo URL
+                cursor = db.conn.cursor()
+                cursor.execute("""
+                    SELECT id FROM projects WHERE repos LIKE ?
+                """, (f'%{git_url}%',))
+                row = cursor.fetchone()
+                if row:
+                    project_id = row['id']
+        except Exception:
+            pass
+
+        # Link session to project if found
+        if project_id:
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                UPDATE sessions SET project_id = ? WHERE session_id = ?
+            """, (project_id, session_id))
+            db.conn.commit()
+
         db.close()
-        
+
         if output_format == 'json':
             result = {
                 "ok": True,
@@ -32,6 +66,7 @@ def handle_session_create_command(args):
                 "ai_id": ai_id,
                 "user_id": user_id,
                 "bootstrap_level": bootstrap_level,
+                "project_id": project_id,
                 "message": "Session created successfully"
             }
             print(json.dumps(result, indent=2))
@@ -40,6 +75,36 @@ def handle_session_create_command(args):
             print(f"   📋 Session ID: {session_id}")
             print(f"   🤖 AI ID: {ai_id}")
             print(f"   📊 Bootstrap Level: {bootstrap_level}")
+
+            # Show project breadcrumbs if project was detected
+            if project_id:
+                print(f"   📁 Project: {project_id[:8]}...")
+                print(f"\n📚 Project Context:")
+                db = SessionDatabase()
+                breadcrumbs = db.bootstrap_project_breadcrumbs(project_id, mode="session_start")
+                db.close()
+
+                if "error" not in breadcrumbs:
+                    project = breadcrumbs['project']
+                    print(f"   Project: {project['name']}")
+                    print(f"   Description: {project['description']}")
+
+                    if breadcrumbs.get('findings'):
+                        print(f"\n   Recent Findings (last 5):")
+                        for finding in breadcrumbs['findings'][:5]:
+                            print(f"     • {finding}")
+
+                    unresolved = [u for u in breadcrumbs.get('unknowns', []) if not u['is_resolved']]
+                    if unresolved:
+                        print(f"\n   Unresolved Unknowns:")
+                        for u in unresolved[:3]:
+                            print(f"     • {u['unknown']}")
+
+                    if breadcrumbs.get('available_skills'):
+                        print(f"\n   Available Skills:")
+                        for skill in breadcrumbs['available_skills'][:3]:
+                            print(f"     • {skill['title']} ({', '.join(skill['tags'])})")
+
             print(f"\nNext steps:")
             print(f"   empirica preflight --session-id {session_id} --prompt \"Your task\"")
         
