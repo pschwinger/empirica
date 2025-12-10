@@ -122,24 +122,6 @@ def _add_cascade_parsers(subparsers):
     preflight_parser.add_argument('--verbose', action='store_true', help='Show detailed assessment (human format only)')
     preflight_parser.add_argument('--quiet', action='store_true', help='Quiet mode (requires --assessment-json)')
     
-    # Postflight command
-    postflight_parser = subparsers.add_parser('postflight', help='Execute postflight epistemic reassessment')
-    postflight_parser.add_argument('session_id', help='Session ID from preflight')
-    postflight_parser.add_argument('--summary', help='Task completion summary')
-    postflight_parser.add_argument('--ai-id', help='AI identifier for session tracking (should match preflight)')
-    postflight_parser.add_argument('--no-git', action='store_true', help='Disable automatic git checkpoint creation')
-    postflight_parser.add_argument('--sign', action='store_true', help='Sign assessment with AI keypair (Phase 2: EEP-1)')
-    postflight_parser.add_argument('--prompt-only', action='store_true', help='Return ONLY the self-assessment prompt as JSON (no waiting, for genuine AI assessment)')
-    postflight_parser.add_argument('--assessment-json', help='Genuine AI self-assessment JSON (required for genuine assessment)')
-    postflight_parser.add_argument('--sentinel-assess', action='store_true', help='Route to Sentinel assessment system (future feature)')
-    postflight_parser.add_argument('--json', action='store_const', const='json', dest='output_format', help='Output as JSON (deprecated, use --output json)')
-    postflight_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json for programmatic use; --output human for inspection)')
-    postflight_parser.add_argument('--sentinel', action='store_true', help='Route to Sentinel for interactive decision-making (future: Sentinel assessment routing)')
-    postflight_parser.add_argument('--compact', action='store_true', help='Output as single-line key=value (human format only)')
-    postflight_parser.add_argument('--kv', action='store_true', help='Output as multi-line key=value (human format only)')
-    postflight_parser.add_argument('--verbose', action='store_true', help='Show detailed delta analysis')
-    postflight_parser.add_argument('--quiet', action='store_true', help='Quiet mode (requires --assessment-json)')
-    
     # Workflow command
     workflow_parser = subparsers.add_parser('workflow', help='Execute full preflight→work→postflight workflow')
     workflow_parser.add_argument('prompt', help='Task description')
@@ -176,11 +158,18 @@ def _add_cascade_parsers(subparsers):
     check_submit_parser.add_argument('--cycle', type=int, help='Investigation cycle number')
     check_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
-    # Postflight submit command
-    postflight_submit_parser = subparsers.add_parser('postflight-submit', help='Submit postflight assessment results')
+    # Postflight command (primary, non-blocking)
+    postflight_parser = subparsers.add_parser('postflight', help='Submit postflight epistemic assessment results')
+    postflight_parser.add_argument('--session-id', required=True, help='Session ID')
+    postflight_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict (reassessment of same 13 dimensions as preflight)')
+    postflight_parser.add_argument('--reasoning', help='Task summary or description of learning/changes from preflight')
+    postflight_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+
+    # Postflight-submit alias (backward compatibility)
+    postflight_submit_parser = subparsers.add_parser('postflight-submit', help='Alias for postflight (deprecated, use postflight)')
     postflight_submit_parser.add_argument('--session-id', required=True, help='Session ID')
     postflight_submit_parser.add_argument('--vectors', required=True, help='Epistemic vectors as JSON string or dict')
-    postflight_submit_parser.add_argument('--reasoning', help='Description of what changed from preflight (was --changes, now unified with preflight-submit)')
+    postflight_submit_parser.add_argument('--reasoning', help='Description of what changed from preflight')
     postflight_submit_parser.add_argument('--changes', help='Alias for --reasoning (deprecated, use --reasoning)', dest='reasoning')
     postflight_submit_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
@@ -841,14 +830,14 @@ def main(args=None):
             # Cascade commands (core workflow via MCP)
             # 'cascade': removed - use MCP tools: execute_preflight, execute_check, execute_postflight
             'preflight': handle_preflight_command,
-            'postflight': handle_postflight_command,
             'workflow': handle_workflow_command,
-            
+
             # NEW: MCP v2 Workflow Commands (Critical Priority)
             'preflight-submit': handle_preflight_submit_command,
             'check': handle_check_command,
             'check-submit': handle_check_submit_command,
-            'postflight-submit': handle_postflight_submit_command,
+            'postflight': handle_postflight_submit_command,  # Primary command: non-blocking assessment submission
+            'postflight-submit': handle_postflight_submit_command,  # Alias for backward compatibility
             
             # Decision commands (from decision_commands.py)
             'decision': handle_decision_command,

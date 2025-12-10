@@ -331,10 +331,13 @@ def handle_preflight_command(args):
                 logger.error(f"Signing failed: {e}")
         
         # Format output based on requested format
-        # Handle both --json (deprecated, sets output_format) and --output json
-        output_format = getattr(args, 'output_format', None) or getattr(args, 'output', 'default')
+        # Default is JSON for programmatic use (AI→CLI→storage)
+        # --output human for inspection/debugging
+        output_format = getattr(args, 'output_format', None) or getattr(args, 'output', 'json')
+
         json_output = output_format == 'json' or getattr(args, 'json', False)
-        
+        human_output = output_format == 'human'
+
         if json_output:
             output = {
                 "session_id": session_id,
@@ -347,15 +350,16 @@ def handle_preflight_command(args):
                 output['signature'] = signature_data
             logger.info(json.dumps(output, indent=2))
         
-        elif args.compact:
+        elif human_output or getattr(args, 'compact', False):
             # Single-line key=value format
-            parts = [f"SESSION={session_id}"]
-            for key, value in vectors.items():
-                parts.append(f"{key.upper()}={value:.2f}")
-            parts.append(f"RECOMMEND={_get_recommendation(vectors)['action']}")
-            logger.info(" ".join(parts))
-        
-        elif args.kv:
+            if getattr(args, 'compact', False):
+                parts = [f"SESSION={session_id}"]
+                for key, value in vectors.items():
+                    parts.append(f"{key.upper()}={value:.2f}")
+                parts.append(f"RECOMMEND={_get_recommendation(vectors)['action']}")
+                logger.info(" ".join(parts))
+
+        elif getattr(args, 'kv', False):
             # Multi-line key=value format
             logger.info(f"session_id={session_id}")
             logger.info(f"task={prompt}")
@@ -363,9 +367,9 @@ def handle_preflight_command(args):
             for key, value in vectors.items():
                 logger.info(f"{key}={value:.2f}")
             logger.info(f"recommendation={_get_recommendation(vectors)['action']}")
-        
+
         else:
-            # Human-friendly format (default)
+            # Human-friendly format (interactive default with --output human or --interactive)
             logger.info("📊 Epistemic Vectors:")
             
             # Tier 1: Foundation
@@ -411,291 +415,16 @@ def handle_preflight_command(args):
 
 
 def handle_postflight_command(args):
-    """Execute postflight epistemic reassessment after task completion"""
-    try:
-        from empirica.core.canonical import CanonicalEpistemicAssessor
-        from empirica.data.session_database import SessionDatabase
-        import asyncio
-        
-        session_id = args.session_id
-        summary = args.summary or "Task completed"
-        ai_id = getattr(args, 'ai_id', None)
-        
-        # Execute postflight assessment - GENUINE self-assessment required
-        # Use ai_id if provided, otherwise fall back to session_id for backward compatibility
-        assessor = CanonicalEpistemicAssessor(agent_id=ai_id if ai_id else session_id)
-        
-        task_description = f"POSTFLIGHT: {summary}"
-        assessment_request = asyncio.run(assessor.assess(task_description, {"phase": "postflight"}))
-        
-        if not isinstance(assessment_request, dict) or 'self_assessment_prompt' not in assessment_request:
-            logger.error("❌ Failed to generate self-assessment prompt")
-            return
-        
-        # NEW: --prompt-only flag returns ONLY the prompt (no waiting for input)
-        if hasattr(args, 'prompt_only') and args.prompt_only:
-            output = {
-                "session_id": session_id,
-                "summary": summary,
-                "assessment_id": assessment_request['assessment_id'],
-                "self_assessment_prompt": assessment_request['self_assessment_prompt'],
-                "phase": "postflight",
-                "instructions": "Perform genuine self-assessment and call submit_postflight_assessment with vectors"
-            }
-            print(json.dumps(output, indent=2))
-            return
-        
-        # LEGACY: Original flow with hanging risk
-        # CRITICAL FIX: Add Sentinel routing to prevent hanging
-        if hasattr(args, 'sentinel_assess') and args.sentinel_assess:
-            print("🔮 SENTINEL ASSESSMENT ROUTING")
-            print("⚠️  Sentinel integration not yet implemented")
-            print("📍 For now, please use MCP tools directly:")
-            print("   • execute_postflight MCP tool")
-            print("   • submit_postflight_assessment MCP tool")
-            print("")
-            print("💡 Alternative: Use working MCP tools instead of hanging CLI")
-            return
-        print_header("🏁 Postflight Assessment")
-        
-        logger.info(f"🆔 Session ID: {session_id}")
-        logger.info(f"📋 Task Summary: {summary}")
-        logger.info(f"\n⏳ Reassessing epistemic state...\n")
-        
-        # Check if AI self-assessment was provided
-        if hasattr(args, 'assessment_json') and args.assessment_json:
-            try:
-                # Check if it's a file path or inline JSON
-                import os
-                
-                if os.path.isfile(args.assessment_json):
-                    # It's a file path - read the file
-                    with open(args.assessment_json, 'r') as f:
-                        json_content = f.read()
-                else:
-                    # It's inline JSON
-                    json_content = args.assessment_json
-                
-                # Validate it's proper JSON
-                json.loads(json_content)  # This will raise if invalid
-                
-                assessment = assessor.parse_llm_response(
-                    json_content,
-                    assessment_request['assessment_id'],
-                    task_description,
-                    {"phase": "postflight"}
-                )
-                postflight_vectors = {
-                    'know': assessment.know.score,
-                    'do': assessment.do.score,
-                    'context': assessment.context.score,
-                    'clarity': assessment.clarity.score,
-                    'coherence': assessment.coherence.score,
-                    'signal': assessment.signal.score,
-                    'density': assessment.density.score,
-                    'state': assessment.state.score,
-                    'change': assessment.change.score,
-                    'completion': assessment.completion.score,
-                    'impact': assessment.impact.score,
-                    'engagement': assessment.engagement.score,
-                    'uncertainty': assessment.uncertainty.score
-                }
-            except Exception as e:
-                logger.error(f"❌ Failed to parse self-assessment: {e}")
-                return
-        else:
-            # Interactive mode
-            logger.info("\n" + "=" * 70)
-            logger.info("GENUINE POSTFLIGHT SELF-ASSESSMENT REQUIRED")
-            logger.info("=" * 70)
-            logger.info("\n⚠️  NO HEURISTICS. NO STATIC VALUES. NO CONFABULATION.")
-            logger.info("\n📋 SELF-ASSESSMENT PROMPT:")
-            logger.info("=" * 70)
-            logger.info(assessment_request['self_assessment_prompt'])
-            logger.info("=" * 70)
-            logger.info("\n💡 Provide genuine postflight self-assessment via --assessment-json")
-            print("   or use MCP server for automated genuine assessment.")
-            
-            if not args.quiet:
-                response = input("\nPaste your genuine postflight self-assessment JSON (or press Enter to skip): ")
-                
-                if response.strip():
-                    try:
-                        assessment = assessor.parse_llm_response(
-                            response,
-                            assessment_request['assessment_id'],
-                            task_description,
-                            {"phase": "postflight"}
-                        )
-                        postflight_vectors = {
-                            'know': assessment.know.score,
-                            'do': assessment.do.score,
-                            'context': assessment.context.score,
-                            'clarity': assessment.clarity.score,
-                            'coherence': assessment.coherence.score,
-                            'signal': assessment.signal.score,
-                            'density': assessment.density.score,
-                            'state': assessment.state.score,
-                            'change': assessment.change.score,
-                            'completion': assessment.completion.score,
-                            'impact': assessment.impact.score,
-                            'engagement': assessment.engagement.score,
-                            'uncertainty': assessment.uncertainty.score
-                        }
-                    except Exception as e:
-                        logger.error(f"\n❌ Failed to parse assessment: {e}")
-                        return
-                else:
-                    logger.warning("\n⚠️  Skipping postflight - no genuine assessment provided")
-                    return
-            else:
-                logger.warning("\n⚠️  Cannot complete postflight in --quiet mode without --assessment-json")
-                return
-        
-        # Try to get preflight vectors for delta calculation
-        db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
-        delta = None
-        calibration = None
-        
-        try:
-            cursor = db.conn.cursor()
-            cursor.execute("""
-                SELECT reflex_data
-                FROM reflexes
-                WHERE session_id = ?
-                AND phase = 'PREFLIGHT'
-                ORDER BY timestamp DESC
-                LIMIT 1
-            """, (session_id,))
-            
-            result = cursor.fetchone()
-            if result:
-                reflex_entry = json.loads(result[0])
-                # The vectors are in reflex_data['vectors'] according to the schema
-                if 'vectors' in reflex_entry:
-                    preflight_vectors = reflex_entry['vectors']
-                else:
-                    # If vectors are directly in reflex_data, use as-is
-                    preflight_vectors = reflex_entry
-                delta = _calculate_vector_delta(preflight_vectors, postflight_vectors)
-                calibration = _assess_calibration(preflight_vectors, postflight_vectors)
-        except Exception as e:
-            if args.verbose:
-                print(f"⚠️  Could not calculate delta: {e}")
-        finally:
-            db.close()
-        
-        # Automatic git checkpoint creation (Phase 1: Git Automation)
-        try:
-            from empirica.core.canonical.empirica_git import auto_checkpoint
-            
-            no_git = getattr(args, 'no_git', False)
-            checkpoint_hash = auto_checkpoint(
-                session_id=session_id,
-                ai_id=ai_id if ai_id else session_id,
-                phase='POSTFLIGHT',
-                vectors=postflight_vectors,
-                round_num=1,
-                metadata={
-                    'calibration': calibration,
-                    'delta': delta
-                },
-                no_git_flag=no_git
-            )
-            
-            if checkpoint_hash:
-                logger.debug(f"Git checkpoint created: {checkpoint_hash[:8]}")
-        except Exception as e:
-            # Safe degradation - don't fail CASCADE if checkpoint fails
-            logger.debug(f"Checkpoint creation skipped: {e}")
-        
-        # Format output based on requested format
-        # Handle both --json (deprecated, sets output_format) and --output json
-        output_format = getattr(args, 'output_format', None) or getattr(args, 'output', 'default')
-        json_output = output_format == 'json' or getattr(args, 'json', False)
-        
-        if json_output:
-            output = {
-                "session_id": session_id,
-                "summary": summary,
-                "timestamp": datetime.utcnow().isoformat(),
-                "vectors": postflight_vectors,
-                "delta": delta,
-                "calibration": calibration
-            }
-            print(json.dumps(output, indent=2))
-        
-        elif args.compact:
-            parts = [f"SESSION={session_id}"]
-            for key, value in postflight_vectors.items():
-                parts.append(f"{key.upper()}={value:.2f}")
-            if calibration:
-                parts.append(f"CALIBRATED={calibration['well_calibrated']}")
-            print(" ".join(parts))
-        
-        elif args.kv:
-            print(f"session_id={session_id}")
-            print(f"summary={summary}")
-            print(f"timestamp={datetime.utcnow().isoformat()}")
-            for key, value in postflight_vectors.items():
-                print(f"{key}={value:.2f}")
-            if delta:
-                for key, value in delta.items():
-                    print(f"delta_{key}={value:.2f}")
-            if calibration:
-                print(f"calibrated={calibration['well_calibrated']}")
-        
-        else:
-            # Human-friendly format
-            print("📊 Postflight Epistemic State:")
-            
-            # Show vectors with deltas if available
-            print("\n  🏛️  TIER 1: Foundation")
-            _print_vector_with_delta("KNOW", postflight_vectors.get('know', 0.5), delta)
-            _print_vector_with_delta("DO", postflight_vectors.get('do', 0.5), delta)
-            _print_vector_with_delta("CONTEXT", postflight_vectors.get('context', 0.5), delta)
-            
-            print("\n  🧠 TIER 2: Comprehension")
-            _print_vector_with_delta("CLARITY", postflight_vectors.get('clarity', 0.5), delta)
-            _print_vector_with_delta("COHERENCE", postflight_vectors.get('coherence', 0.5), delta)
-            _print_vector_with_delta("SIGNAL", postflight_vectors.get('signal', 0.5), delta)
-            _print_vector_with_delta("DENSITY", postflight_vectors.get('density', 0.5), delta)
-            
-            print("\n  ⚡ TIER 3: Execution")
-            _print_vector_with_delta("STATE", postflight_vectors.get('state', 0.5), delta)
-            _print_vector_with_delta("CHANGE", postflight_vectors.get('change', 0.5), delta)
-            _print_vector_with_delta("COMPLETION", postflight_vectors.get('completion', 0.5), delta)
-            _print_vector_with_delta("IMPACT", postflight_vectors.get('impact', 0.5), delta)
-            
-            print("\n  🎯 Meta-Cognitive")
-            _print_vector_with_delta("ENGAGEMENT", postflight_vectors.get('engagement', 0.5), delta)
-            _print_vector_with_delta("UNCERTAINTY", postflight_vectors.get('uncertainty', 0.5), delta)
-            
-            # Show learning summary
-            if delta:
-                print("\n📈 Learning Summary:")
-                learning = _summarize_learning(delta)
-                if learning['improvements']:
-                    print(f"   ✅ Improved: {', '.join(learning['improvements'])}")
-                if learning['regressions']:
-                    print(f"   ⚠️  Decreased: {', '.join(learning['regressions'])}")
-                if not learning['improvements'] and not learning['regressions']:
-                    print(f"   ➖ Minimal change")
-            
-            # Show calibration
-            if calibration:
-                print("\n🎯 Calibration Analysis:")
-                status_icon = "✅" if calibration['well_calibrated'] else "⚠️"
-                print(f"   {status_icon} Status: {calibration['status']}")
-                print(f"   📊 Confidence: {calibration['pre_confidence']:.2f} → {calibration['post_confidence']:.2f} ({calibration['confidence_delta']:+.2f})")
-                print(f"   🤔 Uncertainty: {calibration['pre_uncertainty']:.2f} → {calibration['post_uncertainty']:.2f} ({calibration['uncertainty_delta']:+.2f})")
-                print(f"   💡 {calibration['note']}")
-            else:
-                print("\n⚠️  No preflight baseline found - cannot assess calibration")
-                print("   💡 Run 'empirica preflight' before starting tasks")
-        
-    except Exception as e:
-        handle_cli_error(e, "Postflight assessment", getattr(args, 'verbose', False))
+    """
+    DEPRECATED: This handler is no longer used.
+
+    Postflight is now integrated into the non-blocking MCP v2 workflow.
+    Use 'empirica postflight' which calls handle_postflight_submit_command.
+
+    This function is kept for reference only.
+    """
+    print("⚠️  Internal handler deprecated - use handle_postflight_submit_command instead")
+    return
 
 
 def handle_workflow_command(args):
