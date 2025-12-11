@@ -2805,6 +2805,31 @@ class SessionDatabase:
             ORDER BY g.created_timestamp DESC
         """, (project_id,))
         incomplete_goals = [dict(row) for row in cursor.fetchall()]
+        
+        # Get recent artifacts/modified files from handoff reports
+        # This tells AI which files were changed and may need doc updates
+        # Include sessions with matching project_id OR NULL project_id (legacy sessions)
+        cursor.execute("""
+            SELECT h.session_id, h.task_summary, h.artifacts_created, h.timestamp, s.ai_id
+            FROM handoff_reports h
+            JOIN sessions s ON h.session_id = s.session_id
+            WHERE (s.project_id = ? OR s.project_id IS NULL)
+              AND h.artifacts_created IS NOT NULL
+              AND h.artifacts_created != '[]'
+            ORDER BY h.created_at DESC
+            LIMIT 10
+        """, (project_id,))
+        
+        recent_artifacts = []
+        for row in cursor.fetchall():
+            artifacts = json.loads(row['artifacts_created']) if row['artifacts_created'] else []
+            if artifacts:
+                recent_artifacts.append({
+                    'session_id': row['session_id'][:8] + '...',
+                    'task_summary': row['task_summary'][:80] + '...' if len(row['task_summary']) > 80 else row['task_summary'],
+                    'files_modified': artifacts,
+                    'ai_id': row['ai_id']
+                })
 
         # Load available skills from project_skills/*.yaml
         available_skills = []
@@ -2905,6 +2930,7 @@ class SessionDatabase:
                 }
                 for g in incomplete_goals
             ],
+            "recent_artifacts": recent_artifacts,
             "available_skills": available_skills,
             "semantic_docs": semantic_docs,
             "mode": mode

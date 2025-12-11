@@ -243,6 +243,18 @@ def handle_project_bootstrap_command(args):
                         print(f"      {doc['description']}")
                 print()
             
+            if breadcrumbs.get('recent_artifacts'):
+                print(f"📝 Recently Modified Files (last 10 sessions):")
+                for i, artifact in enumerate(breadcrumbs['recent_artifacts'][:10], 1):
+                    print(f"   {i}. Session {artifact['session_id']} ({artifact['ai_id']})")
+                    print(f"      Task: {artifact['task_summary']}")
+                    print(f"      Files modified ({len(artifact['files_modified'])}):")
+                    for file in artifact['files_modified'][:5]:  # Show first 5 files
+                        print(f"        • {file}")
+                    if len(artifact['files_modified']) > 5:
+                        print(f"        ... and {len(artifact['files_modified']) - 5} more")
+                print()
+            
             if breadcrumbs['incomplete_work']:
                 print(f"🎯 Incomplete Work:")
                 for i, w in enumerate(breadcrumbs['incomplete_work'], 1):
