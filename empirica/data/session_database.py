@@ -2318,10 +2318,10 @@ class SessionDatabase:
         cursor.execute("""
             SELECT g.objective, g.id,
                    (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
-                   (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'complete') as completed_subtasks
+                   (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND status = 'completed') as completed_subtasks
             FROM goals g
             JOIN sessions s ON g.session_id = s.session_id
-            WHERE s.project_id = ? AND g.status != 'complete'
+            WHERE s.project_id = ? AND g.status != 'completed'
             ORDER BY g.created_timestamp DESC
         """, (project_id,))
         incomplete_goals = [dict(row) for row in cursor.fetchall()]
