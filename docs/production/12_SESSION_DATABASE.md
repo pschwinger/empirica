@@ -93,6 +93,46 @@ db = SessionDatabase()  # Uses .empirica/sessions/sessions.db
 
 ---
 
+## Internal Architecture (v4.1+)
+
+### Repository Pattern
+
+**As of v4.1, SessionDatabase uses a modular repository pattern internally:**
+
+```python
+from empirica.data.session_database import SessionDatabase
+
+db = SessionDatabase()
+
+# Standard usage (recommended) - facade pattern
+goal_id = db.create_goal(session_id, "My goal")
+project_id = db.create_project("My project")
+finding_id = db.log_finding(project_id, session_id, "Learned X")
+
+# Direct repository access (advanced) - for contributors
+goal_id = db.goals.create_goal(session_id, "My goal")
+project_id = db.projects.create_project("My project")
+finding_id = db.breadcrumbs.log_finding(project_id, session_id, "Learned X")
+```
+
+**Internal repositories:**
+- **`db.goals`** - GoalRepository (8 methods: goal/subtask CRUD)
+- **`db.branches`** - BranchRepository (4 methods: investigation branching)
+- **`db.breadcrumbs`** - BreadcrumbRepository (10 methods: findings/unknowns/mistakes)
+- **`db.projects`** - ProjectRepository (7 methods: project operations)
+
+**Design:**
+- **Composition over inheritance** - All repositories share single SQLite connection
+- **Facade pattern** - SessionDatabase delegates to repositories transparently
+- **Zero breaking changes** - All existing code continues to work unchanged
+- **Transactional consistency** - Shared connection ensures atomic operations
+
+**For users:** Use the standard `db.method()` pattern. Repository details are internal implementation.
+
+**For contributors:** See `empirica/data/repositories/` for domain-specific implementations.
+
+---
+
 ## Why Temporal Separation Matters
 
 **The Problem:**
