@@ -130,17 +130,24 @@ def handle_check_command(args):
         cycle = getattr(args, 'cycle', 1)
         verbose = getattr(args, 'verbose', False)
 
-        # Auto-convert strings to single-item arrays for better UX
+        # Auto-convert strings to single-item arrays for better UX (defensive parsing)
         if isinstance(findings, str):
             findings = [findings]
+        elif not isinstance(findings, list):
+            # If parse_json_safely returned None or invalid type, wrap in list
+            findings = [str(findings)] if findings else []
+        
         if isinstance(unknowns, str):
             unknowns = [unknowns]
+        elif not isinstance(unknowns, list):
+            # If parse_json_safely returned None or invalid type, wrap in list
+            unknowns = [str(unknowns)] if unknowns else []
 
-        # Validate inputs
+        # Validate inputs (now more defensive)
         if not isinstance(findings, list):
-            raise ValueError("Findings must be a list")
+            raise ValueError(f"Findings must be a list, got {type(findings)}")
         if not isinstance(unknowns, list):
-            raise ValueError("Unknowns must be a list")
+            raise ValueError(f"Unknowns must be a list, got {type(unknowns)}")
         if not 0.0 <= confidence <= 1.0:
             raise ValueError("Confidence must be between 0.0 and 1.0")
 
