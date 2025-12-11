@@ -503,10 +503,35 @@ def handle_postflight_submit_command(args):
             calibration_issues = []
             
             try:
-                # Get preflight checkpoint from git notes for delta calculation
+                # Get preflight checkpoint from git notes or SQLite for delta calculation
                 preflight_checkpoint = logger_instance.get_last_checkpoint(phase="PREFLIGHT")
-                if preflight_checkpoint and 'vectors' in preflight_checkpoint:
+                
+                # Fallback: Query SQLite reflexes table directly if git notes unavailable
+                if not preflight_checkpoint:
+                    db = SessionDatabase()
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT engagement, know, do, context, clarity, coherence, signal, density,
+                               state, change, completion, impact, uncertainty
+                        FROM reflexes
+                        WHERE session_id = ? AND phase = 'PREFLIGHT'
+                        ORDER BY timestamp DESC LIMIT 1
+                    """, (session_id,))
+                    preflight_row = cursor.fetchone()
+                    db.close()
+                    
+                    if preflight_row:
+                        vector_names = ["engagement", "know", "do", "context", "clarity", "coherence", 
+                                       "signal", "density", "state", "change", "completion", "impact", "uncertainty"]
+                        preflight_vectors = {name: preflight_row[i] for i, name in enumerate(vector_names)}
+                    else:
+                        preflight_vectors = None
+                elif 'vectors' in preflight_checkpoint:
                     preflight_vectors = preflight_checkpoint['vectors']
+                else:
+                    preflight_vectors = None
+                
+                if preflight_vectors:
 
                     # Calculate deltas (system calculates growth, not AI's claimed growth)
                     for key in vectors:
