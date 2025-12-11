@@ -609,8 +609,9 @@ class GitEnhancedReflexLogger:
             # Use -f flag to allow updating notes if this ref already has a note on HEAD
             # (This happens when multiple checkpoints are created before new commits)
             # Use stdin instead of -m to avoid "Argument list too long" errors with large payloads
+            # -F - tells git to read note content from stdin
             result = subprocess.run(
-                ["git", "notes", "--ref", note_ref, "add", "-f", "HEAD"],
+                ["git", "notes", "--ref", note_ref, "add", "-f", "-F", "-", "HEAD"],
                 input=checkpoint_json,
                 capture_output=True,
                 timeout=5,
@@ -694,8 +695,9 @@ class GitEnhancedReflexLogger:
 
             # Add noema-specific note ref for semantic storage in Qdrant
             # Use stdin instead of -m to avoid "Argument list too long" errors with large payloads
+            # -F - tells git to read note content from stdin
             result = subprocess.run(
-                ["git", "notes", "--ref", note_ref, "add", "-f", "HEAD"],
+                ["git", "notes", "--ref", note_ref, "add", "-f", "-F", "-", "HEAD"],
                 input=checkpoint_json,
                 capture_output=True,
                 timeout=5,
