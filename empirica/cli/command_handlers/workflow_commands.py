@@ -543,7 +543,12 @@ def handle_postflight_submit_command(args):
                             
                             # MEMORY GAP DETECTION: Identify unexpected changes
                             # Large decreases suggest memory loss or context drift
-                            if delta < -0.3:
+                            # EXCEPTION: Uncertainty decrease is GOOD (learning/progress), not a memory gap
+                            if key == "uncertainty":
+                                # Uncertainty decrease = learning, not memory loss
+                                # Skip memory gap detection for this vector
+                                pass
+                            elif delta < -0.3:
                                 memory_gaps.append({
                                     "vector": key,
                                     "preflight": pre_val,
