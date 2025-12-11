@@ -388,3 +388,132 @@ def handle_monitor_cost_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Cost Analysis", getattr(args, 'verbose', False))
+
+
+def handle_check_drift_command(args):
+    """
+    Check for epistemic drift by comparing current state to historical baselines.
+
+    Uses MirrorDriftMonitor to detect unexpected drops in epistemic vectors
+    that indicate memory corruption, context loss, or other drift.
+    """
+    try:
+        from empirica.core.drift.mirror_drift_monitor import MirrorDriftMonitor
+        from empirica.core.canonical.empirica_git.checkpoint_manager import CheckpointManager
+
+        session_id = args.session_id
+        threshold = getattr(args, 'threshold', 0.2)
+        lookback = getattr(args, 'lookback', 5)
+        output_format = getattr(args, 'output', 'human')
+
+        print("\n🔍 Epistemic Drift Detection")
+        print("=" * 70)
+        print(f"   Session ID:  {session_id}")
+        print(f"   Threshold:   {threshold}")
+        print(f"   Lookback:    {lookback} checkpoints")
+        print("=" * 70)
+
+        # Load current epistemic state from latest checkpoint
+        manager = CheckpointManager()
+        checkpoints = manager.load_recent_checkpoints(session_id=session_id, count=1)
+
+        if not checkpoints:
+            print("\n⚠️  No checkpoints found for session")
+            print("   Run PREFLIGHT or CHECK to create a checkpoint first")
+            return
+
+        current_checkpoint = checkpoints[0]
+
+        # Create mock assessment from checkpoint vectors
+        class MockAssessment:
+            def __init__(self, vectors):
+                for name, score in vectors.items():
+                    setattr(self, name, type('VectorState', (), {'score': score})())
+
+        current_assessment = MockAssessment(current_checkpoint.get('vectors', {}))
+
+        # Run drift detection
+        monitor = MirrorDriftMonitor(
+            drift_threshold=threshold,
+            lookback_window=lookback,
+            enable_logging=True
+        )
+
+        report = monitor.detect_drift(current_assessment, session_id)
+
+        # Output results
+        if output_format == 'json':
+            # JSON output
+            output = {
+                'session_id': session_id,
+                'drift_detected': report.drift_detected,
+                'severity': report.severity,
+                'recommended_action': report.recommended_action,
+                'drifted_vectors': report.drifted_vectors,
+                'checkpoints_analyzed': report.checkpoints_analyzed,
+                'reason': report.reason
+            }
+            print(json.dumps(output, indent=2))
+        else:
+            # Human-readable output
+            print("\n📊 Drift Analysis Results")
+            print("=" * 70)
+
+            if not report.drift_detected:
+                print("\n✅ No drift detected")
+                print(f"   Epistemic state is stable")
+                if report.reason:
+                    print(f"   Reason: {report.reason}")
+            else:
+                severity_emoji = {
+                    'low': '⚠️ ',
+                    'medium': '⚠️ ',
+                    'high': '🚨',
+                    'critical': '🛑'
+                }.get(report.severity, '⚠️ ')
+
+                print(f"\n{severity_emoji} DRIFT DETECTED")
+                print(f"   Severity: {report.severity.upper()}")
+                print(f"   Recommended Action: {report.recommended_action.replace('_', ' ').upper()}")
+                print(f"   Checkpoints Analyzed: {report.checkpoints_analyzed}")
+
+                print("\n🔻 Drifted Vectors:")
+                print("=" * 70)
+
+                for vec in report.drifted_vectors:
+                    vector_name = vec['vector']
+                    baseline = vec['baseline']
+                    current = vec['current']
+                    drift = vec['drift']
+                    vec_severity = vec['severity']
+
+                    print(f"\n   {vector_name.upper()}")
+                    print(f"      Baseline:  {baseline:.2f}")
+                    print(f"      Current:   {current:.2f}")
+                    print(f"      Drift:     -{drift:.2f} ({vec_severity})")
+
+                # Recommendations
+                print("\n💡 Recommendations:")
+                print("=" * 70)
+
+                if report.recommended_action == 'stop_and_reassess':
+                    print("   🛑 STOP: Severe drift detected")
+                    print("   → Review session history")
+                    print("   → Check for context loss or memory corruption")
+                    print("   → Consider restarting session with fresh context")
+                elif report.recommended_action == 'investigate':
+                    print("   🔍 INVESTIGATE: Significant drift detected")
+                    print("   → Review recent work for quality")
+                    print("   → Check if epistemic state accurately reflects knowledge")
+                    print("   → Consider running CHECK assessment")
+                elif report.recommended_action == 'monitor_closely':
+                    print("   👀 MONITOR: Moderate drift detected")
+                    print("   → Continue work but watch for further drift")
+                    print("   → Run periodic drift checks")
+                else:
+                    print("   ✅ Continue work as normal")
+
+            print("\n" + "=" * 70)
+
+    except Exception as e:
+        handle_cli_error(e, "Check Drift", getattr(args, 'verbose', False))

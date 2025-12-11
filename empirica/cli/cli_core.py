@@ -309,6 +309,15 @@ def _add_monitor_parsers(subparsers):
     monitor_parser.add_argument('--yes', '-y', action='store_true', help='Skip confirmation (with --reset)')
     monitor_parser.add_argument('--verbose', action='store_true', help='Show detailed stats')
 
+    # Check drift command - detect epistemic drift
+    check_drift_parser = subparsers.add_parser('check-drift',
+        help='Detect epistemic drift by comparing current state to historical baselines')
+    check_drift_parser.add_argument('--session-id', required=True, help='Session UUID to check for drift')
+    check_drift_parser.add_argument('--threshold', type=float, default=0.2, help='Drift threshold (default: 0.2)')
+    check_drift_parser.add_argument('--lookback', type=int, default=5, help='Number of checkpoints to analyze (default: 5)')
+    check_drift_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
+    check_drift_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+
     # REMOVED: monitor-export, monitor-reset, monitor-cost
     # Use: monitor --export FILE, monitor --reset, monitor --cost
 
@@ -869,6 +878,7 @@ def main(args=None):
             
             # Monitor commands (consolidated: 4 commands → 1)
             'monitor': handle_monitor_command,  # Handles --export, --reset, --cost
+            'check-drift': handle_check_drift_command,  # Detect epistemic drift
 
             # MCP commands - REMOVED (IDE/CLI manages MCP lifecycle)
             # mcp-start, mcp-stop, mcp-status, mcp-test, mcp-list-tools, mcp-call all removed

@@ -102,7 +102,8 @@ from .skill_commands import (
 )
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
-    handle_monitor_reset_command, handle_monitor_cost_command
+    handle_monitor_reset_command, handle_monitor_cost_command,
+    handle_check_drift_command
 )
 from .investigation_commands import (
     handle_investigate_command,
@@ -227,6 +228,7 @@ __all__ = [
     'handle_monitor_export_command',
     'handle_monitor_reset_command',
     'handle_monitor_cost_command',
+    'handle_check_drift_command',
     
     # Investigation commands
     'handle_investigate_command',
