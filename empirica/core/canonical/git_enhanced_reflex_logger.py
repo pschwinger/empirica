@@ -184,12 +184,16 @@ class GitEnhancedReflexLogger:
 
         # Save to git notes first (to get commit SHA for SQLite pointer)
         git_commit_sha = None
+        git_notes_success = False
         if self.enable_git_notes and self.git_available:
             # If signing persona available, use signed git operations
             if self.signed_git_ops and self.signing_persona:
                 git_commit_sha = self._git_add_signed_note(checkpoint, phase)
             else:
                 git_commit_sha = self._git_add_note(checkpoint)
+            
+            # Track success for status reporting
+            git_notes_success = git_commit_sha is not None
 
         # Save to SQLite with git pointer (always, for queryability)
         self._save_checkpoint_to_sqlite(
@@ -198,7 +202,19 @@ class GitEnhancedReflexLogger:
             git_notes_ref=f"empirica/session/{self.session_id}/{phase}/{round_num}"
         )
 
-        return git_commit_sha
+        # Return success indicator (string SHA on success, empty string on failure but attempted)
+        # This allows callers to distinguish between:
+        # - Success: git_commit_sha is a SHA string
+        # - Attempted but failed: returns empty string ""
+        # - Not attempted: would return None (but we always attempt if enabled)
+        if git_notes_success:
+            return git_commit_sha
+        elif self.enable_git_notes and self.git_available:
+            # Attempted but failed - return empty string to indicate "tried but failed"
+            return ""
+        else:
+            # Git notes not enabled/available
+            return None
     
     def _create_checkpoint(
         self,

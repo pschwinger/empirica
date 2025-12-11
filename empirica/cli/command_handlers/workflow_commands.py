@@ -82,7 +82,7 @@ def handle_preflight_submit_command(args):
                 "persisted": True,
                 "storage_layers": {
                     "sqlite": True,
-                    "git_notes": checkpoint_id is not None,
+                    "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
                 }
             }
@@ -331,7 +331,7 @@ def handle_check_submit_command(args):
                 "persisted": True,
                 "storage_layers": {
                     "sqlite": True,
-                    "git_notes": checkpoint_id is not None,
+                    "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
                 }
             }
@@ -563,7 +563,7 @@ def handle_postflight_submit_command(args):
                 "persisted": True,
                 "storage_layers": {
                     "sqlite": True,
-                    "git_notes": checkpoint_id is not None,
+                    "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
                 }
             }
