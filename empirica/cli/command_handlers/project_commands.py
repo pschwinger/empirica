@@ -6,6 +6,7 @@ import json
 import logging
 from typing import Optional
 from ..cli_utils import handle_cli_error
+from empirica.core.memory_gap_detector import MemoryGapDetector
 
 logger = logging.getLogger(__name__)
 
@@ -173,11 +174,66 @@ def handle_project_bootstrap_command(args):
         
         db = SessionDatabase()
         breadcrumbs = db.bootstrap_project_breadcrumbs(project_id, check_integrity=check_integrity)
+
+        # Optional: Detect memory gaps if session-id provided
+        memory_gap_report = None
+        session_id = getattr(args, 'session_id', None)
+
+        if session_id:
+            # Get current session vectors
+            current_vectors = db.get_latest_vectors(session_id)
+
+            if current_vectors:
+                # Get memory gap policy from config or use default
+                gap_policy = getattr(args, 'memory_gap_policy', None)
+                if gap_policy:
+                    policy = {'enforcement': gap_policy}
+                else:
+                    policy = {'enforcement': 'inform'}  # Default: just show gaps
+
+                # Detect memory gaps
+                detector = MemoryGapDetector(policy)
+                session_context = {
+                    'session_id': session_id,
+                    'breadcrumbs_loaded': False,  # Will be updated if AI loads them
+                    'finding_references': 0,  # TODO: Track actual references
+                    'compaction_events': []  # TODO: Load from database
+                }
+
+                memory_gap_report = detector.detect_gaps(
+                    current_vectors=current_vectors,
+                    breadcrumbs=breadcrumbs,
+                    session_context=session_context
+                )
+
         db.close()
 
         if "error" in breadcrumbs:
             print(f"❌ {breadcrumbs['error']}")
             return None
+
+        # Add memory gaps to breadcrumbs if detected
+        if memory_gap_report and memory_gap_report.detected:
+            breadcrumbs['memory_gaps'] = [
+                {
+                    'gap_id': gap.gap_id,
+                    'type': gap.gap_type,
+                    'content': gap.content,
+                    'severity': gap.severity,
+                    'gap_score': gap.gap_score,
+                    'evidence': gap.evidence,
+                    'resolution_action': gap.resolution_action
+                }
+                for gap in memory_gap_report.gaps
+            ]
+            breadcrumbs['memory_gap_analysis'] = {
+                'detected': True,
+                'overall_gap': memory_gap_report.overall_gap,
+                'claimed_know': memory_gap_report.claimed_know,
+                'expected_know': memory_gap_report.expected_know,
+                'enforcement_mode': policy.get('enforcement', 'inform'),
+                'recommended_actions': memory_gap_report.actions
+            }
 
         # Format output
         if hasattr(args, 'output') and args.output == 'json':
@@ -298,6 +354,84 @@ def handle_project_bootstrap_command(args):
                         print(f"\n   📝 Missing Documentation ({cli['missing_documentation']} total):")
                         for item in integrity['missing_docs'][:5]:
                             print(f"      • empirica {item['command']}")
+                print()
+
+            # Memory Gap Analysis (if session-id provided)
+            if breadcrumbs.get('memory_gap_analysis'):
+                analysis = breadcrumbs['memory_gap_analysis']
+                enforcement = analysis.get('enforcement_mode', 'inform')
+
+                # Select emoji based on enforcement mode
+                mode_emoji = {
+                    'inform': '🧠',
+                    'warn': '⚠️',
+                    'strict': '🔴',
+                    'block': '🛑'
+                }.get(enforcement, '🧠')
+
+                print(f"{mode_emoji} Memory Gap Analysis (Mode: {enforcement.upper()}):")
+
+                if analysis['detected']:
+                    gap_score = analysis['overall_gap']
+                    claimed = analysis['claimed_know']
+                    expected = analysis['expected_know']
+
+                    print(f"   Knowledge Assessment:")
+                    print(f"      Claimed KNOW:  {claimed:.2f}")
+                    print(f"      Expected KNOW: {expected:.2f}")
+                    print(f"      Gap Score:     {gap_score:.2f}")
+
+                    # Group gaps by type
+                    gaps_by_type = {}
+                    for gap in breadcrumbs.get('memory_gaps', []):
+                        gap_type = gap['type']
+                        if gap_type not in gaps_by_type:
+                            gaps_by_type[gap_type] = []
+                        gaps_by_type[gap_type].append(gap)
+
+                    # Display gaps by severity
+                    if gaps_by_type:
+                        print(f"\n   Detected Gaps:")
+
+                        # Priority order
+                        type_order = ['confabulation', 'unreferenced_findings', 'unincorporated_unknowns',
+                                     'file_unawareness', 'compaction']
+
+                        for gap_type in type_order:
+                            if gap_type not in gaps_by_type:
+                                continue
+
+                            gaps = gaps_by_type[gap_type]
+                            severity_icon = {
+                                'critical': '🔴',
+                                'high': '🟠',
+                                'medium': '🟡',
+                                'low': '🔵'
+                            }
+
+                            # Show type header
+                            type_label = gap_type.replace('_', ' ').title()
+                            print(f"\n      {type_label} ({len(gaps)}):")
+
+                            # Show top 3 gaps of this type
+                            for gap in gaps[:3]:
+                                icon = severity_icon.get(gap['severity'], '•')
+                                content = gap['content'][:80] + '...' if len(gap['content']) > 80 else gap['content']
+                                print(f"      {icon} {content}")
+                                if gap.get('resolution_action'):
+                                    print(f"         → {gap['resolution_action']}")
+
+                            if len(gaps) > 3:
+                                print(f"         ... and {len(gaps) - 3} more")
+
+                    # Show recommended actions
+                    if analysis.get('recommended_actions'):
+                        print(f"\n   Recommended Actions:")
+                        for i, action in enumerate(analysis['recommended_actions'][:5], 1):
+                            print(f"      {i}. {action}")
+                else:
+                    print(f"   ✅ No memory gaps detected - context is current")
+
                 print()
 
         return {"breadcrumbs": breadcrumbs}

@@ -278,7 +278,78 @@ workflow_integration:
     action: "Suggest logging mistake with empirica mistake-log"
     bypass_allowed: true   # Optional but valuable
 
+  memory_gap_enforcement:
+    trigger: "Cross-session memory gaps detected (unreferenced findings, confabulation)"
+    enforcement_modes:
+      inform:
+        description: "Show gaps, no penalty (default)"
+        action: "Display memory gap analysis in project-bootstrap and statusline"
+        bypass_allowed: true
+        use_case: "Default mode - transparency without enforcement"
+
+      warn:
+        description: "Show gaps + recommendations"
+        action: "Display gaps with recommended actions (e.g., 'Load breadcrumbs', 'Review findings')"
+        bypass_allowed: true
+        use_case: "Collaborative mode - gentle nudges to maintain context"
+
+      strict:
+        description: "Show gaps + adjust vectors to realistic"
+        action: "Automatically adjust KNOW/CLARITY/CONTEXT vectors to realistic values based on breadcrumbs"
+        bypass_allowed: false
+        use_case: "High-stakes work requiring accurate self-assessment"
+
+      block:
+        description: "Show gaps + prevent proceeding"
+        action: "Prevent task continuation until breadcrumbs loaded or gaps acknowledged"
+        bypass_allowed: false
+        use_case: "Critical work where context loss causes significant errors"
+
+    default_mode: "inform"
+
+    scope_policies:
+      findings:
+        description: "Unreferenced findings in breadcrumbs"
+        threshold: 10  # Flag if >10 unread findings
+        severity_map:
+          critical: {count_min: 20, enforcement: "strict"}
+          high: {count_min: 10, enforcement: "warn"}
+          medium: {count_min: 5, enforcement: "inform"}
+
+      unknowns:
+        description: "Unincorporated unknowns (unresolved questions)"
+        threshold: 5  # Flag if >5 unresolved unknowns
+        severity_map:
+          critical: {count_min: 10, enforcement: "strict"}
+          high: {count_min: 5, enforcement: "warn"}
+          medium: {count_min: 3, enforcement: "inform"}
+
+      file_changes:
+        description: "File changes since last session (git diff)"
+        threshold: 0  # Flag if any changes not reviewed
+        severity_map:
+          critical: {files_min: 20, enforcement: "strict"}
+          high: {files_min: 10, enforcement: "warn"}
+          medium: {files_min: 5, enforcement: "inform"}
+
+      compaction:
+        description: "Memory compaction events (summarization loss)"
+        threshold: 0.4  # Flag if compaction ratio > 0.4
+        severity_map:
+          critical: {compaction_min: 0.7, enforcement: "strict"}
+          high: {compaction_min: 0.4, enforcement: "warn"}
+          medium: {compaction_min: 0.2, enforcement: "inform"}
+
+      confabulation:
+        description: "AI claiming knowledge without evidence"
+        threshold: 0.3  # Flag if knowledge gap > 0.3
+        severity_map:
+          critical: {gap_min: 0.5, enforcement: "block"}
+          high: {gap_min: 0.3, enforcement: "strict"}
+          medium: {gap_min: 0.2, enforcement: "warn"}
+
 # =============================================================================
 # VERSION HISTORY
 # =============================================================================
 # v1.0 (2025-12-09): Initial formalization from session 3247538d-f8a0-4715-8b90-80141669b0e1
+# v1.1 (2025-12-12): Added memory_gap_enforcement configuration

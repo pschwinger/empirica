@@ -46,6 +46,13 @@ try:
 except ImportError:
     DRIFT_AVAILABLE = False
 
+# Import memory gap detector
+try:
+    from empirica.core.memory_gap_detector import MemoryGapDetector
+    MEMORY_GAP_AVAILABLE = True
+except ImportError:
+    MEMORY_GAP_AVAILABLE = False
+
 
 # ANSI color codes
 class Colors:
@@ -608,6 +615,109 @@ def calculate_scope_stability(db: SessionDatabase, session_id: str) -> dict:
         }
 
 
+def calculate_memory_gaps(db: SessionDatabase, session_id: str, current_vectors: dict) -> dict:
+    """
+    Calculate memory gaps by comparing claimed knowledge against realistic estimate from breadcrumbs.
+
+    Returns:
+        {
+            'has_gaps': bool,
+            'overall_gap': float,           # 0.0-1.0
+            'claimed_know': float,          # What AI claims
+            'expected_know': float,         # Realistic estimate
+            'gap_count': int,
+            'critical_gaps': int,
+            'enforcement_mode': str,
+            'gap_types': {
+                'confabulation': int,
+                'unreferenced_findings': int,
+                'unincorporated_unknowns': int,
+                'file_unawareness': int,
+                'compaction': int
+            }
+        }
+    """
+    if not MEMORY_GAP_AVAILABLE:
+        return {'has_gaps': False, 'enforcement_mode': 'unavailable'}
+
+    try:
+        # Get project_id for this session
+        cursor = db.conn.cursor()
+        cursor.execute("""
+            SELECT project_id
+            FROM sessions
+            WHERE session_id = ?
+        """, (session_id,))
+
+        row = cursor.fetchone()
+        if not row or not row[0]:
+            return {'has_gaps': False, 'enforcement_mode': 'no_project'}
+
+        project_id = row[0]
+
+        # Get breadcrumbs for this project
+        breadcrumbs = db.bootstrap_project_breadcrumbs(project_id, check_integrity=False)
+
+        # Create detector with 'inform' mode for statusline (non-intrusive)
+        detector = MemoryGapDetector(policy={'enforcement': 'inform'})
+
+        # Session context for gap detection
+        session_context = {
+            'session_id': session_id,
+            'breadcrumbs_loaded': False,  # Conservative assumption
+            'finding_references': 0,       # Not tracked in statusline
+            'compaction_events': []        # Not tracked yet
+        }
+
+        # Detect gaps
+        gap_report = detector.detect_gaps(
+            current_vectors=current_vectors,
+            breadcrumbs=breadcrumbs,
+            session_context=session_context
+        )
+
+        if not gap_report.detected:
+            return {
+                'has_gaps': False,
+                'overall_gap': 0.0,
+                'claimed_know': current_vectors.get('know', 0.5),
+                'expected_know': current_vectors.get('know', 0.5),
+                'gap_count': 0,
+                'critical_gaps': 0,
+                'enforcement_mode': 'inform',
+                'gap_types': {}
+            }
+
+        # Count gaps by type and severity
+        gap_types = {}
+        critical_gaps = 0
+
+        for gap in gap_report.gaps:
+            gap_type = gap.gap_type
+            gap_types[gap_type] = gap_types.get(gap_type, 0) + 1
+
+            if gap.severity == 'critical':
+                critical_gaps += 1
+
+        return {
+            'has_gaps': True,
+            'overall_gap': gap_report.overall_gap,
+            'claimed_know': gap_report.claimed_know,
+            'expected_know': gap_report.expected_know,
+            'gap_count': len(gap_report.gaps),
+            'critical_gaps': critical_gaps,
+            'enforcement_mode': 'inform',
+            'gap_types': gap_types
+        }
+
+    except Exception as e:
+        return {
+            'has_gaps': False,
+            'enforcement_mode': 'error',
+            'error': str(e)
+        }
+
+
 def classify_drift_pattern(drift_status: dict, vectors: dict, deltas: dict) -> tuple:
     """
     Classify drift pattern using MirrorDriftMonitor's real epistemic calculations.
@@ -661,8 +771,8 @@ def classify_drift_pattern(drift_status: dict, vectors: dict, deltas: dict) -> t
     return ('DRIFT', drop_amount, 'high', 'unknown_pattern')
 
 
-def detect_warnings(vectors: dict, drift_status: dict = None, deltas: dict = None, cognitive_load: dict = None, scope_stability: dict = None) -> list:
-    """Detect warning conditions from epistemic vectors, drift patterns, cognitive load, and scope stability."""
+def detect_warnings(vectors: dict, drift_status: dict = None, deltas: dict = None, cognitive_load: dict = None, scope_stability: dict = None, memory_gaps: dict = None) -> list:
+    """Detect warning conditions from epistemic vectors, drift patterns, memory gaps, cognitive load, and scope stability."""
     warnings = []
 
     # Drift warnings with pattern classification (HIGHEST PRIORITY)
@@ -672,7 +782,19 @@ def detect_warnings(vectors: dict, drift_status: dict = None, deltas: dict = Non
             warning_type, value, severity, context = drift_pattern
             warnings.append((warning_type, value, severity, context))
 
-    # Cognitive load warnings (SECOND PRIORITY - can prevent drift!)
+    # Memory gap warnings (SECOND PRIORITY - context loss detection)
+    if memory_gaps and memory_gaps.get('has_gaps') and not warnings:
+        gap_score = memory_gaps.get('overall_gap', 0)
+        critical_gaps = memory_gaps.get('critical_gaps', 0)
+
+        if critical_gaps > 0:
+            # Critical memory gaps (confabulation, major context loss)
+            warnings.append(('MEMORY_GAP', gap_score, 'critical', 'load_breadcrumbs'))
+        elif gap_score > 0.3:
+            # Significant memory gaps
+            warnings.append(('MEMORY_GAP', gap_score, 'high', 'check_context'))
+
+    # Cognitive load warnings (THIRD PRIORITY - can prevent drift!)
     if cognitive_load and not warnings:  # Only show if no drift warnings
         load_level = cognitive_load.get('load_level')
         if load_level == 'overwhelmed':
@@ -764,6 +886,11 @@ def format_balanced(session: dict, goals: list, vectors: dict, deltas: dict, war
             parts.append(f"{Colors.RED}🔴 SCOPE:{value:.2f} [REFOCUS!]{Colors.RESET}")
         elif name == 'SCOPE_CREEP':
             parts.append(f"{Colors.YELLOW}⚠️ SCOPE:{value:.2f} [PREFLIGHT?]{Colors.RESET}")
+        elif name == 'MEMORY_GAP':
+            if severity == 'critical':
+                parts.append(f"{Colors.RED}🧠 MEMORY:{value:.2f} [LOAD BREADCRUMBS!]{Colors.RESET}")
+            else:
+                parts.append(f"{Colors.YELLOW}🧠 MEMORY:{value:.2f} [CHECK CONTEXT]{Colors.RESET}")
         else:
             color = Colors.RED if severity == 'critical' else Colors.YELLOW
             parts.append(f"{color}⚠ {name}:{value:.2f}{Colors.RESET}")
@@ -935,8 +1062,11 @@ def main():
         # Calculate scope stability (Tier 1 metacognitive signal)
         scope_stability = calculate_scope_stability(db, session_id)
 
+        # Calculate memory gaps (Tier 1 metacognitive signal - cross-session context tracking)
+        memory_gaps = calculate_memory_gaps(db, session_id, vectors) if vectors else None
+
         # Detect warnings with pattern analysis (all Tier 1 signals)
-        warnings = detect_warnings(vectors, drift_status, deltas, cognitive_load, scope_stability)
+        warnings = detect_warnings(vectors, drift_status, deltas, cognitive_load, scope_stability, memory_gaps)
 
         # Format based on mode
         if mode == 'minimal':
