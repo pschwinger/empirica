@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "empirica-mcp"
-version = "1.0.0-beta"
+version = "1.0.0"
 description = "MCP server for Empirica epistemic framework"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,9 +14,8 @@ authors = [
 ]
 keywords = ["mcp", "empirica", "epistemic", "ai", "metacognition"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -24,8 +23,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "empirica>=1.0.0-beta",  # Main package
-    "mcp>=1.0.0",            # MCP SDK
+    "empirica>=1.0.0",  # Main package
+    "mcp>=1.0.0",       # MCP SDK
 ]
 
 [project.urls]

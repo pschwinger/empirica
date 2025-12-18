@@ -1,25 +1,23 @@
 Metadata-Version: 2.4
 Name: empirica-mcp
-Version: 1.0.0b0
+Version: 1.0.0
 Summary: MCP server for Empirica epistemic framework
 Author: Empirica Team
-License: LGPL-3.0-or-later OR MIT
-Project-URL: Homepage, https://github.com/empirical-ai/empirica
-Project-URL: Documentation, https://github.com/empirical-ai/empirica/tree/main/docs
-Project-URL: Repository, https://github.com/empirical-ai/empirica
-Project-URL: Issues, https://github.com/empirical-ai/empirica/issues
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/Nubaeon/empirica
+Project-URL: Documentation, https://github.com/Nubaeon/empirica/tree/main/docs
+Project-URL: Repository, https://github.com/Nubaeon/empirica
+Project-URL: Issues, https://github.com/Nubaeon/empirica/issues
 Keywords: mcp,empirica,epistemic,ai,metacognition
-Classifier: Development Status :: 4 - Beta
+Classifier: Development Status :: 5 - Production/Stable
 Classifier: Intended Audience :: Developers
-Classifier: License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)
-Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
 Classifier: Topic :: Software Development :: Libraries :: Python Modules
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
-Requires-Dist: empirica>=1.0.0-beta
+Requires-Dist: empirica>=1.0.0
 Requires-Dist: mcp>=1.0.0
 
 # Empirica MCP Server
@@ -85,4 +83,6 @@ See main [Empirica documentation](https://github.com/empirical-ai/empirica/tree/
 
 ## License
 
-Dual-licensed under LGPL-3.0-or-later OR MIT
+MIT License
+
+See main [Empirica repository](https://github.com/empirical-ai/empirica) for details.
