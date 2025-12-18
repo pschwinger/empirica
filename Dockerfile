@@ -1,15 +1,15 @@
 # Empirica Docker Image
 # Includes Python CLI, system prompts, and SKILL.md for AI agent usage
 #
-# Build: docker build -t empirica:1.0.0-beta .
-# Run:   docker run -it --rm empirica:1.0.0-beta empirica --help
-# Shell: docker run -it --rm empirica:1.0.0-beta /bin/bash
+# Build: docker build -t empirica:1.0.0 .
+# Run:   docker run -it --rm empirica:1.0.0 empirica --help
+# Shell: docker run -it --rm empirica:1.0.0 /bin/bash
 
 FROM python:3.11-slim
 
 LABEL maintainer="Empirica Team"
 LABEL description="Epistemic self-assessment framework for AI agents"
-LABEL version="1.0.0-beta"
+LABEL version="1.0.0"
 
 # Set working directory
 WORKDIR /app
@@ -20,18 +20,17 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
-COPY dist/empirica-1.0.0b0-py3-none-any.whl /tmp/
+COPY dist/empirica-1.0.0-py3-none-any.whl /tmp/
 
 # Install Empirica
-RUN pip install --no-cache-dir /tmp/empirica-1.0.0b0-py3-none-any.whl \
-    && rm /tmp/empirica-1.0.0b0-py3-none-any.whl
+RUN pip install --no-cache-dir /tmp/empirica-1.0.0-py3-none-any.whl \
+    && rm /tmp/empirica-1.0.0-py3-none-any.whl
 
 # Create directory for user data
 RUN mkdir -p /data/.empirica
 
 # Copy documentation to accessible location
 COPY docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md /app/docs/CANONICAL_SYSTEM_PROMPT.md
-COPY docs/skills/SKILL.md /app/docs/SKILL.md
 COPY README.md /app/README.md
 
 # Set environment variables
@@ -52,10 +51,9 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
     CMD empirica --version || exit 1
 
 # Default command
-ENTRYPOINT ["empirica"]
-CMD ["--help"]
+CMD ["empirica", "--help"]
 
 # Usage examples (add as labels for documentation)
-LABEL example.bootstrap="docker run -v $(pwd)/.empirica:/data/.empirica empirica:1.0.0-beta bootstrap --ai-id docker-agent --level extended"
-LABEL example.session="docker run -v $(pwd)/.empirica:/data/.empirica empirica:1.0.0-beta sessions list"
-LABEL example.shell="docker run -it -v $(pwd)/.empirica:/data/.empirica empirica:1.0.0-beta /bin/bash"
+LABEL example.bootstrap="docker run -v $(pwd)/.empirica:/data/.empirica empirica:1.0.0 bootstrap --ai-id docker-agent --level extended"
+LABEL example.session="docker run -v $(pwd)/.empirica:/data/.empirica empirica:1.0.0 sessions list"
+LABEL example.shell="docker run -it -v $(pwd)/.empirica:/data/.empirica empirica:1.0.0 /bin/bash"
