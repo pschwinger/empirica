@@ -1,0 +1,123 @@
+# Empirica Project Configuration
+# This allows contributors to use Empirica to manage Empirica development (meta!)
+
+project:
+  name: "empirica-development"
+  description: "Using Empirica to manage Empirica itself - dogfooding at its finest"
+  repository: "https://github.com/Nubaeon/empirica"
+  version: "1.0.0"
+  
+bootstrap:
+  # What contributors should know when starting work
+  essential_docs:
+    - "docs/production/03_BASIC_USAGE.md"
+    - "docs/production/06_CASCADE_FLOW.md"
+    - "CONTRIBUTING.md"
+    - "CHANGELOG.md"
+  
+  # Key architectural concepts
+  core_concepts:
+    - "MCO (Model-Centric Operations) system"
+    - "CASCADE workflow (PREFLIGHT/CHECK/POSTFLIGHT)"
+    - "GitEnhancedReflexLogger for unified storage"
+    - "Uncertainty-driven bootstrap"
+    - "Multi-AI coordination"
+  
+  # Critical files to understand
+  key_files:
+    cli: "empirica/cli/cli_core.py"
+    session_db: "empirica/data/session_database.py"
+    reflex_logger: "empirica/core/canonical/git_enhanced_reflex_logger.py"
+    mco_config: "empirica/config/mco/"
+    command_handlers: "empirica/cli/command_handlers/"
+
+workflow:
+  # Contributors should use Empirica for complex tasks
+  use_empirica_for:
+    - "Adding new CLI commands"
+    - "Refactoring core systems"
+    - "Implementing new features"
+    - "Investigating bugs"
+    - "Architecture changes"
+  
+  # Standard workflow for contributors
+  steps:
+    1_start:
+      command: "empirica session-create --ai-id {your-ai-id}"
+      description: "Create session for your work"
+    
+    2_preflight:
+      command: "empirica preflight-submit /tmp/preflight.json"
+      description: "Assess what you know/don't know about the task"
+      vectors:
+        - "KNOW: How well do you understand the codebase area?"
+        - "DO: Confidence in execution?"
+        - "CONTEXT: Do you have enough context?"
+        - "UNCERTAINTY: What are you unsure about?"
+    
+    3_work:
+      description: "Investigate, plan, implement naturally"
+      log_findings: true
+      log_unknowns: true
+    
+    4_check:
+      command: "empirica check /tmp/check.json"
+      description: "Decision gate: ready to proceed or need more investigation?"
+      when: "Before committing major changes"
+    
+    5_postflight:
+      command: "empirica postflight-submit /tmp/postflight.json"
+      description: "Measure what you learned"
+      compare_to: "PREFLIGHT vectors"
+
+testing:
+  # Always test your changes
+  commands:
+    - "pytest tests/"
+    - "ruff check empirica/"
+    - "pyright"
+  
+  # Test with Empirica itself
+  dogfood_test:
+    - "empirica session-create"
+    - "empirica preflight-submit"
+    - "empirica check"
+    - "empirica postflight-submit"
+
+collaboration:
+  # When handing off to another contributor/AI
+  handoff:
+    command: "empirica handoff-create"
+    includes:
+      - "Session findings and unknowns"
+      - "Goal tree (what was investigated)"
+      - "Epistemic state (what you learned)"
+      - "Incomplete work (what's pending)"
+  
+  # For multi-AI coordination
+  multi_ai:
+    enabled: true
+    agents:
+      - "claude-code (implementer)"
+      - "claude-sonnet (architect)"  
+      - "qwen (testing)"
+
+meta_principles:
+  - "Empirica eats its own dog food"
+  - "Contributors use CASCADE workflow for complex tasks"
+  - "Track epistemic state honestly (model for users)"
+  - "Demonstrate value by using it ourselves"
+  - "If we wouldn't use it, why should users?"
+
+project_goals:
+  current:
+    - "Maintain production stability (v1.0.0)"
+    - "Improve documentation based on user feedback"
+    - "Enhance MCP server capabilities"
+    - "Optimize token efficiency"
+  
+  future:
+    - "Advanced Qdrant integration"
+    - "Real-time drift detection"
+    - "Web dashboard for visualization"
+    - "PyPI publication"
