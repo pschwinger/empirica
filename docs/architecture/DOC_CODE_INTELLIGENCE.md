@@ -490,8 +490,6 @@ Both require:
 
 - [STORAGE_ARCHITECTURE_COMPLETE.md](STORAGE_ARCHITECTURE_COMPLETE.md) - 3-layer storage design
 - [PROJECT_LEVEL_TRACKING.md](../guides/PROJECT_LEVEL_TRACKING.md) - Breadcrumbs system
-- [EPISTEMIC_TRAJECTORY_VISUALIZATION.md](EPISTEMIC_TRAJECTORY_VISUALIZATION.md) - Learning visualization
-- [FUTURE_VISIONS.md](FUTURE_VISIONS.md) - Cognitive OS roadmap
 
 ---
 

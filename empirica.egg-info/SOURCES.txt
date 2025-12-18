@@ -1,16 +1,14 @@
-.env.example
 CONTRIBUTING.md
 LICENSE
 MANIFEST.in
-Makefile
 README.md
 pyproject.toml
-pytest.ini
 docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md
+docs/system-prompts/CLAUDE_DESKTOP.md
+docs/system-prompts/COPILOT_INSTRUCTIONS.md
 docs/system-prompts/CUSTOMIZATION_GUIDE.md
 docs/system-prompts/EMPIRICA_WEB_EDITION.md
 docs/system-prompts/GEMINI.md
-docs/system-prompts/GEMINI.md.backup
 docs/system-prompts/INSTALLATION.md
 docs/system-prompts/MINIMALIST_SYSTEM_PROMPT.md
 docs/system-prompts/QUICK_REFERENCE_WEB.md
@@ -52,6 +50,7 @@ empirica/cli/command_handlers/config_commands.py
 empirica/cli/command_handlers/decision_commands.py
 empirica/cli/command_handlers/decision_utils.py
 empirica/cli/command_handlers/doc_commands.py
+empirica/cli/command_handlers/epistemics_commands.py
 empirica/cli/command_handlers/goal_claim_command.py
 empirica/cli/command_handlers/goal_commands.py
 empirica/cli/command_handlers/goal_complete_command.py
@@ -109,6 +108,7 @@ empirica/core/__init__.py
 empirica/core/checkpoint_signer.py
 empirica/core/context_load_balancer.py
 empirica/core/epistemic_bus.py
+empirica/core/epistemic_trajectory.py
 empirica/core/memory_gap_detector.py
 empirica/core/thresholds.py
 empirica/core/canonical/__init__.py
@@ -179,7 +179,6 @@ empirica/core/validation/coherence_validator.py
 empirica/core/validation/handoff_validator.py
 empirica/core/validation/rehydration.py
 empirica/core/validation/validation_utils.py
-empirica/dashboard/README.md
 empirica/dashboard/__init__.py
 empirica/dashboard/cascade_monitor.py
 empirica/dashboard/snapshot_monitor.py
@@ -204,7 +203,6 @@ empirica/investigation/advanced_investigation/__init__.py
 empirica/investigation/advanced_investigation/advanced_investigation.py
 empirica/metrics/__init__.py
 empirica/metrics/token_efficiency.py
-empirica/plugins/README_DASHBOARD.md
 empirica/plugins/__init__.py
 empirica/plugins/base_plugin.py
 empirica/plugins/dashboard_spawner.py
@@ -250,4 +248,3 @@ empirica/vision/readable_translator.py
 empirica/vision/slide_processor.py
 mcp_local/__init__.py
 mcp_local/empirica_mcp_server.py
-mcp_local/start_empirica_mcp.sh

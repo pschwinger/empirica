@@ -744,6 +744,20 @@ def handle_postflight_submit_command(args):
                 # Auto-checkpoint failure is not fatal, but log it
                 logger.warning(f"Auto-checkpoint after POSTFLIGHT failed (non-fatal): {e}")
 
+            # EPISTEMIC TRAJECTORY STORAGE: Store learning deltas to Qdrant (if available)
+            trajectory_stored = False
+            try:
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+                if session and session.get('project_id'):
+                    from empirica.core.epistemic_trajectory import store_trajectory
+                    trajectory_stored = store_trajectory(session['project_id'], session_id, db)
+                    if trajectory_stored:
+                        logger.debug(f"Stored epistemic trajectory to Qdrant for session {session_id}")
+            except Exception as e:
+                # Trajectory storage is optional (requires Qdrant)
+                logger.debug(f"Epistemic trajectory storage skipped: {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,

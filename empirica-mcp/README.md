@@ -61,4 +61,6 @@ See main [Empirica documentation](https://github.com/empirical-ai/empirica/tree/
 
 ## License
 
-Dual-licensed under LGPL-3.0-or-later OR MIT
+MIT License
+
+See main [Empirica repository](https://github.com/empirical-ai/empirica) for details.

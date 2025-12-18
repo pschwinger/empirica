@@ -90,6 +90,9 @@ Examples:
     # Vision commands
     _add_vision_parsers(subparsers)
     
+    # Epistemic trajectory commands
+    _add_epistemics_parsers(subparsers)
+    
     return parser
 
 
@@ -905,6 +908,32 @@ def _add_vision_parsers(subparsers):
     add_vision_parsers(subparsers)
 
 
+
+
+def _add_epistemics_parsers(subparsers):
+    """Add epistemic trajectory command parsers"""
+    
+    # epistemics-search
+    search_parser = subparsers.add_parser(
+        'epistemics-search',
+        help='Search epistemic learning trajectories'
+    )
+    search_parser.add_argument('--project-id', required=True, help='Project UUID')
+    search_parser.add_argument('--query', default='', help='Semantic search query')
+    search_parser.add_argument('--min-learning', type=float, help='Minimum know delta (e.g., 0.2)')
+    search_parser.add_argument('--calibration', choices=['good', 'fair', 'poor'], help='Filter by calibration quality')
+    search_parser.add_argument('--limit', type=int, default=5, help='Max results')
+    search_parser.add_argument('--output', choices=['json', 'text'], default='json', help='Output format')
+    
+    # epistemics-stats
+    stats_parser = subparsers.add_parser(
+        'epistemics-stats',
+        help='Show epistemic trajectory statistics'
+    )
+    stats_parser.add_argument('--project-id', required=True, help='Project UUID')
+    stats_parser.add_argument('--output', choices=['json', 'text'], default='json', help='Output format')
+
+
 def main(args=None):
     """Main CLI entry point"""
     if args is None:
@@ -1053,6 +1082,9 @@ def main(args=None):
             # Vision commands
             'vision-analyze': handle_vision_analyze,
             'vision-log': handle_vision_log,
+            # Epistemic trajectory commands
+            'epistemics-search': handle_epistemics_search_command,
+            'epistemics-stats': handle_epistemics_stats_command,
         }
 
         handler = command_map.get(parsed_args.command)

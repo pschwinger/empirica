@@ -8,7 +8,7 @@ version = "1.0.0-beta"
 description = "MCP server for Empirica epistemic framework"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "LGPL-3.0-or-later OR MIT"
+license = "MIT"
 authors = [
     {name = "Empirica Team"},
 ]
@@ -16,7 +16,6 @@ keywords = ["mcp", "empirica", "epistemic", "ai", "metacognition"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",

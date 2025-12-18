@@ -127,6 +127,11 @@ from .vision_commands import (
     handle_vision_log,
     add_vision_parsers as _add_vision_parsers
 )
+from .epistemics_commands import (
+    handle_epistemics_search_command,
+    handle_epistemics_stats_command
+)
+
 
 # Export all handlers
 __all__ = [
@@ -274,6 +279,10 @@ __all__ = [
     'handle_vision_analyze',
     'handle_vision_log',
     '_add_vision_parsers',
+    
+    # Epistemic trajectory commands
+    'handle_epistemics_search_command',
+    'handle_epistemics_stats_command',
     
     # Session-end command
     # 'handle_session_end_command',  # removed - use handoff-create

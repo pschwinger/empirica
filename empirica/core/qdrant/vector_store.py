@@ -31,9 +31,14 @@ def _memory_collection(project_id: str) -> str:
     return f"project_{project_id}_memory"
 
 
+def _epistemics_collection(project_id: str) -> str:
+    """Collection for epistemic learning trajectories (PREFLIGHT → POSTFLIGHT deltas)"""
+    return f"project_{project_id}_epistemics"
+
+
 def init_collections(project_id: str) -> None:
     client = _get_qdrant_client()
-    for name in (_docs_collection(project_id), _memory_collection(project_id)):
+    for name in (_docs_collection(project_id), _memory_collection(project_id), _epistemics_collection(project_id)):
         if not client.collection_exists(name):
             client.create_collection(name, vectors_config=VectorParams(size=1536, distance=Distance.COSINE))
 
@@ -146,3 +151,96 @@ def search(project_id: str, query_text: str, kind: str = "all", limit: int = 5) 
             for m in rm
         ]
     return results
+
+
+def upsert_epistemics(project_id: str, items: List[Dict]) -> None:
+    """
+    Store epistemic learning trajectories (PREFLIGHT → POSTFLIGHT deltas).
+    
+    items: List of {
+        id: "session_{uuid}",
+        text: "Combined reasoning from PREFLIGHT + POSTFLIGHT",
+        metadata: {
+            session_id, ai_id, timestamp, task_description,
+            preflight: {engagement, know, do, context, ...},
+            postflight: {engagement, know, do, context, ...},
+            deltas: {know: +0.25, uncertainty: -0.2, ...},
+            calibration_accuracy: "good"|"fair"|"poor",
+            investigation_phase: bool,
+            mistakes_count: int,
+            completion: float,
+            impact: float
+        }
+    }
+    """
+    client = _get_qdrant_client()
+    coll = _epistemics_collection(project_id)
+    points: List[PointStruct] = []
+    
+    for item in items:
+        vector = get_embedding(item.get("text", ""))
+        payload = item.get("metadata", {})
+        points.append(PointStruct(id=item["id"], vector=vector, payload=payload))
+    
+    if points:
+        client.upsert(collection_name=coll, points=points)
+
+
+def search_epistemics(
+    project_id: str, 
+    query_text: str, 
+    filters: Optional[Dict] = None,
+    limit: int = 5
+) -> List[Dict]:
+    """
+    Search epistemic learning trajectories by semantic similarity + optional filters.
+    
+    Args:
+        project_id: Project UUID
+        query_text: Semantic query (e.g., "OAuth2 authentication learning")
+        filters: Qdrant filter conditions (e.g., {"deltas.know": {"$gte": 0.2}})
+        limit: Max results
+        
+    Returns:
+        List of {score, session_id, task_description, preflight, postflight, deltas, ...}
+    """
+    client = _get_qdrant_client()
+    qvec = get_embedding(query_text)
+    coll = _epistemics_collection(project_id)
+    
+    # Build Qdrant filter if provided
+    query_filter = None
+    if filters:
+        # Convert simple dict filters to Qdrant Filter objects
+        # For now, pass through - full filter support can be added later
+        pass
+    
+    try:
+        if hasattr(client, 'search') and callable(getattr(client, 'search')):
+            results = client.search(
+                collection_name=coll,
+                query_vector=qvec,
+                limit=limit,
+                with_payload=True,
+                query_filter=query_filter
+            )
+            return [
+                {
+                    "score": getattr(r, 'score', 0.0) or 0.0,
+                    **(r.payload or {})
+                }
+                for r in results
+            ]
+    except Exception:
+        # Fall back to REST if needed
+        pass
+    
+    # REST fallback
+    rd = _rest_search(coll, qvec, limit)
+    return [
+        {
+            "score": d.get('score', 0.0),
+            **(d.get('payload') or {})
+        }
+        for d in rd
+    ]

@@ -2,9 +2,11 @@
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-4.1-blue)]()
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.0.0)
+[![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
-[![License](https://img.shields.io/badge/license-LGPL--3.0%20OR%20MIT-green)]()
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
+[![Docker](https://img.shields.io/badge/docker-nubaeon%2Fempirica-blue)](https://hub.docker.com/r/nubaeon/empirica)
 
 ## What is Empirica?
 
@@ -25,6 +27,10 @@ Instead of false confidence and hallucinations, Empirica provides:
 
 ### Installation
 
+Choose your preferred installation method:
+
+#### PyPI (Recommended)
+
 ```bash
 # Core installation
 pip install empirica
@@ -39,7 +45,43 @@ pip install empirica[vector]
 pip install empirica[all]
 ```
 
-**🆕 First-time user?** → [First-Time Setup Guide](https://github.com/empirical-ai/empirica/blob/main/docs/guides/FIRST_TIME_SETUP.md) *(explains data isolation & privacy)*
+#### Homebrew (macOS/Linux)
+
+```bash
+brew tap nubaeon/tap
+brew install empirica
+```
+
+#### Docker
+
+```bash
+# Pull the image
+docker pull nubaeon/empirica:1.0.0
+
+# Run a command
+docker run -it nubaeon/empirica:1.0.0 empirica --help
+
+# Interactive session with persistent data
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.0.0 /bin/bash
+```
+
+#### Chocolatey (Windows)
+
+```powershell
+choco install empirica
+```
+
+#### From Source
+
+```bash
+# Latest stable release
+pip install git+https://github.com/Nubaeon/empirica.git@v1.0.0
+
+# Development branch
+pip install git+https://github.com/Nubaeon/empirica.git@develop
+```
+
+**🆕 First-time user?** → [Installation Guide](https://github.com/Nubaeon/empirica/blob/main/docs/production/02_INSTALLATION.md)
 
 ### Your First Session
 
@@ -295,9 +337,9 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📜 License
 
-Dual-licensed under:
-- **LGPL-3.0** (for open source use)
-- **MIT** (for commercial/proprietary use)
+MIT License - Maximum adoption, trust-aligned with Empirica's transparency principles.
+
+See [LICENSE](LICENSE) for details.
 
 See [LICENSE](LICENSE) for details.
 
