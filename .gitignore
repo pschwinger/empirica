@@ -62,3 +62,8 @@ test_goals_session
 .empirica/identity/*.key
 .env
 .env.*
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
