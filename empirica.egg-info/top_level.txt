@@ -1,3 +1,2 @@
 empirica
 empirica-mcp
-mcp_local

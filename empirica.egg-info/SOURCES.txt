@@ -68,6 +68,7 @@ empirica/cli/command_handlers/onboard_handler.py
 empirica/cli/command_handlers/performance_commands.py
 empirica/cli/command_handlers/project_commands.py
 empirica/cli/command_handlers/project_embed.py
+empirica/cli/command_handlers/project_init.py
 empirica/cli/command_handlers/project_search.py
 empirica/cli/command_handlers/session_commands.py
 empirica/cli/command_handlers/session_create.py
@@ -92,6 +93,7 @@ empirica/config/modality_config.yaml
 empirica/config/path_resolver.py
 empirica/config/profile_loader.py
 empirica/config/project_config_loader.py
+empirica/config/semantic_index_loader.py
 empirica/config/threshold_loader.py
 empirica/config/mco/MCO_INDEX.yaml
 empirica/config/mco/ask_before_investigate.yaml
@@ -246,5 +248,3 @@ empirica/utils/session_resolver.py
 empirica/vision/__init__.py
 empirica/vision/readable_translator.py
 empirica/vision/slide_processor.py
-mcp_local/__init__.py
-mcp_local/empirica_mcp_server.py

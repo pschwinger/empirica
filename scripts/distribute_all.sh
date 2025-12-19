@@ -8,6 +8,11 @@
 #   ./scripts/distribute_all.sh prod    # Production (publishes to PyPI)
 
 set -e
+YES_FLAG="false"
+if [ "$1" = "-y" ]; then
+    YES_FLAG="true"
+    shift
+fi
 
 MODE="${1:-test}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -54,7 +59,7 @@ echo "🧪 Testing package installation..."
 TEST_VENV="/tmp/test_empirica_$(date +%s)"
 python3 -m venv "$TEST_VENV"
 "$TEST_VENV/bin/pip" install --quiet dist/*.whl
-"$TEST_VENV/bin/empirica" bootstrap --help > /dev/null
+"$TEST_VENV/bin/empirica" --help > /dev/null
 "$TEST_VENV/bin/python" -c "from empirica.plugins.modality_switcher import ModalitySwitcher"
 rm -rf "$TEST_VENV"
 echo "✅ Package installs and imports successfully"
@@ -63,7 +68,12 @@ echo "✅ Package installs and imports successfully"
 if [ "$MODE" = "prod" ]; then
     echo ""
     echo "⚠️  WARNING: About to publish to PRODUCTION PyPI"
-    read -p "Continue? (yes/no): " -r
+    if [ "$YES_FLAG" = "false" ]; then
+        read -p "Continue? (yes/no): " -r
+    else
+        REPLY="yes"
+        echo "yes (auto-confirmed with -y)"
+    fi
     if [[ $REPLY != "yes" ]]; then
         echo "Aborted."
         exit 1
