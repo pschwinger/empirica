@@ -208,13 +208,18 @@ def handle_project_init_command(args):
                 print(f"🔗 BEADS: Enabled by default")
             
             print("\n📋 Next steps:")
-            print("   1. Create your first session:")
-            print(f"      empirica session-create --ai-id myai")
-            print("   2. Start working with epistemic tracking:")
-            print(f"      empirica preflight-submit <assessment.json>")
             if enable_beads:
+                print("   1. Initialize BEADS issue tracking:")
+                print(f"      bd init")
+                print("   2. Create your first session:")
+                print(f"      empirica session-create --ai-id myai")
                 print("   3. Create goals (BEADS will auto-link):")
                 print(f"      empirica goals-create --objective '...' --success-criteria '...'")
+            else:
+                print("   1. Create your first session:")
+                print(f"      empirica session-create --ai-id myai")
+                print("   2. Start working with epistemic tracking:")
+                print(f"      empirica preflight-submit <assessment.json>")
             
             if create_semantic_index:
                 print(f"\n📖 Semantic index template created!")
