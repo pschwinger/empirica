@@ -5,7 +5,6 @@ include requirements.txt
 include setup.py
 include pyproject.toml
 recursive-include empirica *.py *.json *.yaml
-recursive-include mcp_local *.py
 # Only include essential docs (must explicitly include each file)
 include docs/skills/SKILL.md
 include docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md
@@ -14,8 +13,6 @@ include docs/getting-started.md
 recursive-exclude empirica __pycache__
 recursive-exclude empirica *.pyc
 recursive-exclude empirica *.pyo
-recursive-exclude mcp_local __pycache__
-recursive-exclude mcp_local *.pyc
 exclude tests
 exclude .empirica
 exclude .empirica_reflex_logs
@@ -36,7 +33,6 @@ prune docs
 graft docs/skills
 graft docs/system-prompts
 prune tests/coordination/archive
-prune mcp_local/archive
 prune empirica-dev
 prune forgejo-plugin-empirica
 prune website
@@ -45,8 +41,6 @@ prune tests
 prune .github
 prune examples
 
-# 🛑 Exclude optional/experimental components
-exclude mcp_local/empirica_tmux_mcp_server.py
 # NOTE: modality_switcher is REQUIRED by decision_commands.py - do not prune
 
 # 🛑 Exclude logs and temp files
