@@ -590,6 +590,19 @@ def _add_checkpoint_parsers(subparsers):
 
     # Project Tracking Commands (Multi-repo/multi-session)
     
+    # Project init command (NEW: initialize Empirica in a new repo)
+    project_init_parser = subparsers.add_parser(
+        'project-init',
+        help='Initialize Empirica in a new git repository (creates config files)'
+    )
+    project_init_parser.add_argument('--project-name', help='Project name (defaults to repo name)')
+    project_init_parser.add_argument('--project-description', help='Project description')
+    project_init_parser.add_argument('--enable-beads', action='store_true', help='Enable BEADS by default')
+    project_init_parser.add_argument('--create-semantic-index', action='store_true', help='Create SEMANTIC_INDEX.yaml template')
+    project_init_parser.add_argument('--non-interactive', action='store_true', help='Skip interactive prompts')
+    project_init_parser.add_argument('--force', action='store_true', help='Reinitialize if already initialized')
+    project_init_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    
     # Project create command
     project_create_parser = subparsers.add_parser(
         'project-create',
@@ -1059,6 +1072,7 @@ def main(args=None):
             'mistake-query': handle_mistake_query_command,
             
             # Project Tracking commands (Multi-repo/multi-session)
+            'project-init': lambda args: __import__('empirica.cli.command_handlers.project_init', fromlist=['handle_project_init_command']).handle_project_init_command(args),
             'project-create': handle_project_create_command,
             'project-handoff': handle_project_handoff_command,
             'project-list': handle_project_list_command,

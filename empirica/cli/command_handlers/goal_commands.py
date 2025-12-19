@@ -180,7 +180,21 @@ def handle_goals_create_command(args):
         if success:
             # BEADS Integration (Optional): Create linked issue tracker item
             beads_issue_id = None
+            
+            # Check if BEADS should be used (priority: flag > config file > project default)
             use_beads = getattr(args, 'use_beads', False) or (config_data and config_data.get('use_beads', False))
+            
+            # If not explicitly set, check project-level default
+            if not use_beads and not hasattr(args, 'use_beads'):
+                try:
+                    from empirica.config.project_config_loader import load_project_config
+                    project_config = load_project_config()
+                    if project_config:
+                        use_beads = project_config.default_use_beads
+                        if use_beads:
+                            logger.info("Using BEADS integration from project config default")
+                except Exception as e:
+                    logger.debug(f"Could not load project config for BEADS default: {e}")
             
             if use_beads:
                 try:
@@ -215,7 +229,22 @@ def handle_goals_create_command(args):
                             temp_db.close()
                             logger.info(f"Linked goal {goal.id[:8]} to BEADS issue {beads_issue_id}")
                     else:
-                        logger.warning("BEADS integration requested but bd CLI not available")
+                        # BEADS requested but not available - provide helpful error
+                        error_msg = (
+                            "⚠️  BEADS integration requested but 'bd' CLI not found.\n\n"
+                            "To use BEADS issue tracking:\n"
+                            "  1. Install BEADS: pip install beads-project\n"
+                            "  2. Initialize: bd init\n"
+                            "  3. Try again: empirica goals-create --use-beads ...\n\n"
+                            "Or omit --use-beads to create goal without issue tracking.\n"
+                            "Learn more: https://github.com/cased/beads"
+                        )
+                        if output_format == 'json':
+                            logger.warning("BEADS integration requested but bd CLI not available")
+                            print(f"\n{error_msg}", file=sys.stderr)
+                        else:
+                            print(f"\n{error_msg}", file=sys.stderr)
+                        # Continue without BEADS - goal already created successfully
                 except Exception as e:
                     logger.warning(f"BEADS integration failed: {e}")
                     # Continue without BEADS - it's optional
@@ -269,6 +298,9 @@ def handle_goals_create_command(args):
         # Format output (AI-first = JSON by default)
         if output_format == 'json':
             print(json.dumps(result, indent=2))
+            # Add helpful hint if BEADS not used (only in JSON mode for parsability)
+            if result['ok'] and not beads_issue_id and not use_beads:
+                print(f"\n💡 Tip: Add --use-beads flag to track this goal in BEADS issue tracker", file=sys.stderr)
         else:
             # Human-readable output (legacy)
             if result['ok']:
@@ -278,6 +310,10 @@ def handle_goals_create_command(args):
                 print(f"   Scope: breadth={scope.breadth}, duration={scope.duration}, coordination={scope.coordination}")
                 if estimated_complexity:
                     print(f"   Complexity: {estimated_complexity:.2f}")
+                if beads_issue_id:
+                    print(f"   BEADS Issue: {beads_issue_id}")
+                elif not use_beads:
+                    print(f"\n💡 Tip: Add --use-beads flag to track goals in BEADS issue tracker")
             else:
                 print(f"❌ {result.get('message', 'Failed to create goal')}")
         

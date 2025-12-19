@@ -40,6 +40,10 @@ logger = logging.getLogger(__name__)
 # Add paths for proper imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from empirica.data.session_database import SessionDatabase
+from empirica.config.path_resolver import get_session_db_path
+from empirica.utils.session_resolver import resolve_session_id
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp import types
@@ -739,7 +743,6 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
         from empirica.core.goals.repository import GoalRepository
         from empirica.core.goals.types import Goal, ScopeVector, SuccessCriterion
         from empirica.core.canonical.empirica_git import GitGoalStore
-        from empirica.config.path_resolver import get_session_db_path
         import uuid
         import time
         
@@ -864,9 +867,6 @@ async def handle_execute_postflight_direct(arguments: dict) -> List[types.TextCo
     System calculates deltas and detects memory gaps automatically.
     """
     try:
-        from empirica.data.session_database import SessionDatabase
-        from empirica.config.path_resolver import get_session_db_path
-
         session_id = arguments.get("session_id")
         task_summary = arguments.get("task_summary", "Session work completed")
 
@@ -964,10 +964,11 @@ async def handle_execute_postflight_direct(arguments: dict) -> List[types.TextCo
             type="text",
             text=json.dumps({
                 "ok": False,
-                "error": str(e),
+                "error": f"SESSION RESOLUTION ERROR - V2.0.1: {str(e)}",
                 "tool": "execute_postflight"
             }, indent=2)
         )]
+
 
 async def handle_get_calibration_report(arguments: dict) -> List[types.TextContent]:
     """Handle get_calibration_report by querying SQLite reflexes directly
@@ -976,9 +977,6 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
     This handler queries session reflexes for genuine calibration data.
     """
     try:
-        from empirica.data.session_database import SessionDatabase
-        from empirica.config.path_resolver import get_session_db_path
-
         session_id = arguments.get("session_id")
         if not session_id:
             return [types.TextContent(
@@ -986,8 +984,10 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
                 text=json.dumps({"ok": False, "error": "session_id required"}, indent=2)
             )]
 
+        # Resolve session alias if needed
+        session_id = resolve_session_id(session_id)
+
         # Query reflexes for PREFLIGHT and POSTFLIGHT
-        # Fix: Use path_resolver to get correct database location (repo-local, not home)
         db = SessionDatabase(db_path=str(get_session_db_path()))
         cursor = db.conn.cursor()
         

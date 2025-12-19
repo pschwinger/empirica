@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 def _load_semantic_index(root: str) -> Dict:
-    import yaml  # type: ignore
-    path = os.path.join(root, 'docs', 'SEMANTIC_INDEX.yaml')
-    with open(path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+    """Load semantic index (per-project, with graceful fallback)"""
+    from empirica.config.semantic_index_loader import load_semantic_index
+    index = load_semantic_index(root)
+    return index or {}
 
 
 def _read_file(path: str) -> str:

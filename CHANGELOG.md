@@ -5,6 +5,33 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2025-12-19
+
+### Added
+- **`empirica project-init` command** - Interactive onboarding for new repositories
+- **Per-project SEMANTIC_INDEX.yaml** - Each repo can have its own semantic documentation index
+- **Project-level BEADS defaults** - Configure BEADS behavior per-project
+- **CLI hints for BEADS** - Helpful tips after goal creation
+- **Better error messages** - Install instructions when BEADS CLI not found
+- **Configuration examples** - Added docs/examples/project.yaml.example
+
+### Fixed
+- **Database fragmentation (AI Amnesia)** - MCP server now uses repo-local database
+- **refdoc-add UnboundLocalError** - Fixed variable usage before assignment
+- **MCP server postflight regression** - Added missing resolve_session_id import
+- **goals-ready schema bug** - Fixed vectors_json → individual columns
+- **Project auto-detection** - Made --project-id optional with git remote URL auto-detection
+
+### Changed
+- **Project-session linking** - Added explicit --project-id flag to session-create
+- **Project bootstrap** - Now auto-detects project from git remote
+- **Documentation organization** - Moved session summaries to docs/development/
+
+### Investigated
+- **BEADS default behavior** - Kept opt-in (matches industry standards: Git LFS, npm, Python)
+- Evidence: 5 major tools analyzed, high confidence decision (know=0.9, uncertainty=0.15)
+
+
 ## [1.0.0] - 2025-12-18
 
 ### Summary

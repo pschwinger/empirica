@@ -2633,10 +2633,11 @@ class SessionDatabase:
 
         # Load semantic index docs (for quick reference to core documentation)
         semantic_docs = []
-        semantic_index_path = os.path.join(project_root, 'docs', 'SEMANTIC_INDEX.yaml')
-        if os.path.exists(semantic_index_path):
+        # Load semantic index (per-project, with graceful fallback)
+        from empirica.config.semantic_index_loader import load_semantic_index
+        semantic_index = load_semantic_index(project_root)
+        if semantic_index:
             try:
-                semantic_index = yaml.safe_load(open(semantic_index_path, 'r', encoding='utf-8')) or {}
                 index = semantic_index.get('index', {}) or {}
                 # Include top 5 most relevant docs (core-concept tagged ones)
                 for doc_path, meta in list(index.items())[:5]:

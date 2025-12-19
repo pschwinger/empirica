@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: empirica
-Version: 1.0.1
+Version: 1.0.2
 Summary: Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking
 Author: Empirica Team
 License-Expression: MIT
@@ -28,7 +28,6 @@ Requires-Dist: jsonschema>=4.0
 Requires-Dist: httpx>=0.24
 Requires-Dist: requests>=2.31.0
 Requires-Dist: cryptography>=41.0
-Requires-Dist: mcp>=1.0.0
 Requires-Dist: anthropic>=0.39.0
 Requires-Dist: tiktoken>=0.5.0
 Requires-Dist: rich>=13.0
@@ -45,8 +44,10 @@ Provides-Extra: vision
 Requires-Dist: pytesseract>=0.3; extra == "vision"
 Requires-Dist: pillow>=10.0; extra == "vision"
 Requires-Dist: opencv-contrib-python>=4.8; extra == "vision"
+Provides-Extra: mcp
+Requires-Dist: mcp>=1.0.0; extra == "mcp"
 Provides-Extra: all
-Requires-Dist: empirica[api,vector,vision]; extra == "all"
+Requires-Dist: empirica[api,mcp,vector,vision]; extra == "all"
 Provides-Extra: test
 Requires-Dist: pytest>=7.4; extra == "test"
 Requires-Dist: pytest-asyncio>=0.21; extra == "test"
@@ -59,8 +60,6 @@ Provides-Extra: typecheck
 Requires-Dist: pyright>=1.1.330; extra == "typecheck"
 Provides-Extra: dev
 Requires-Dist: empirica[lint,test,typecheck]; extra == "dev"
-Provides-Extra: mcp
-Requires-Dist: mcp>=0.1.0; extra == "mcp"
 Dynamic: license-file
 
 # 🧠 Empirica - Honest AI Through Epistemic Self-Awareness

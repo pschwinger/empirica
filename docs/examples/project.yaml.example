@@ -1,0 +1,46 @@
+# Example project.yaml - Per-Project Configuration
+# Location: <repo-root>/.empirica/project.yaml
+# Created by: empirica project-init
+
+version: '1.0'
+name: My Project
+description: Optional project description
+project_id: uuid-generated-automatically
+
+# BEADS Integration Settings
+beads:
+  # Enable BEADS issue tracking by default for all goals
+  # true = goals automatically create BEADS issues (unless --no-beads)
+  # false = opt-in per goal with --use-beads flag
+  default_enabled: false
+
+# Subjects (Workstreams/Components)
+# Used for context-aware filtering and subject detection
+subjects:
+  # Example: CLI workstream
+  cli:
+    paths:
+      - "src/cli"
+      - "commands"
+    description: "Command-line interface"
+  
+  # Example: Core framework
+  core:
+    paths:
+      - "src/core"
+      - "lib"
+    description: "Core framework logic"
+  
+  # Example: Documentation
+  docs:
+    paths:
+      - "docs"
+    description: "Documentation"
+
+# Default subject when path doesn't match any subject
+default_subject: core
+
+# Auto-detection settings
+auto_detect:
+  enabled: true
+  method: path_match  # Detects subject based on current working directory path

@@ -168,19 +168,36 @@ empirica goals-progress --goal-id <GOAL_ID>
 ```
 
 ### Multi-Agent Collaboration (BEADS)
+**BEADS** (Dependency-Aware Issue Tracker) integrates with Empirica for dependency-aware goal tracking.
+
 ```bash
-# Discover goals from other agents
-empirica goals-discover
+# Create goal with BEADS tracking
+empirica goals-create \
+  --session-id <SESSION_ID> \
+  --objective "Implement OAuth2" \
+  --success-criteria "Auth works" \
+  --use-beads  # ← Automatically creates BEADS issue
 
-# Resume someone's goal
-empirica goals-resume --goal-id <GOAL_ID> --ai-id myai
+# Add subtasks with auto-dependencies
+empirica goals-add-subtask \
+  --goal-id <GOAL_ID> \
+  --description "Research OAuth2 spec" \
+  --use-beads  # ← Auto-links as dependency
 
-# Claim goal (creates branch + links to issue)
-empirica goals-claim --goal-id <GOAL_ID>
-
-# Complete goal (merges branch + closes issue)
-empirica goals-complete --goal-id <GOAL_ID>
+# Find ready work (BEADS + Epistemic)
+empirica goals-ready --session-id <SESSION_ID>
+# Combines: BEADS dependencies + epistemic state
+# Result: Tasks you can actually do right now
 ```
+
+**Per-project default:**
+```yaml
+# .empirica/project.yaml
+beads:
+  default_enabled: true  # Enable by default
+```
+
+**Learn more:** [BEADS Quickstart](../integrations/BEADS_QUICKSTART.md)
 
 ### Git Integration
 ```bash

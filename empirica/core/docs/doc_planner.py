@@ -19,11 +19,12 @@ def _load_yaml(path: str) -> Dict:
 
 
 def _load_semantic_index(root: str) -> Dict[str, Dict]:
-    idx_path = os.path.join(root, 'docs', 'SEMANTIC_INDEX.yaml')
-    if not os.path.exists(idx_path):
+    """Load semantic index (per-project, with graceful fallback)"""
+    from empirica.config.semantic_index_loader import load_semantic_index
+    index = load_semantic_index(root)
+    if not index:
         return {}
-    data = _load_yaml(idx_path)
-    return data.get('index', {}) or {}
+    return index.get('index', {}) or {}
 
 
 def _find_cli_reference(root: str) -> Optional[str]:
