@@ -230,6 +230,7 @@ def handle_goals_create_command(args):
                             logger.info(f"Linked goal {goal.id[:8]} to BEADS issue {beads_issue_id}")
                     else:
                         # BEADS requested but not available - provide helpful error
+                        import sys as _sys  # Local import to ensure availability
                         error_msg = (
                             "⚠️  BEADS integration requested but 'bd' CLI not found.\n\n"
                             "To use BEADS issue tracking:\n"
@@ -241,9 +242,9 @@ def handle_goals_create_command(args):
                         )
                         if output_format == 'json':
                             logger.warning("BEADS integration requested but bd CLI not available")
-                            print(f"\n{error_msg}", file=sys.stderr)
+                            print(f"\n{error_msg}", file=_sys.stderr)
                         else:
-                            print(f"\n{error_msg}", file=sys.stderr)
+                            print(f"\n{error_msg}", file=_sys.stderr)
                         # Continue without BEADS - goal already created successfully
                 except Exception as e:
                     logger.warning(f"BEADS integration failed: {e}")
@@ -300,7 +301,8 @@ def handle_goals_create_command(args):
             print(json.dumps(result, indent=2))
             # Add helpful hint if BEADS not used (only in JSON mode for parsability)
             if result['ok'] and not beads_issue_id and not use_beads:
-                print(f"\n💡 Tip: Add --use-beads flag to track this goal in BEADS issue tracker", file=sys.stderr)
+                import sys as _sys
+                print(f"\n💡 Tip: Add --use-beads flag to track this goal in BEADS issue tracker", file=_sys.stderr)
         else:
             # Human-readable output (legacy)
             if result['ok']:
