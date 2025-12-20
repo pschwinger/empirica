@@ -1,22 +1,25 @@
-# Empirica MCP Server Reference (v4.0)
+# Empirica MCP Server Reference (v5.0)
 
-**Generated:** 2025-12-16  
-**Total Tools:** 38  
-**Server:** `empirica-mcp-server`
+**Last Updated:** 2025-12-20
+**Total Tools:** 40
+**Architecture:** Thin wrappers around CLI commands
 
 ---
 
 ## Overview
 
-The Empirica MCP (Model Context Protocol) server exposes all Empirica functionality through a standardized tool interface for AI assistants.
+The Empirica MCP (Model Context Protocol) server exposes Empirica functionality through standardized tool interface for AI assistants.
+
+**Architecture Principle:** MCP tools are **thin wrappers** around CLI commands - the CLI is the single source of truth.
 
 **Server Details:**
-- **Name:** `empirica-v2`
 - **Package:** `empirica-mcp` (PyPI)
 - **Command:** `empirica-mcp`
 - **Protocol:** MCP (Model Context Protocol)
 - **Transport:** stdio
-- **Tools:** 38 tools organized by category
+- **Tools:** 40 tools (3 stateless + 37 CLI wrappers)
+
+**For complete MCP ↔ CLI mapping:** See [`MCP_CLI_MAPPING.md`](MCP_CLI_MAPPING.md)
 
 ---
 
