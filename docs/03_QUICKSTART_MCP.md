@@ -8,13 +8,15 @@
 
 ## What is MCP?
 
-**MCP (Model Context Protocol)** is Anthropic's standard for connecting AI assistants to external tools. Empirica's MCP server provides **21 tools** (17 core + 4 optional modality switcher - EXPERIMENTAL) for epistemic workflow management directly in your IDE.
+**MCP (Model Context Protocol)** is Anthropic's standard for connecting AI assistants to external tools. Empirica's MCP server provides **40 tools** that wrap the Empirica CLI for epistemic workflow management directly in your IDE.
+
+**Architecture:** MCP tools are **thin wrappers** around CLI commands - the CLI is the single source of truth.
 
 **Benefits:**
 - ✅ **Real-time assessment** - Track epistemic state during coding
 - ✅ **Automatic tracking** - AI decides when to assess
 - ✅ **Stateful sessions** - Maintains context across tasks
-- ✅ **21 specialized tools** - Fine-grained workflow control
+- ✅ **40 specialized tools** - Complete CLI access from IDE
 
 ---
 
@@ -74,7 +76,7 @@ Ask your AI assistant:
 What MCP tools are available?
 ```
 
-You should see 21 Empirica tools listed.
+You should see 40 Empirica tools listed.
 
 ---
 
@@ -141,7 +143,7 @@ claude mcp list
 "What MCP tools are available?"
 ```
 
-You should see 15+ tools with `mcp__empirica_*` prefix.
+You should see 40 Empirica tools with `mcp__empirica_*` prefix.
 
 ### Troubleshooting Claude Code
 
@@ -201,40 +203,54 @@ which empirica  # Verify it's in PATH
 
 ---
 
-## MCP Tools Available
+## MCP Tools Available (40 Total)
 
-### Core Workflow Tools (5)
-1. **execute_preflight** - Assess epistemic state before task
-2. **submit_preflight_assessment** - Log preflight scores
-3. **execute_check** - Mid-task decision point validation
-4. **execute_postflight** - Reassess after completion
-5. **submit_postflight_assessment** - Log postflight with calibration
+**MCP tools are thin wrappers around CLI commands** - the CLI is the single source of truth.
 
-### Session Management (5)
-6. **create_session** - Initialize new session
-7. **resume_previous_session** - Load previous context
-8. **get_epistemic_state** - Query current vectors
-9. **get_session_summary** - Full session history
-10. **get_calibration_report** - Check calibration accuracy
+### Tool Categories
 
-### Monitoring (3)
-11. **query_bayesian_beliefs** - Belief tracking
-12. **check_drift_monitor** - Behavioral integrity check
-13. **query_goal_orchestrator** - Task hierarchy
+**CASCADE Workflow (7 tools):**
+- Session creation, preflight/check/postflight execution and submission
 
-### Guidance (2)
-14. **get_workflow_guidance** - Workflow step guidance
-15. **cli_help** - CLI command help
+**Goal Management (6 tools):**
+- Create goals, add/complete subtasks, query progress
 
-### Integration Tools (2)
-16. **query_ai** - AI-to-AI communication via modality switcher (EXPERIMENTAL)
-17. **execute_cli_command** - Token-efficient access to all 39 CLI commands
+**Session Management (4 tools):**
+- Get epistemic state, session summary, calibration, resume sessions
 
-### Optional: Modality Switcher (4)
-18. **modality_route_query** - Route to specialist AI (Phase 1+)
-19. **modality_list_adapters** - List available AIs
-20. **modality_adapter_health** - Health check
-21. **modality_decision_assist** - Routing recommendation
+**Continuity & Handoffs (4 tools):**
+- Checkpoints (create/load), handoff reports (create/query)
+
+**Multi-AI Coordination (2 tools):**
+- Discover goals, resume goals from other AIs
+
+**Mistakes Tracking (2 tools):**
+- Log mistakes, query mistakes for learning
+
+**Cryptographic Trust (4 tools):**
+- Create identity, list identities, export keys, verify signatures
+
+**Project Tracking (5 tools):**
+- Bootstrap context, log findings/unknowns/dead ends, add reference docs
+
+**Vision Analysis (2 tools):**
+- Analyze images, log visual observations
+
+**Metacognitive Editing (1 tool):**
+- Edit with confidence (prevents 80% of edit failures)
+
+**Guidance (3 tools):**
+- Introduction, workflow guidance, CLI help
+
+### Complete Tool Reference
+
+**For complete MCP ↔ CLI mapping:** See [`docs/reference/MCP_CLI_MAPPING.md`](reference/MCP_CLI_MAPPING.md)
+
+This document shows:
+- Exact CLI command for each MCP tool
+- Parameter name conversions
+- Which tools use direct handlers vs. CLI routing
+- Missing MCP wrappers for CLI commands
 
 ---
 
@@ -311,231 +327,6 @@ increased from 0.6 → 0.8. I was well-calibrated in
 my initial assessment.
 ```
 
----
-
-## Monitoring Tools Deep Dive
-
-The monitoring tools (11-13) provide visibility into epistemic tracking, behavioral integrity, and goal management.
-
-### query_bayesian_beliefs - Evidence-Based Belief Tracking
-
-**Purpose:** Access Bayesian belief tracking and detect calibration discrepancies.
-
-**Use Cases:**
-- Check evidence-based confidence levels for specific contexts
-- Detect overconfidence patterns (intuition > evidence)
-- Detect underconfidence patterns (intuition < evidence)
-- Monitor belief updates during investigation
-
-**Example Usage:**
-```json
-{
-  "tool": "query_bayesian_beliefs",
-  "arguments": {
-    "session_id": "your-session-id",
-    "context_key": "authentication_review"
-  }
-}
-```
-
-**Returns:**
-```json
-{
-  "session_id": "your-session-id",
-  "context_key": "authentication_review",
-  "belief_state": {
-    "know": {"mean": 0.62, "variance": 0.15},
-    "context": {"mean": 0.58, "variance": 0.18}
-  },
-  "discrepancies": {
-    "detected": true,
-    "overconfidence": ["know"],
-    "recommendation": "Evidence suggests lower confidence than intuition"
-  }
-}
-```
-
-**When to use:** When you need to validate your confidence against actual evidence gathered during investigation.
-
-### check_drift_monitor - Behavioral Integrity Check
-
-**Purpose:** Analyze behavioral patterns for drift issues (sycophancy, tension avoidance).
-
-**Use Cases:**
-- Detect sycophancy drift (increasing user-pleasing bias)
-- Identify tension avoidance (not acknowledging conflicts)
-- Monitor synthesis patterns for integrity
-- Alert on behavioral degradation
-
-**Example Usage:**
-```json
-{
-  "tool": "check_drift_monitor",
-  "arguments": {
-    "session_id": "your-session-id",
-    "window_size": 5
-  }
-}
-```
-
-**Returns:**
-```json
-{
-  "session_id": "your-session-id",
-  "drift_analysis": {
-    "sycophancy_drift": {
-      "detected": false,
-      "severity": 0.15
-    },
-    "tension_avoidance": {
-      "detected": false,
-      "acknowledgment_rate": 0.80
-    }
-  },
-  "recommendation": "No drift detected - behavioral integrity maintained"
-}
-```
-
-**When to use:** Periodically check behavioral integrity, especially in long sessions or collaborative work.
-
-### query_goal_orchestrator - Task Hierarchy Tracking
-
-**Purpose:** Track goal decomposition, sub-goals, and progress.
-
-**Use Cases:**
-- Query current goal hierarchy
-- Monitor sub-goal completion
-- Track task dependencies
-- Get visibility into autonomous planning
-
-**Example Usage:**
-```json
-{
-  "tool": "query_goal_orchestrator",
-  "arguments": {
-    "session_id": "your-session-id"
-  }
-}
-```
-
-**Returns:**
-```json
-{
-  "session_id": "your-session-id",
-  "goals": {
-    "primary": "Review authentication module",
-    "sub_goals": [
-      {"id": "g1", "name": "Read auth code", "status": "complete"},
-      {"id": "g2", "name": "Check vulnerabilities", "status": "in_progress"}
-    ]
-  },
-  "progress": {
-    "overall": 0.50,
-    "completed": 1,
-    "total": 2
-  }
-}
-```
-
-**When to use:** To understand how the AI has decomposed complex tasks and track progress.
-
----
-
-## Advanced Integration Tools
-
-### query_ai - AI-to-AI Communication
-
-**Purpose:** Allows one AI to query another AI for specialized knowledge or analysis.
-
-**Use Cases:**
-- When you need a second opinion from a different AI model
-- Specialized tasks requiring different model capabilities
-- Cross-checking analysis with another AI perspective
-
-**Example:**
-```
-AI (Claude) calls query_ai tool:
-- query: "Analyze this Rust code for memory safety issues"
-- adapter: "qwen"  (force Qwen for code analysis)
-- strategy: "epistemic"
-
-Result: Qwen's analysis returned to Claude
-```
-
-**Parameters:**
-- `query` (required): Question or task for the other AI
-- `adapter` (optional): Force specific adapter (qwen, minimax, gemini, rovodev, qodo, openrouter, copilot)
-- `model` (optional): Force specific model (e.g., qwen-coder-turbo, gpt-4)
-- `strategy` (optional): Routing strategy (epistemic, cost, latency, quality, balanced)
-- `session_id` (optional): Track conversation history
-
-**When to use:** When another AI's specialized capabilities would provide valuable insight.
-
-### execute_cli_command - Token-Efficient CLI Access
-
-**Purpose:** Provides access to all 39 Empirica CLI commands through a single MCP tool, reducing token overhead by 96%.
-
-**Why it exists:** Instead of defining 39 separate MCP tools (massive token cost), this single tool wraps all CLI commands.
-
-**Example:**
-```
-execute_cli_command({
-  "command": "sessions-list",
-  "arguments": [],
-  "flags": {"limit": 10, "verbose": true}
-})
-```
-
-**Available Commands:**
-- **Workflow:** preflight, postflight, workflow, cascade, decision
-- **Sessions:** sessions-list, sessions-show, sessions-export, session-create
-- **Monitoring:** monitor
-- **Config:** config
-- **Performance:** performance
-- **Investigation:** investigate
-- **Goals:** goals-create, goals-add-subtask, goals-progress
-- **Utilities:** goal-analysis, ask, chat, onboard
-- See `docs/reference/CLI_COMMANDS_COMPLETE.md` for all 49 commands
-- **Components:** list, explain, demo
-- **User Interface:** ask, chat
-
-**When to use:** When you need CLI functionality from within MCP (e.g., listing sessions, exporting data, checking status).
-
----
-
-## Governance Layer Integration
-
-**Future Enhancement:** Dynamic Role-Based Prompts via Governance Layer
-
-**Concept:** Cognitive Vault + Sentinel provides appropriate prompts based on your role (AI vs Agent).
-
-```python
-# AI requests collaborative prompt
-get_system_prompt(
-    ai_id="rovo-dev",
-    role="collaborative_ai",
-    modality="coding",
-    task_type="feature_design"
-)
-→ Returns: AI_COLLABORATIVE_PROMPT (full CASCADE guidance)
-
-# Agent requests execution prompt  
-get_system_prompt(
-    ai_id="mini-agent", 
-    role="acting_agent",
-    modality="testing",
-    task_type="test_implementation"
-)
-→ Returns: AGENT_EXECUTION_PROMPT (ACT-focused guidance)
-```
-
-**Benefits:**
-- **Right prompt for right role** - AI gets reasoning prompts, agents get execution prompts
-- **Consistent terminology** - AI vs Agent distinction maintained
-- **Token-efficient** - Load only needed guidance
-- **Centrally managed** - Version controlled prompts
-
-**See:** [`docs/AI_VS_AGENT_EMPIRICA_PATTERNS.md`](AI_VS_AGENT_EMPIRICA_PATTERNS.md) for detailed AI vs Agent patterns.
 
 ---
 
@@ -712,10 +503,10 @@ If you have empirica-mcp in a specific virtual environment:
 ## MCP vs CLI
 
 ### When to Use MCP:
-✅ **IDE-integrated workflows** - Code while tracking epistemic state  
-✅ **Real-time assessment** - Automatic during work  
-✅ **Stateful sessions** - Maintains context  
-✅ **19 specialized tools** - Fine-grained control  
+✅ **IDE-integrated workflows** - Code while tracking epistemic state
+✅ **Real-time assessment** - Automatic during work
+✅ **Stateful sessions** - Maintains context
+✅ **40 specialized tools** - Complete CLI access from IDE  
 
 ### When to Use CLI:
 ✅ **Terminal workflows** - Script-based tasks  
