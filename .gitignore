@@ -58,6 +58,7 @@ test_goals_session
 .empirica_reflex_logs/
 .empirica_sessions/
 .agent_memory.json
+.qdrant_data/
 # AI identity keys (private)
 .empirica/identity/*.key
 .env

@@ -363,8 +363,6 @@ MIT License - Maximum adoption, trust-aligned with Empirica's transparency princ
 
 See [LICENSE](LICENSE) for details.
 
-See [LICENSE](LICENSE) for details.
-
 ---
 
 **Built with genuine epistemic transparency** 🧠✨
