@@ -170,6 +170,116 @@ empirica sessions-resume --ai-id claude-code --count 1
 
 ---
 
+### memory-compact
+
+Compact session for epistemic continuity across conversation boundaries. Use when approaching context limits (e.g., >180k tokens) to enable true cross-session continuity.
+
+**Dependencies:** Session must exist with epistemic vectors
+
+**Workflow:**
+1. Checkpoints current epistemic state (pre-compact snapshot)
+2. Loads project-bootstrap context (ground truth: findings/unknowns/goals)
+3. Creates continuation session with lineage linkage
+4. Returns formatted context for IDE injection
+5. Provides recommended PREFLIGHT vectors for new session
+
+**Usage (AI-first JSON):**
+```bash
+cat > /tmp/compact.json << 'EOF'
+{
+  "session_id": "latest:active:claude-code",
+  "create_continuation": true,
+  "include_bootstrap": true,
+  "checkpoint_current": true,
+  "compact_mode": "full"
+}
+EOF
+empirica memory-compact /tmp/compact.json
+```
+
+**Parameters:**
+- `session_id` (required) - Session to compact (supports aliases like "latest:active:ai-id")
+- `create_continuation` (default: true) - Create new continuation session
+- `include_bootstrap` (default: true) - Load project-bootstrap context
+- `checkpoint_current` (default: true) - Snapshot current epistemic state
+- `compact_mode` (default: "full") - Compaction mode:
+  - `full` - All features (checkpoint + bootstrap + continuation + IDE injection)
+  - `minimal` - Checkpoint only (fast, minimal context)
+  - `context_only` - Bootstrap only (no checkpoint or continuation)
+
+**Returns:**
+```json
+{
+  "ok": true,
+  "operation": "memory_compact",
+  "session_id": "original-session-id",
+  "compact_mode": "full",
+  "pre_compact_checkpoint": {
+    "checkpoint_id": "checkpoint-uuid",
+    "vectors": {"engagement": 0.85, "know": 0.80, ...},
+    "timestamp": "2025-12-20T..."
+  },
+  "bootstrap_context": {
+    "findings": [...],
+    "unknowns": [...],
+    "goals": [...]
+  },
+  "continuation": {
+    "new_session_id": "continuation-session-id",
+    "parent_session_id": "original-session-id",
+    "ai_id": "claude-code"
+  },
+  "recommended_preflight": {
+    "engagement": 0.85,
+    "foundation": {"know": 0.80, "do": 0.90, "context": 0.85},
+    "uncertainty": 0.35,
+    ...
+  },
+  "ide_injection": "## Empirica Context (Loaded from Ground Truth)\n\n..."
+}
+```
+
+**Use cases:**
+- Approaching IDE context limits (>180k tokens used)
+- Switching between long-running investigation sessions
+- Measuring epistemic drift (pre-compact vs. post-bootstrap vectors)
+- Enabling true cross-session continuity with ground truth anchoring
+
+**Example workflow:**
+```bash
+# 1. Detect context pressure (e.g., IDE shows >180k tokens)
+
+# 2. Run memory-compact
+cat > /tmp/compact.json << 'EOF'
+{
+  "session_id": "latest:active:claude-code",
+  "compact_mode": "full"
+}
+EOF
+RESULT=$(empirica memory-compact /tmp/compact.json)
+
+# 3. Extract continuation session ID
+NEW_SESSION=$(echo "$RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['continuation']['new_session_id'])")
+
+# 4. Copy ide_injection to IDE conversation (provides bootstrap context)
+
+# 5. Run PREFLIGHT in new session with recommended vectors
+cat > /tmp/preflight.json << EOF
+{
+  "session_id": "$NEW_SESSION",
+  "vectors": $(echo "$RESULT" | python3 -c "import sys, json; print(json.dumps(json.load(sys.stdin)['recommended_preflight']))"),
+  "reasoning": "Post-compact PREFLIGHT with bootstrap-adjusted vectors"
+}
+EOF
+empirica preflight-submit /tmp/preflight.json
+
+# 6. Continue work in new session with full epistemic context
+```
+
+**See also:** checkpoint-load, project-bootstrap, sessions-resume
+
+---
+
 ## CASCADE Workflow
 
 ### preflight-submit

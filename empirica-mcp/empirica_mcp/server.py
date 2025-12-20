@@ -1368,6 +1368,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "get_session_summary": ["sessions-show", "--verbose"],
         "get_calibration_report": ["calibration"],
         "resume_previous_session": ["sessions-resume"],
+        "memory_compact": ["memory-compact"],
 
         # Checkpoints
         "create_git_checkpoint": ["checkpoint-create"],
@@ -1486,7 +1487,8 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "goals-create", "goals-add-subtask", "goals-complete-subtask",
         "goals-progress", "goals-list", "sessions-resume",
         "handoff-create", "handoff-query",
-        "project-bootstrap", "finding-log", "unknown-log", "deadend-log", "refdoc-add"
+        "project-bootstrap", "finding-log", "unknown-log", "deadend-log", "refdoc-add",
+        "memory-compact"
     }
 
     cli_command = tool_map.get(tool_name, [tool_name])[0]
