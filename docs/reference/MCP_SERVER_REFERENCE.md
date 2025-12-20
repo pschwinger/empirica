@@ -793,7 +793,11 @@ Query logged mistakes for learning.
 
 ## Tool Reference
 
-**Complete tool list (38 tools):**
+**Complete tool list (40 tools):**
+
+**For complete MCP ↔ CLI mapping and detailed reference:** See [`MCP_CLI_MAPPING.md`](MCP_CLI_MAPPING.md)
+
+**High-level categories:**
 
 ### Documentation
 1. `get_empirica_introduction` - Framework introduction
