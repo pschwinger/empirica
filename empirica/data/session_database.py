@@ -1741,7 +1741,7 @@ class SessionDatabase:
         for goal in goal_tree:
             if goal.get('status') != 'completed':
                 active_goals.append({
-                    'id': goal['id'],
+                    'id': goal['goal_id'],
                     'objective': goal['objective'],
                     'progress': f"{goal.get('completed_subtasks', 0)}/{goal.get('total_subtasks', 0)}"
                 })
@@ -2631,6 +2631,24 @@ class SessionDatabase:
             except Exception:
                 pass
 
+        # Load essential docs from PROJECT_CONFIG.yaml (project-specific configuration)
+        project_config_docs = []
+        project_config_path = os.path.join(project_root, '.empirica-project', 'PROJECT_CONFIG.yaml')
+        if os.path.exists(project_config_path):
+            try:
+                with open(project_config_path, 'r') as f:
+                    project_config = yaml.safe_load(f)
+                    if project_config and 'essential_docs' in project_config:
+                        for doc in project_config['essential_docs']:
+                            if isinstance(doc, dict):
+                                project_config_docs.append({
+                                    'path': doc.get('path', ''),
+                                    'purpose': doc.get('purpose', ''),
+                                    'source': 'PROJECT_CONFIG'
+                                })
+            except Exception as e:
+                logger.debug(f"Could not load PROJECT_CONFIG.yaml: {e}")
+
         # Load semantic index docs (for quick reference to core documentation)
         semantic_docs = []
         # Load semantic index (per-project, with graceful fallback)
@@ -2697,10 +2715,11 @@ class SessionDatabase:
                 {
                     "path": d['doc_path'],
                     "type": d['doc_type'],
-                    "description": d['description']
+                    "description": d['description'],
+                    "source": "database"
                 }
                 for d in reference_docs
-            ],
+            ] + project_config_docs,  # Add docs from PROJECT_CONFIG.yaml
             "incomplete_work": [
                 {
                     "goal": g['objective'],
