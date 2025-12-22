@@ -92,6 +92,7 @@ from .project_commands import (
     handle_deadend_log_command,
     handle_refdoc_add_command
 )
+from .workspace_init import handle_workspace_init_command
 from .project_search import (
     handle_project_search_command,
 )
@@ -235,6 +236,7 @@ __all__ = [
     'handle_project_bootstrap_command',
     'handle_workspace_overview_command',
     'handle_workspace_map_command',
+    'handle_workspace_init_command',
     'handle_finding_log_command',
     'handle_unknown_log_command',
     'handle_deadend_log_command',

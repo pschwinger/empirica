@@ -665,6 +665,15 @@ def _add_checkpoint_parsers(subparsers):
     )
     workspace_map_parser.add_argument('--output', choices=['dashboard', 'json'], default='dashboard', help='Output format')
 
+    # Workspace init command - EPISTEMIC INITIALIZATION
+    workspace_init_parser = subparsers.add_parser(
+        'workspace-init',
+        help='Initialize workspace with epistemic self-awareness (uses CASCADE workflow)'
+    )
+    workspace_init_parser.add_argument('--path', type=str, help='Workspace path (defaults to current directory)')
+    workspace_init_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
+    workspace_init_parser.add_argument('--non-interactive', action='store_true', help='Skip user questions, use defaults')
+
     # Project semantic search command (Qdrant-backed)
     project_search_parser = subparsers.add_parser(
         'project-search',
@@ -1100,6 +1109,7 @@ def main(args=None):
             'project-bootstrap': handle_project_bootstrap_command,
             'workspace-overview': handle_workspace_overview_command,
             'workspace-map': handle_workspace_map_command,
+            'workspace-init': handle_workspace_init_command,
             'project-search': handle_project_search_command,
             'project-embed': handle_project_embed_command,
             'doc-check': handle_doc_check_command,
