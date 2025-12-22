@@ -5,6 +5,37 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2025-12-22
+
+### Added
+- **workspace-overview command** - Epistemic project management dashboard
+  - Shows epistemic health of all projects in workspace
+  - Health scoring algorithm: `(know * 0.6) + ((1 - uncertainty) * 0.4) - (dead_end_ratio * 0.2)`
+  - Color-coded health tiers: 🟢 high (≥0.7), 🟡 medium (0.5-0.7), 🔴 low (<0.5)
+  - Sorting options: activity, knowledge, uncertainty, name
+  - Filtering by project status: active, inactive, complete
+  - JSON and dashboard output formats
+  
+- **workspace-map command** - Git repository discovery
+  - Scans parent directory for git repositories
+  - Shows which repos are tracked in Empirica
+  - Displays epistemic health metrics for tracked projects
+  - Suggests commands to track untracked repositories
+  - Enables workspace-wide epistemic visibility
+
+### Database
+- `get_workspace_overview()` - Aggregates epistemic state across all projects
+- `_get_workspace_stats()` - Calculates workspace-level statistics
+- Health metrics include: know, uncertainty, findings, unknowns, dead ends
+
+### Dogfooding
+- Successfully used Empirica's full CASCADE workflow to build these features
+- PREFLIGHT → CHECK → POSTFLIGHT assessments captured
+- Learning deltas: know +0.13, completion +0.75, uncertainty -0.20
+- BEADS integration tested with 3 issues tracked and closed
+
+---
+
 ## [1.0.4] - 2025-12-22
 
 ### Added
