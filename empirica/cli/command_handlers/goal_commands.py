@@ -261,6 +261,22 @@ def handle_goals_create_command(args):
                 "beads_issue_id": beads_issue_id  # Include BEADS link in response
             }
             
+            # ===== SMART CHECK PROMPT: Scope-Based =====
+            # Show CHECK recommendation for high-scope goals
+            if scope_breadth >= 0.6 or scope_duration >= 0.5:
+                check_prompt = {
+                    "type": "check_recommendation",
+                    "reason": "high_scope",
+                    "message": "💡 High-scope goal: Consider running CHECK after initial investigation",
+                    "scope_trigger": {
+                        "breadth": scope_breadth if scope_breadth >= 0.6 else None,
+                        "duration": scope_duration if scope_duration >= 0.5 else None
+                    },
+                    "suggested_timing": "after 1-2 subtasks or 30+ minutes",
+                    "command": f"empirica check --session-id {session_id}"
+                }
+                result["check_recommendation"] = check_prompt
+            
             # Store goal in git notes for cross-AI discovery (Phase 1: Git Automation)
             try:
                 from empirica.core.canonical.empirica_git import GitGoalStore

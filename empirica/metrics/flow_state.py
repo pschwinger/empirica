@@ -7,6 +7,7 @@ Measures:
 - Goal structure (active goals with subtasks)
 - Learning velocity (know increase per hour)
 - Session continuity (AI naming convention)
+- CHECK usage (mid-session confidence checks)
 
 Flow Score = weighted average of above factors
 """
@@ -24,11 +25,12 @@ class FlowStateMetrics:
     
     # Weights for flow score calculation
     WEIGHTS = {
-        'cascade_completeness': 0.3,
-        'bootstrap_usage': 0.2,
-        'goal_structure': 0.2,
-        'learning_velocity': 0.2,
-        'session_continuity': 0.1
+        'cascade_completeness': 0.25,
+        'bootstrap_usage': 0.15,
+        'goal_structure': 0.15,
+        'learning_velocity': 0.20,
+        'check_usage': 0.15,
+        'session_continuity': 0.10
     }
     
     def __init__(self, db):
@@ -71,6 +73,7 @@ class FlowStateMetrics:
         bootstrap_score = self._check_bootstrap_usage(session_id)
         goal_score = self._check_goal_structure(session_id)
         learning_score = self._check_learning_velocity(session_id, session)
+        check_score = self._check_check_usage(session_id, session)
         continuity_score = self._check_session_continuity(session['ai_id'])
         
         # Calculate weighted flow score
@@ -79,6 +82,7 @@ class FlowStateMetrics:
             bootstrap_score * self.WEIGHTS['bootstrap_usage'] +
             goal_score * self.WEIGHTS['goal_structure'] +
             learning_score * self.WEIGHTS['learning_velocity'] +
+            check_score * self.WEIGHTS['check_usage'] +
             continuity_score * self.WEIGHTS['session_continuity']
         )
         
@@ -92,6 +96,8 @@ class FlowStateMetrics:
             recommendations.append("Create goals with subtasks for better structure")
         if learning_score < 0.3:
             recommendations.append("Increase learning rate: More investigation, less guessing")
+        if check_score < 0.5:
+            recommendations.append("Use CHECK for high-scope goals to validate direction")
         if continuity_score < 0.5:
             recommendations.append("Use AI naming convention: <model>-<workstream>")
         
@@ -102,6 +108,7 @@ class FlowStateMetrics:
                 'bootstrap_usage': round(bootstrap_score, 2),
                 'goal_structure': round(goal_score, 2),
                 'learning_velocity': round(learning_score, 2),
+                'check_usage': round(check_score, 2),
                 'session_continuity': round(continuity_score, 2)
             },
             'recommendations': recommendations,
@@ -204,6 +211,76 @@ class FlowStateMetrics:
         # <0 = negative learning (0.0)
         learning_velocity = know_delta / duration_hours
         return max(0.0, min(learning_velocity / 0.3, 1.0))
+    
+    def _check_check_usage(self, session_id: str, session: Dict) -> float:
+        """Check if CHECK was used appropriately for session scope
+        
+        Returns:
+            1.0 = CHECK used appropriately for scope
+            0.7 = CHECK used but scope was low (unnecessary but not harmful)
+            0.5 = No CHECK for low-scope session (acceptable)
+            0.3 = No CHECK for high-scope session (should have used it)
+        """
+        cursor = self.db.conn.cursor()
+        
+        # Check if session has CHECK phase
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM reflexes 
+            WHERE session_id = ? AND phase = 'CHECK'
+        """, (session_id,))
+        has_check = cursor.fetchone()[0] > 0
+        
+        # Get goal scope for session (if any)
+        cursor.execute("""
+            SELECT goal_data 
+            FROM goals 
+            WHERE session_id = ? 
+            ORDER BY created_timestamp DESC 
+            LIMIT 1
+        """, (session_id,))
+        goal = cursor.fetchone()
+        
+        if goal and goal['goal_data']:
+            import json
+            try:
+                goal_data = json.loads(goal['goal_data'])
+                scope = goal_data.get('scope', {})
+                scope_breadth = scope.get('breadth', 0.3)
+                scope_duration = scope.get('duration', 0.2)
+            except:
+                scope_breadth = 0.3
+                scope_duration = 0.2
+            is_high_scope = scope_breadth >= 0.6 or scope_duration >= 0.5
+            
+            if has_check and is_high_scope:
+                return 1.0  # Perfect: CHECK used for high-scope
+            elif has_check and not is_high_scope:
+                return 0.7  # CHECK used but not needed (still good practice)
+            elif not has_check and is_high_scope:
+                return 0.3  # Missing: Should have used CHECK
+            else:
+                return 0.5  # No CHECK for low-scope (acceptable)
+        else:
+            # No goal defined, check by session duration as proxy
+            if session['end_time']:
+                start_time = datetime.fromisoformat(str(session['start_time']))
+                end_time = datetime.fromisoformat(str(session['end_time']))
+                duration_hours = (end_time - start_time).total_seconds() / 3600
+                
+                if duration_hours >= 0.5:  # 30+ minutes
+                    if has_check:
+                        return 1.0  # Good: CHECK for long session
+                    else:
+                        return 0.3  # Missing: Should have checked
+                else:
+                    if has_check:
+                        return 0.7  # Extra CHECK (not harmful)
+                    else:
+                        return 0.5  # Quick session, CHECK optional
+            else:
+                # Session not ended yet, default to middle ground
+                return 0.7 if has_check else 0.5
     
     def _check_session_continuity(self, ai_id: str) -> float:
         """Check if AI naming follows convention: <model>-<workstream>"""
