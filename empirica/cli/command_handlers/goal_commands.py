@@ -746,8 +746,11 @@ def handle_goals_list_command(args):
                 print(f"\n{status_emoji} Goal {i}: {goal['goal_id']}")
                 print(f"   Objective: {goal['objective'][:60]}...")
                 print(f"   Scope: breadth={goal['scope']['breadth']:.2f}, duration={goal['scope']['duration']:.2f}, coordination={goal['scope']['coordination']:.2f}")
-                print(f"   Progress: {goal['completion_percentage']:.1f}% ({goal['completed_subtasks']}/{goal['total_subtasks']} subtasks)")
-                print(f"   Created: {goal['created_at'][:10]}")
+                print(f"   Progress: {float(goal['completion_percentage']):.1f}% ({goal['completed_subtasks']}/{goal['total_subtasks']} subtasks)")
+                # Convert timestamp to date string
+                from datetime import datetime
+                created_date = datetime.fromtimestamp(goal['created_at']).strftime('%Y-%m-%d')
+                print(f"   Created: {created_date}")
         
         goal_repo.close()
         return result

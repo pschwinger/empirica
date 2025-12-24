@@ -2695,6 +2695,87 @@ class SessionDatabase:
         """, (resolved_id,))
         incomplete_goals = [dict(row) for row in cursor.fetchall()]
         
+        # ===== NEW: Active Work Context =====
+        # Get active sessions (not ended)
+        cursor.execute("""
+            SELECT session_id, ai_id, start_time, subject
+            FROM sessions
+            WHERE project_id = ? AND end_time IS NULL
+            ORDER BY start_time DESC
+            LIMIT 5
+        """, (resolved_id,))
+        active_sessions = [dict(row) for row in cursor.fetchall()]
+        
+        # Get goals in_progress (active work)
+        cursor.execute("""
+            SELECT g.id, g.objective, g.status, g.session_id, g.beads_issue_id,
+                   COUNT(st.id) as subtask_count,
+                   s.ai_id, s.start_time
+            FROM goals g
+            JOIN sessions s ON g.session_id = s.session_id
+            LEFT JOIN subtasks st ON g.id = st.goal_id
+            WHERE s.project_id = ? AND g.status = 'in_progress'
+            GROUP BY g.id, g.objective, g.status, g.session_id, g.beads_issue_id, s.ai_id, s.start_time
+            ORDER BY g.created_timestamp DESC
+            LIMIT 10
+        """, (resolved_id,))
+        active_goals = [dict(row) for row in cursor.fetchall()]
+        
+        # Get findings linked to active goals
+        active_goal_ids = [g['id'] for g in active_goals]
+        findings_with_goals = []
+        if active_goal_ids:
+            placeholders = ','.join('?' * len(active_goal_ids))
+            cursor.execute(f"""
+                SELECT pf.finding, pf.goal_id, pf.session_id, pf.created_timestamp,
+                       g.objective as goal_objective
+                FROM project_findings pf
+                LEFT JOIN goals g ON pf.goal_id = g.id
+                WHERE pf.project_id = ? AND pf.goal_id IN ({placeholders})
+                ORDER BY pf.created_timestamp DESC
+                LIMIT 10
+            """, (resolved_id, *active_goal_ids))
+            findings_with_goals = [dict(row) for row in cursor.fetchall()]
+        
+        # Get AI activity summary (last 7 days)
+        cursor.execute("""
+            SELECT ai_id, COUNT(*) as session_count,
+                   MAX(start_time) as last_session
+            FROM sessions
+            WHERE project_id = ? 
+              AND start_time >= datetime('now', '-7 days')
+            GROUP BY ai_id
+            ORDER BY session_count DESC
+            LIMIT 10
+        """, (resolved_id,))
+        ai_activity = [dict(row) for row in cursor.fetchall()]
+        
+        # Scan for epistemic artifacts (audit files, test results)
+        epistemic_artifacts = []
+        try:
+            import glob
+            artifact_patterns = [
+                '/tmp/empirica_*.json',
+                '/tmp/*_audit.json',
+                os.path.join(project_root, '*.audit.json'),
+                os.path.join(project_root, '.empirica', 'artifacts', '*.json')
+            ]
+            for pattern in artifact_patterns:
+                for filepath in glob.glob(pattern):
+                    try:
+                        # Get file size and mtime
+                        stat = os.stat(filepath)
+                        epistemic_artifacts.append({
+                            'path': filepath,
+                            'size': stat.st_size,
+                            'modified': stat.st_mtime,
+                            'type': 'audit' if 'audit' in filepath else 'artifact'
+                        })
+                    except:
+                        pass
+        except Exception as e:
+            logger.debug(f"Could not scan for epistemic artifacts: {e}")
+        
         # Get recent artifacts/modified files from handoff reports
         # This tells AI which files were changed and may need doc updates
         # Include sessions with matching project_id OR NULL project_id (legacy sessions)
@@ -2866,6 +2947,13 @@ class SessionDatabase:
                 }
                 for g in incomplete_goals
             ],
+            # ===== NEW: Active Work Context =====
+            "active_sessions": active_sessions,
+            "active_goals": active_goals,
+            "findings_with_goals": findings_with_goals,
+            "ai_activity": ai_activity,
+            "epistemic_artifacts": epistemic_artifacts,
+            # ===== END NEW =====
             "recent_artifacts": recent_artifacts,
             "available_skills": available_skills,
             "full_skills": full_skills,  # Full content for matched skills

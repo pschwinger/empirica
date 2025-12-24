@@ -315,9 +315,43 @@ def handle_project_bootstrap_command(args):
             project = breadcrumbs['project']
             last = breadcrumbs['last_activity']
             
-            print(f"📋 Project Context: {project['name']}")
+            # ===== PROJECT CONTEXT BANNER =====
+            print("━" * 64)
+            print("🎯 PROJECT CONTEXT")
+            print("━" * 64)
+            print()
+            print(f"📁 Project: {project['name']}")
+            print(f"🆔 ID: {project_id}")
+            
+            # Get git URL
+            git_url = None
+            try:
+                result = subprocess.run(
+                    ['git', 'remote', 'get-url', 'origin'],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                if result.returncode == 0:
+                    git_url = result.stdout.strip()
+                    print(f"🔗 Repository: {git_url}")
+            except:
+                pass
+            
+            print(f"📍 Location: {db.db_path.parent.parent if hasattr(db, 'db_path') and db.db_path else 'Unknown'}")
+            print(f"💾 Database: .empirica/sessions/sessions.db")
+            print()
+            print("⚠️  All commands write to THIS project's database.")
+            print("   Findings, sessions, goals → stored in this project context.")
+            print()
+            print("━" * 64)
+            print()
+            
+            # ===== PROJECT SUMMARY =====
+            print(f"📋 Project Summary")
             print(f"   {project['description']}")
-            print(f"   Repos: {', '.join(project['repos'])}")
+            if project['repos']:
+                print(f"   Repos: {', '.join(project['repos'])}")
             print(f"   Total sessions: {project['total_sessions']}")
             print()
             
@@ -379,6 +413,57 @@ def handle_project_bootstrap_command(args):
                     if len(artifact['files_modified']) > 5:
                         print(f"        ... and {len(artifact['files_modified']) - 5} more")
                 print()
+            
+            # ===== NEW: Active Work Section =====
+            if breadcrumbs.get('active_sessions') or breadcrumbs.get('active_goals'):
+                print(f"🚀 Active Work (In Progress):")
+                print()
+                
+                # Show active sessions
+                if breadcrumbs.get('active_sessions'):
+                    print(f"   📡 Active Sessions:")
+                    for sess in breadcrumbs['active_sessions'][:3]:
+                        from datetime import datetime
+                        start = datetime.fromisoformat(str(sess['start_time']))
+                        elapsed = datetime.now() - start
+                        hours = int(elapsed.total_seconds() / 3600)
+                        print(f"      • {sess['session_id'][:8]}... ({sess['ai_id']}) - {hours}h ago")
+                        if sess.get('subject'):
+                            print(f"        Subject: {sess['subject']}")
+                    print()
+                
+                # Show active goals
+                if breadcrumbs.get('active_goals'):
+                    print(f"   🎯 Goals In Progress:")
+                    for goal in breadcrumbs['active_goals'][:5]:
+                        beads_link = f" [BEADS: {goal['beads_issue_id']}]" if goal.get('beads_issue_id') else " ⚠️ No BEADS link"
+                        print(f"      • [{goal['id'][:8]}] {goal['objective']}{beads_link}")
+                        print(f"        AI: {goal['ai_id']} | Subtasks: {goal['subtask_count']}")
+                        
+                        # Show recent findings for this goal
+                        goal_findings = [f for f in breadcrumbs.get('findings_with_goals', []) if f['goal_id'] == goal['id']]
+                        if goal_findings:
+                            print(f"        Latest: {goal_findings[0]['finding'][:60]}...")
+                    print()
+                
+                # Show epistemic artifacts
+                if breadcrumbs.get('epistemic_artifacts'):
+                    print(f"   📊 Epistemic Artifacts:")
+                    for artifact in breadcrumbs['epistemic_artifacts'][:3]:
+                        size_kb = artifact['size'] / 1024
+                        print(f"      • {artifact['path']} ({size_kb:.1f} KB)")
+                    print()
+                
+                # Show AI activity summary
+                if breadcrumbs.get('ai_activity'):
+                    print(f"   👥 AI Activity (Last 7 Days):")
+                    for ai in breadcrumbs['ai_activity'][:5]:
+                        print(f"      • {ai['ai_id']}: {ai['session_count']} session(s)")
+                    print()
+                    print(f"   💡 Tip: Use format '<model>-<workstream>' (e.g., claude-cli-testing)")
+                    print()
+            
+            # ===== END NEW =====
             
             if breadcrumbs['incomplete_work']:
                 print(f"🎯 Incomplete Work:")
@@ -572,6 +657,11 @@ def handle_finding_log_command(args):
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
         
+        # Show project context (quiet mode - single line)
+        if output_format != 'json':
+            from empirica.cli.cli_utils import print_project_context
+            print_project_context(quiet=True)
+        
         db = SessionDatabase()
 
         # Resolve project name to UUID
@@ -673,6 +763,11 @@ def handle_unknown_log_command(args):
         subject = config_data.get('subject') if config_data else getattr(args, 'subject', None)
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
+        
+        # Show project context (quiet mode - single line)
+        if output_format != 'json':
+            from empirica.cli.cli_utils import print_project_context
+            print_project_context(quiet=True)
         
         db = SessionDatabase()
 

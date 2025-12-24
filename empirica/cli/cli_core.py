@@ -454,6 +454,7 @@ def _add_checkpoint_parsers(subparsers):
     )
     checkpoint_create_parser.add_argument('--round', type=int, required=True, help='Round number')
     checkpoint_create_parser.add_argument('--metadata', help='JSON metadata (optional)')
+    checkpoint_create_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Checkpoint load command
     checkpoint_load_parser = subparsers.add_parser(
@@ -485,6 +486,7 @@ def _add_checkpoint_parsers(subparsers):
     checkpoint_list_parser.add_argument('--session-id', help='Session ID (optional, lists all if omitted)')
     checkpoint_list_parser.add_argument('--limit', type=int, default=10, help='Maximum checkpoints to show')
     checkpoint_list_parser.add_argument('--phase', help='Filter by phase (optional)')
+    checkpoint_list_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Checkpoint diff command
     checkpoint_diff_parser = subparsers.add_parser(
@@ -679,6 +681,11 @@ def _add_checkpoint_parsers(subparsers):
         'project-search',
         help='Semantic search for relevant docs/memory by task description'
     )
+    project_search_parser.add_argument('--project-id', required=True, help='Project UUID')
+    project_search_parser.add_argument('--task', required=True, help='Task description to search for')
+    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory'], default='all', help='Result type (default: all)')
+    project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
+    project_search_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
 
     # Project embed (build vectors) command
     project_embed_parser = subparsers.add_parser(
@@ -701,11 +708,6 @@ def _add_checkpoint_parsers(subparsers):
     # NOTE: skill-suggest and skill-fetch are NOT YET IMPLEMENTED
     # Placeholder parsers removed to avoid confusion (use project-bootstrap instead)
     # TODO: Implement skill discovery and fetching in Phase 4
-    project_search_parser.add_argument('--project-id', required=True, help='Project UUID')
-    project_search_parser.add_argument('--task', required=True, help='Task description to search for')
-    project_search_parser.add_argument('--type', choices=['all', 'docs', 'memory'], default='all', help='Result type (default: all)')
-    project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
-    project_search_parser.add_argument('--output', choices=['default', 'json'], default='default', help='Output format')
     
     # Finding log command
     finding_log_parser = subparsers.add_parser(
