@@ -2872,6 +2872,65 @@ class SessionDatabase:
         except Exception as e:
             logger.debug(f"Could not calculate flow metrics: {e}")
         
+        # ===== Database Schema Summary (Dynamic Context) =====
+        # Show which tables have data and recent activity
+        database_summary = {}
+        try:
+            cursor = self.conn.cursor()
+            
+            # Get all tables
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+            all_tables = [row['name'] for row in cursor.fetchall()]
+            
+            # Get tables with data (row count)
+            tables_with_data = []
+            for table in all_tables:
+                try:
+                    cursor.execute(f"SELECT COUNT(*) as count FROM {table}")
+                    count = cursor.fetchone()['count']
+                    if count > 0:
+                        tables_with_data.append({
+                            'name': table,
+                            'rows': count
+                        })
+                except:
+                    pass
+            
+            # Sort by row count
+            tables_with_data.sort(key=lambda x: x['rows'], reverse=True)
+            
+            # Key tables for quick reference (static knowledge embedded as reminder)
+            key_tables = {
+                'sessions': 'Work sessions with PREFLIGHT/POSTFLIGHT',
+                'goals': 'Hierarchical objectives with scope',
+                'reflexes': 'CASCADE assessments (PREFLIGHT/CHECK/POSTFLIGHT)',
+                'project_findings': 'Findings linked to goals/subtasks',
+                'breadcrumbs': 'Legacy findings/unknowns/dead_ends',
+                'subtasks': 'Goal breakdown with completion tracking'
+            }
+            
+            database_summary = {
+                'total_tables': len(all_tables),
+                'tables_with_data': len(tables_with_data),
+                'top_tables': [
+                    f"{t['name']} ({t['rows']} rows)" 
+                    for t in tables_with_data[:10]
+                ],
+                'key_tables': key_tables,
+                'schema_doc': 'docs/reference/DATABASE_SCHEMA_GENERATED.md'
+            }
+        except Exception as e:
+            logger.debug(f"Could not generate database summary: {e}")
+        
+        # ===== Structure Health Analysis (Dynamic Context) =====
+        # Detect project pattern and assess conformance
+        structure_health = {}
+        try:
+            from empirica.utils.structure_health import analyze_structure_health
+            structure_health = analyze_structure_health(project_root)
+        except Exception as e:
+            logger.debug(f"Could not analyze structure health: {e}")
+        
         # Get recent artifacts/modified files from handoff reports
         # This tells AI which files were changed and may need doc updates
         # Include sessions with matching project_id OR NULL project_id (legacy sessions)
@@ -3052,6 +3111,10 @@ class SessionDatabase:
             # ===== END NEW =====
             # Flow state metrics
             "flow_metrics": flow_metrics_data,
+            # Database schema summary (dynamic context)
+            "database_summary": database_summary,
+            # Structure health (dynamic context)
+            "structure_health": structure_health,
             # File tree structure
             "file_tree": self.generate_file_tree(project_root, max_depth=3, use_cache=True),
             "recent_artifacts": recent_artifacts,

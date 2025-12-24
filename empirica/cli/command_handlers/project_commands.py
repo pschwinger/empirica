@@ -509,6 +509,80 @@ def handle_project_bootstrap_command(args):
                     print(f"   No completed sessions yet to analyze")
                     print()
             
+            # ===== DATABASE SCHEMA SUMMARY =====
+            if breadcrumbs.get('database_summary'):
+                print(f"🗄️  Database Schema (Epistemic Data Store):")
+                print()
+                
+                db_summary = breadcrumbs['database_summary']
+                print(f"   Total Tables: {db_summary.get('total_tables', 0)}")
+                print(f"   Tables With Data: {db_summary.get('tables_with_data', 0)}")
+                print()
+                
+                # Show key tables (static knowledge reminder)
+                if db_summary.get('key_tables'):
+                    print(f"   📌 Key Tables:")
+                    for table, description in list(db_summary['key_tables'].items())[:6]:
+                        print(f"      • {table}: {description}")
+                    print()
+                
+                # Show top tables by row count
+                if db_summary.get('top_tables'):
+                    print(f"   📊 Most Active Tables:")
+                    for table_info in db_summary['top_tables'][:5]:
+                        print(f"      • {table_info}")
+                    print()
+                
+                # Reference to full schema
+                if db_summary.get('schema_doc'):
+                    print(f"   📖 Full Schema: {db_summary['schema_doc']}")
+                    print()
+            
+            # ===== STRUCTURE HEALTH =====
+            if breadcrumbs.get('structure_health'):
+                print(f"🏗️  Project Structure Health:")
+                print()
+                
+                health = breadcrumbs['structure_health']
+                
+                # Show detected pattern with confidence
+                confidence = health.get('confidence', 0.0)
+                conformance = health.get('conformance', 0.0)
+                
+                # Choose emoji based on conformance
+                if conformance >= 0.9:
+                    emoji = "✅"
+                elif conformance >= 0.7:
+                    emoji = "🟢"
+                elif conformance >= 0.5:
+                    emoji = "🟡"
+                else:
+                    emoji = "🔴"
+                
+                print(f"   Detected Pattern: {health.get('detected_name', 'Unknown')} {emoji}")
+                print(f"   Detection Confidence: {confidence:.2f}")
+                print(f"   Pattern Conformance: {conformance:.2f}")
+                print(f"   Description: {health.get('description', '')}")
+                print()
+                
+                # Show violations if any
+                violations = health.get('violations', [])
+                if violations:
+                    print(f"   ⚠️  Conformance Issues ({len(violations)}):")
+                    for violation in violations[:3]:
+                        print(f"      • {violation}")
+                    if len(violations) > 3:
+                        print(f"      ... and {len(violations) - 3} more")
+                    print()
+                
+                # Show suggestions
+                suggestions = health.get('suggestions', [])
+                if suggestions:
+                    print(f"   💡 Suggestions:")
+                    for suggestion in suggestions[:3]:
+                        print(f"      {suggestion}")
+                    print()
+            
             # ===== FILE TREE =====
             if breadcrumbs.get('file_tree'):
                 print(f"📁 Project Structure (depth 3, respects .gitignore):")
