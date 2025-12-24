@@ -28,6 +28,39 @@
 
 ---
 
+## STATIC CONTEXT (Learn These - Bootstrap Shows Current State)
+
+### Database Schema (Key Tables)
+- **sessions**: Work sessions (ai_id, start_time, end_time, project_id)
+- **goals**: Objectives with scope (breadth/duration/coordination 0.0-1.0)
+- **reflexes**: CASCADE phases (PREFLIGHT/CHECK/POSTFLIGHT) with 13 vectors
+- **project_findings**: Findings linked to goals/subtasks
+- **command_usage**: CLI telemetry for usage analytics
+
+### Flow State Factors (6 Components - Empirically Validated)
+What creates high productivity:
+1. **CASCADE Completeness (25%)** - PREFLIGHT → CHECK → POSTFLIGHT
+2. **Bootstrap Usage (15%)** - Load context early
+3. **Goal Structure (15%)** - Goals with subtasks
+4. **Learning Velocity (20%)** - Know increase per hour
+5. **CHECK Usage (15%)** - Mid-session validation for high-scope
+6. **Session Continuity (10%)** - AI naming convention followed
+
+**Scoring:** 0.9+ = ⭐ Perfect | 0.7+ = 🟢 Good | 0.5+ = 🟡 Moderate | <0.5 = 🔴 Low
+
+### Project Structure Patterns (Auto-Detected)
+Bootstrap detects: python_package, django, react, monorepo, empirica_extension
+Don't prescribe structure - let bootstrap analyze and measure conformance.
+
+### Command Best Practices
+**AI-First JSON mode (preferred):**
+```bash
+echo '{"session_id": "...", "objective": "..."}' | empirica goals-create -
+```
+Always use `--output json` for machine readability.
+
+---
+
 ## EMPIRICA WORKFLOW (Essential Only)
 
 ### Core Pattern: PREFLIGHT → [Work] → CHECK (optional) → POSTFLIGHT
