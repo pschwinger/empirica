@@ -2596,6 +2596,69 @@ class SessionDatabase:
         """Get the most recent project handoff (delegates to ProjectRepository)"""
         return self.projects.get_latest_project_handoff(project_id)
     
+    def generate_file_tree(self, project_root: str, max_depth: int = 3, use_cache: bool = True) -> Optional[str]:
+        """Generate file tree respecting .gitignore
+        
+        Args:
+            project_root: Path to project root
+            max_depth: Tree depth (default: 3)
+            use_cache: Use cached tree if <60s old
+            
+        Returns:
+            str: Tree output (plain text, no ANSI codes) or None if tree not available
+        """
+        import subprocess
+        import time
+        from pathlib import Path
+        
+        # Check if tree is installed
+        try:
+            subprocess.run(["tree", "--version"], capture_output=True, check=True, timeout=1)
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+            logger.debug("tree command not available, skipping file tree generation")
+            return None
+        
+        cache_key = f"tree_{Path(project_root).name}_{max_depth}"
+        cache_dir = Path(project_root) / ".empirica" / "cache"
+        cache_file = cache_dir / f"{cache_key}.txt"
+        
+        # Check cache
+        if use_cache and cache_file.exists():
+            age = time.time() - cache_file.stat().st_mtime
+            if age < 60:  # 60 second cache
+                logger.debug(f"Using cached file tree (age: {age:.1f}s)")
+                return cache_file.read_text()
+        
+        # Generate tree
+        cmd = [
+            "tree",
+            "-L", str(max_depth),
+            "--gitignore",
+            "--dirsfirst",
+            "-n",  # No color (plain text)
+            project_root
+        ]
+        
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            
+            if result.returncode == 0:
+                tree_output = result.stdout
+                # Cache it
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                cache_file.write_text(tree_output)
+                logger.debug(f"Generated file tree (cached to {cache_file})")
+                return tree_output
+            else:
+                logger.warning(f"tree command failed: {result.stderr}")
+                return None
+        except subprocess.TimeoutExpired:
+            logger.warning("tree command timed out (>5s)")
+            return None
+        except Exception as e:
+            logger.warning(f"Error generating file tree: {e}")
+            return None
+    
     def bootstrap_project_breadcrumbs(
         self,
         project_id: str,
@@ -2954,6 +3017,8 @@ class SessionDatabase:
             "ai_activity": ai_activity,
             "epistemic_artifacts": epistemic_artifacts,
             # ===== END NEW =====
+            # File tree structure
+            "file_tree": self.generate_file_tree(project_root, max_depth=3, use_cache=True),
             "recent_artifacts": recent_artifacts,
             "available_skills": available_skills,
             "full_skills": full_skills,  # Full content for matched skills
