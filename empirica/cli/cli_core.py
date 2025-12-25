@@ -154,6 +154,19 @@ def main(args=None):
         parser.print_help()
         sys.exit(1)
     
+    # Enable verbose output if requested
+    verbose = getattr(parsed_args, 'verbose', False)
+    if verbose:
+        print(f"[VERBOSE] Empirica v{_get_version().split()[0]}", file=sys.stderr)
+        print(f"[VERBOSE] Command: {parsed_args.command}", file=sys.stderr)
+        try:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            print(f"[VERBOSE] Database: {db.db_path}", file=sys.stderr)
+            db.close()
+        except Exception as e:
+            print(f"[VERBOSE] Database: (unavailable: {e})", file=sys.stderr)
+    
     # Log command usage for telemetry
     try:
         from empirica.data.session_database import SessionDatabase
@@ -289,6 +302,9 @@ def main(args=None):
             
             # Log successful execution
             elapsed_ms = int((time.time() - start_time) * 1000)
+            if verbose:
+                print(f"[VERBOSE] Execution time: {elapsed_ms}ms", file=sys.stderr)
+            
             try:
                 db = SessionDatabase()
                 db.log_command_usage(
