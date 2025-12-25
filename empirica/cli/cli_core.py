@@ -19,6 +19,54 @@ from .cli_utils import handle_cli_error, print_header
 from .command_handlers import *
 from .command_handlers.utility_commands import handle_log_token_saving, handle_efficiency_report
 
+
+class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """Custom formatter that groups subcommands by category"""
+    
+    def _format_action(self, action):
+        result = super()._format_action(action)
+        
+        if isinstance(action, argparse._SubParsersAction):
+            categories = {
+                'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot'],
+                'CASCADE Workflow': ['preflight', 'preflight-submit', 'check', 'check-submit', 'postflight', 'postflight-submit', 'workflow'],
+                'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
+                'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
+                'Workspace': ['workspace-init', 'workspace-map', 'workspace-overview'],
+                'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
+                'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
+                'Handoffs': ['handoff-create', 'handoff-query'],
+                'Logging': ['finding-log', 'unknown-log', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
+                'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
+                'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
+                'Skills': ['skill-suggest', 'skill-fetch'],
+                'Utilities': ['goal-analysis', 'log-token-saving', 'config', 'performance'],
+                'Vision': ['vision'],
+                'Epistemics': ['epistemics-list', 'epistemics-show'],
+                'User Interface': ['chat']
+            }
+            
+            parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
+            for category, commands in categories.items():
+                parts.append(f'\n{category} ({len(commands)} commands):\n')
+                parts.append('-' * 70 + '\n')
+                for cmd in commands:
+                    if cmd in action.choices:
+                        # Get help text from the _SubParsersAction's choice_actions
+                        help_text = action._name_parser_map.get(cmd).description if cmd in action._name_parser_map else ''
+                        if not help_text:
+                            # Fallback to searching in choice_actions
+                            for choice_action in action._choices_actions:
+                                if choice_action.dest == cmd:
+                                    help_text = choice_action.help or ''
+                                    break
+                        parts.append(f'  {cmd:30s}  {help_text}\n')
+            parts.append('\n' + '=' * 70 + '\n')
+            parts.append('\nUse "empirica <command> --help" for detailed help on a specific command.\n')
+            return ''.join(parts)
+        
+        return result
+
 # Import all parser modules
 from .parsers import (
     add_cascade_parsers,
@@ -42,7 +90,7 @@ def create_argument_parser():
     parser = argparse.ArgumentParser(
         prog='empirica',
         description='🧠 Empirica - Semantic Self-Aware AI Framework',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=GroupedHelpFormatter,
         epilog="""
 Examples:
   empirica session-create --ai-id myai          # Create session
