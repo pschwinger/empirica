@@ -181,12 +181,20 @@ def handle_check_command(args):
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
 
-        # Extract parameters
-        session_id = getattr(args, 'session_id', None)
-        cycle = getattr(args, 'cycle', None)
-        round_num = getattr(args, 'round', None)
-        output_format = getattr(args, 'output', 'json')
-        verbose = getattr(args, 'verbose', False)
+        # Try to load from stdin if available
+        config_data = None
+        try:
+            if not sys.stdin.isatty():
+                config_data = parse_json_safely(sys.stdin.read())
+        except:
+            pass
+
+        # Extract parameters from args or stdin config
+        session_id = getattr(args, 'session_id', None) or (config_data.get('session_id') if config_data else None)
+        cycle = getattr(args, 'cycle', None) or (config_data.get('cycle') if config_data else None)
+        round_num = getattr(args, 'round', None) or (config_data.get('round') if config_data else None)
+        output_format = getattr(args, 'output', 'json') or (config_data.get('output', 'json') if config_data else 'json')
+        verbose = getattr(args, 'verbose', False) or (config_data.get('verbose', False) if config_data else False)
 
         if not session_id:
             print(json.dumps({
@@ -388,13 +396,34 @@ def handle_check_command(args):
 def handle_check_submit_command(args):
     """Handle check-submit command"""
     try:
+        import sys
+        import os
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         
-        # Parse arguments
-        session_id = args.session_id
-        vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
-        decision = args.decision
-        reasoning = args.reasoning
+        # AI-FIRST MODE: Check if config provided
+        config_data = None
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
+                config_data = parse_json_safely(sys.stdin.read())
+            else:
+                if not os.path.exists(args.config):
+                    import json
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+        
+        # Parse arguments from config or CLI
+        if config_data:
+            session_id = config_data.get('session_id')
+            vectors = config_data.get('vectors')
+            decision = config_data.get('decision')
+            reasoning = config_data.get('reasoning', '')
+        else:
+            session_id = args.session_id
+            vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
+            decision = args.decision
+            reasoning = args.reasoning
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
         round_num = getattr(args, 'round', 1)  # Default to 1 if not provided, don't depend on cycle
         

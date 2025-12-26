@@ -2193,40 +2193,14 @@ class SessionDatabase:
         subject: Optional[str] = None,
         impact: Optional[float] = None
     ) -> str:
-        """Log a project finding (what was learned/discovered)
-
-        Args:
-            impact: Impact score 0.0-1.0 (importance). If None, auto-derives from latest CASCADE.
-        """
-        finding_id = str(uuid.uuid4())
-
+        """Log a project finding (delegates to BreadcrumbRepository)"""
         # Auto-derive impact from latest CASCADE if not provided
         if impact is None:
             impact = self._get_latest_impact_score(session_id)
 
-        finding_data = {
-            "finding": finding,
-            "goal_id": goal_id,
-            "subtask_id": subtask_id,
-            "impact": impact,
-            "timestamp": time.time()
-        }
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO project_findings (
-                id, project_id, session_id, goal_id, subtask_id,
-                finding, created_timestamp, finding_data, subject
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            finding_id, project_id, session_id, goal_id, subtask_id,
-            finding, time.time(), json.dumps(finding_data), subject
-        ))
-        
-        self.conn.commit()
-        logger.info(f"📝 Finding logged: {finding[:50]}...")
-        
-        return finding_id
+        return self.breadcrumbs.log_finding(
+            project_id, session_id, finding, goal_id, subtask_id, subject, impact
+        )
     
     def log_unknown(
         self,

@@ -442,7 +442,24 @@ class AutoIssueCaptureService:
         
         Perfect for passing to another AI agent with full context.
         """
-        issues = self.list_issues(status="handoff", assigned_to_ai=assigned_to_ai)
+        # Get all handoff issues for this AI
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT * FROM auto_captured_issues
+                WHERE session_id = ? AND status = ? AND assigned_to_ai = ?
+                ORDER BY created_at DESC
+            """, (self.session_id, "handoff", assigned_to_ai))
+            
+            rows = cursor.fetchall()
+            issues = [dict(row) for row in rows]
+            conn.close()
+        except Exception as e:
+            logger.warning(f"Failed to export issues: {e}")
+            issues = []
         
         return {
             "from_session": self.session_id,

@@ -25,25 +25,36 @@ class BreadcrumbRepository(BaseRepository):
         session_id: str,
         finding: str,
         goal_id: Optional[str] = None,
-        subtask_id: Optional[str] = None
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project finding (what was learned/discovered)"""
+        """Log a project finding (what was learned/discovered)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, defaults to 0.5.
+        """
         finding_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
 
         finding_data = {
             "finding": finding,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
             INSERT INTO project_findings (
                 id, project_id, session_id, goal_id, subtask_id,
-                finding, created_timestamp, finding_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                finding, created_timestamp, finding_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             finding_id, project_id, session_id, goal_id, subtask_id,
-            finding, time.time(), json.dumps(finding_data)
+            finding, time.time(), json.dumps(finding_data), subject, impact
         ))
 
         self.commit()
@@ -57,25 +68,36 @@ class BreadcrumbRepository(BaseRepository):
         session_id: str,
         unknown: str,
         goal_id: Optional[str] = None,
-        subtask_id: Optional[str] = None
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project unknown (what's still unclear)"""
+        """Log a project unknown (what's still unclear)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, defaults to 0.5.
+        """
         unknown_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
 
         unknown_data = {
             "unknown": unknown,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
             INSERT INTO project_unknowns (
                 id, project_id, session_id, goal_id, subtask_id,
-                unknown, created_timestamp, unknown_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                unknown, created_timestamp, unknown_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             unknown_id, project_id, session_id, goal_id, subtask_id,
-            unknown, time.time(), json.dumps(unknown_data)
+            unknown, time.time(), json.dumps(unknown_data), subject, impact
         ))
 
         self.commit()
