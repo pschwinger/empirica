@@ -18,6 +18,7 @@ import time
 from .cli_utils import handle_cli_error, print_header
 from .command_handlers import *
 from .command_handlers.utility_commands import handle_log_token_saving, handle_efficiency_report
+from .command_handlers.edit_verification_command import handle_edit_with_confidence_command
 
 
 class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
@@ -82,6 +83,7 @@ from .parsers import (
     add_user_interface_parsers,
     add_vision_parsers,
     add_epistemics_parsers,
+    add_edit_verification_parsers,
 )
 
 
@@ -139,6 +141,7 @@ Examples:
     add_user_interface_parsers(subparsers)
     add_vision_parsers(subparsers)
     add_epistemics_parsers(subparsers)
+    add_edit_verification_parsers(subparsers)
     
     return parser
 
@@ -295,6 +298,9 @@ def main(args=None):
             # Epistemics commands
             'epistemics-list': handle_epistemics_search_command,
             'epistemics-show': handle_epistemics_stats_command,
+
+            # Edit verification commands
+            'edit-with-confidence': handle_edit_with_confidence_command,
         }
         
         if parsed_args.command in command_handlers:

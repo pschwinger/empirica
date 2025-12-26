@@ -52,6 +52,7 @@ from .checkpoint_parsers import add_checkpoint_parsers
 from .user_interface_parsers import add_user_interface_parsers
 from .vision_parsers import add_vision_parsers
 from .epistemics_parsers import add_epistemics_parsers
+from .edit_verification_parsers import add_edit_verification_parsers
 
 __all__ = [
     'format_help_text',
@@ -68,4 +69,5 @@ __all__ = [
     'add_user_interface_parsers',
     'add_vision_parsers',
     'add_epistemics_parsers',
+    'add_edit_verification_parsers',
 ]
