@@ -125,6 +125,7 @@ from .utility_commands import (
 )
 from .ask_handler import handle_ask_command
 from .chat_handler import handle_chat_command
+from .dashboard import handle_dashboard_command
 from .vision_commands import (
     handle_vision_analyze,
     handle_vision_log,
@@ -273,7 +274,8 @@ __all__ = [
     # User interface commands (for human users)
     'handle_ask_command',
     'handle_chat_command',
-    
+    'handle_dashboard_command',
+
     # Vision commands
     'handle_vision_analyze',
     'handle_vision_log',

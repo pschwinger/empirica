@@ -160,7 +160,6 @@ class SessionDatabase:
                 user_id TEXT,
                 start_time TIMESTAMP NOT NULL,
                 end_time TIMESTAMP,
-                bootstrap_level INTEGER NOT NULL,
                 components_loaded INTEGER NOT NULL,
                 total_turns INTEGER DEFAULT 0,
                 total_cascades INTEGER DEFAULT 0,
@@ -972,29 +971,28 @@ class SessionDatabase:
             # Don't raise - allow database to continue working
             # Old tables will remain if migration fails
     
-    def create_session(self, ai_id: str, bootstrap_level: int = 0, components_loaded: int = 0, 
+    def create_session(self, ai_id: str, components_loaded: int = 0,
                       user_id: Optional[str] = None, subject: Optional[str] = None) -> str:
         """
         Create new session, return session_id.
-        
+
         Args:
             ai_id: AI identifier (required)
-            bootstrap_level: Bootstrap level (0-4 or minimal/standard/complete) - default 0
             components_loaded: Number of components loaded - default 0 (components created on-demand)
             user_id: Optional user identifier
             subject: Optional subject/workstream identifier for filtering
-            
+
         Returns:
             session_id: UUID string
         """
         session_id = str(uuid.uuid4())
-        
+
         cursor = self.conn.cursor()
         cursor.execute("""
             INSERT INTO sessions (
-                session_id, ai_id, user_id, start_time, bootstrap_level, components_loaded, subject
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (session_id, ai_id, user_id, datetime.now(), bootstrap_level, components_loaded, subject))
+                session_id, ai_id, user_id, start_time, components_loaded, subject
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, (session_id, ai_id, user_id, datetime.now(), components_loaded, subject))
         
         self.conn.commit()
         return session_id
@@ -2668,7 +2666,12 @@ class SessionDatabase:
         task_description: str = None,
         epistemic_state: Dict[str, float] = None,
         context_to_inject: bool = False,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        session_id: Optional[str] = None,
+        include_live_state: bool = False,
+        fresh_assess: bool = False,
+        trigger: Optional[str] = None,
+        depth: str = "auto"
     ) -> Dict:
         """
         Generate epistemic breadcrumbs for starting a new session on existing project.
@@ -3181,7 +3184,33 @@ class SessionDatabase:
         # Optional: Generate markdown context for injection
         if context_to_inject:
             breadcrumbs["context_markdown"] = self._generate_context_markdown(breadcrumbs)
-        
+
+        # ===== NEW: Live State Capture =====
+        if include_live_state:
+            # Auto-resolve session_id if not provided
+            if not session_id:
+                session_id = self._auto_resolve_session(resolved_id, trigger)
+
+            if session_id:
+                # Capture or load live state
+                if fresh_assess:
+                    # Fresh self-assessment (current state, not old checkpoint)
+                    breadcrumbs["live_state"] = self._capture_fresh_state(session_id, resolved_id)
+                else:
+                    # Load latest checkpoint from session
+                    breadcrumbs["live_state"] = self._load_latest_checkpoint_state(session_id)
+
+                # Always include session linkage
+                breadcrumbs["session_id"] = session_id
+            else:
+                breadcrumbs["live_state"] = None
+                breadcrumbs["live_state_error"] = "No session found. Create session first."
+
+        # ===== Adaptive Depth (for drift-based loading) =====
+        if depth != "auto" or trigger == "post_compact":
+            # Apply depth filtering to breadcrumbs
+            breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
+
         return breadcrumbs
 
     def _generate_context_markdown(self, breadcrumbs: Dict) -> str:
@@ -3314,6 +3343,248 @@ class SessionDatabase:
         
         return "\n".join(lines)
 
+    def _auto_resolve_session(self, project_id: str, trigger: Optional[str]) -> Optional[str]:
+        """
+        Auto-resolve session_id from project and trigger context.
+
+        Resolution order:
+        1. If trigger='post_compact': Load from latest pre-summary snapshot
+        2. If trigger='pre_compact': Get latest session for project (even if ended)
+        3. Otherwise: Get latest ACTIVE session for project
+        """
+        if trigger == 'post_compact':
+            # Load session from pre-compact snapshot
+            try:
+                from pathlib import Path
+                import json
+                ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+                snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
+                if snapshots:
+                    with open(snapshots[0], 'r') as f:
+                        snapshot = json.load(f)
+                        return snapshot.get('session_id')
+            except:
+                pass
+
+        # Get latest session for project
+        cursor = self.conn.cursor()
+        if trigger == 'pre_compact':
+            # Include ended sessions (POSTFLIGHT just ran)
+            cursor.execute("""
+                SELECT session_id FROM sessions
+                WHERE project_id = ?
+                ORDER BY start_time DESC
+                LIMIT 1
+            """, (project_id,))
+        else:
+            # Only active sessions (end_time IS NULL)
+            cursor.execute("""
+                SELECT session_id FROM sessions
+                WHERE project_id = ? AND end_time IS NULL
+                ORDER BY start_time DESC
+                LIMIT 1
+            """, (project_id,))
+
+        row = cursor.fetchone()
+        return row['session_id'] if row else None
+
+    def _capture_fresh_state(self, session_id: str, project_id: str) -> Dict:
+        """
+        Capture fresh epistemic state via self-assessment.
+
+        Returns current state (not from old checkpoint):
+        - Vectors from latest available checkpoint OR minimal self-assess
+        - Current git state
+        - Reasoning
+        - Investigation context
+        """
+        import subprocess
+        from datetime import datetime
+
+        # Get git state
+        git_state = self._get_current_git_state()
+
+        # Try to get vectors from latest checkpoint
+        try:
+            from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+            git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+            checkpoints = git_logger.list_checkpoints(limit=1)
+
+            if checkpoints:
+                latest = checkpoints[0]
+                vectors = latest.get('vectors', {})
+                reasoning = latest.get('meta', {}).get('reasoning', 'Latest checkpoint reasoning')
+                phase = latest.get('phase', 'UNKNOWN')
+            else:
+                # No checkpoints - use minimal default
+                vectors = {
+                    "engagement": 0.5,
+                    "know": 0.5,
+                    "uncertainty": 0.5,
+                    "impact": 0.5,
+                    "completion": 0.0
+                }
+                reasoning = "Fresh assessment (no prior checkpoints)"
+                phase = None
+        except Exception as e:
+            # Fallback to minimal state
+            vectors = {
+                "engagement": 0.5,
+                "know": 0.5,
+                "uncertainty": 0.5,
+                "impact": 0.5,
+                "completion": 0.0
+            }
+            reasoning = f"Fresh assessment (error loading checkpoint: {e})"
+            phase = None
+
+        return {
+            "vectors": vectors,
+            "git": git_state,
+            "reasoning": reasoning,
+            "phase": phase,
+            "timestamp": datetime.now().isoformat(),
+            "fresh": True  # Flag to indicate this is fresh, not loaded checkpoint
+        }
+
+    def _load_latest_checkpoint_state(self, session_id: str) -> Optional[Dict]:
+        """Load latest checkpoint from session (via GitEnhancedReflexLogger)"""
+        try:
+            from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+            from datetime import datetime
+
+            git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+            checkpoints = git_logger.list_checkpoints(limit=1)
+
+            if not checkpoints:
+                return None
+
+            checkpoint = checkpoints[0]
+            return {
+                "vectors": checkpoint.get('vectors', {}),
+                "git": self._get_current_git_state(),  # Current git state, not from checkpoint
+                "reasoning": checkpoint.get('meta', {}).get('reasoning', ''),
+                "phase": checkpoint.get('phase'),
+                "timestamp": checkpoint.get('timestamp'),
+                "fresh": False  # Loaded from checkpoint, not fresh
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _get_current_git_state(self) -> Dict:
+        """Get current git state (HEAD, branch, dirty flag, uncommitted changes)"""
+        import subprocess
+
+        try:
+            # Get HEAD commit
+            head = subprocess.run(
+                ['git', 'rev-parse', 'HEAD'],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            head_commit = head.stdout.strip() if head.returncode == 0 else None
+
+            # Get branch
+            branch = subprocess.run(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            branch_name = branch.stdout.strip() if branch.returncode == 0 else None
+
+            # Check if dirty (uncommitted changes)
+            status = subprocess.run(
+                ['git', 'status', '--porcelain'],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            dirty = len(status.stdout.strip()) > 0 if status.returncode == 0 else None
+            uncommitted_count = len(status.stdout.strip().split('\n')) if dirty else 0
+
+            return {
+                "head": head_commit,
+                "branch": branch_name,
+                "dirty": dirty,
+                "uncommitted_files": uncommitted_count
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _apply_depth_filter(self, breadcrumbs: Dict, depth: str, trigger: Optional[str]) -> Dict:
+        """
+        Apply adaptive depth filtering to breadcrumbs based on drift or explicit depth.
+
+        Depth levels:
+        - minimal: Last 5 findings/unknowns, current goal only (~500 tokens)
+        - moderate: Last 10 findings/unknowns, all active goals (~1500 tokens)
+        - full: All findings/unknowns, all goals, all ref-docs (~3000-5000 tokens)
+        - auto: Determine depth based on drift (if post_compact trigger)
+        """
+        if depth == "auto" and trigger == "post_compact":
+            # Calculate drift from pre-snapshot to current
+            try:
+                from pathlib import Path
+                import json
+                ref_docs_dir = Path.cwd() / ".empirica" / "ref-docs"
+                snapshots = sorted(ref_docs_dir.glob("pre_summary_*.json"), reverse=True)
+
+                if snapshots and breadcrumbs.get('live_state'):
+                    with open(snapshots[0], 'r') as f:
+                        pre_snapshot = json.load(f)
+
+                    pre_vectors = pre_snapshot.get('checkpoint', {}).get('vectors', {})
+                    post_vectors = breadcrumbs['live_state'].get('vectors', {})
+
+                    # Calculate drift (simple average of vector changes)
+                    drift = 0.0
+                    count = 0
+                    for key in ['know', 'uncertainty', 'engagement', 'impact', 'completion']:
+                        if key in pre_vectors and key in post_vectors:
+                            drift += abs(pre_vectors[key] - post_vectors[key])
+                            count += 1
+
+                    drift = drift / count if count > 0 else 0.0
+
+                    # Choose depth based on drift
+                    if drift > 0.3:
+                        depth = "full"
+                    elif drift > 0.1:
+                        depth = "moderate"
+                    else:
+                        depth = "minimal"
+            except:
+                depth = "moderate"  # Fallback to moderate on error
+
+        # Apply depth filter
+        if depth == "minimal":
+            breadcrumbs['findings'] = breadcrumbs.get('findings', [])[:5]
+            breadcrumbs['unknowns'] = breadcrumbs.get('unknowns', [])[:5]
+            breadcrumbs['goals'] = [g for g in breadcrumbs.get('goals', []) if 'current' in str(g).lower()][:1]
+            breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:3]
+        elif depth == "moderate":
+            breadcrumbs['findings'] = breadcrumbs.get('findings', [])[:10]
+            breadcrumbs['unknowns'] = breadcrumbs.get('unknowns', [])[:10]
+            breadcrumbs['goals'] = breadcrumbs.get('goals', [])[:5]
+            breadcrumbs['reference_docs'] = breadcrumbs.get('reference_docs', [])[:5]
+        # depth == "full": no filtering
+
+        return breadcrumbs
+
+    def _get_latest_impact_score(self, session_id: str) -> float:
+        """Get impact score from latest CASCADE assessment (PREFLIGHT/CHECK/POSTFLIGHT)"""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT impact FROM reflexes
+            WHERE session_id = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """, (session_id,))
+        row = cursor.fetchone()
+        return row['impact'] if row and row['impact'] is not None else 0.5  # Default: moderate impact
+
     def log_finding(
         self,
         project_id: str,
@@ -3321,15 +3592,26 @@ class SessionDatabase:
         finding: str,
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project finding (what was learned/discovered)"""
+        """Log a project finding (what was learned/discovered)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, auto-derives from latest CASCADE.
+        """
         finding_id = str(uuid.uuid4())
-        
+
+        # Auto-derive impact from latest CASCADE if not provided
+        if impact is None:
+            impact = self._get_latest_impact_score(session_id)
+
         finding_data = {
             "finding": finding,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
         
         cursor = self.conn.cursor()
@@ -3355,15 +3637,26 @@ class SessionDatabase:
         unknown: str,
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project unknown (what's still unclear)"""
+        """Log a project unknown (what's still unclear)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, auto-derives from latest CASCADE.
+        """
         unknown_id = str(uuid.uuid4())
-        
+
+        # Auto-derive impact from latest CASCADE if not provided
+        if impact is None:
+            impact = self._get_latest_impact_score(session_id)
+
         unknown_data = {
             "unknown": unknown,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
         
         cursor = self.conn.cursor()
@@ -3394,11 +3687,20 @@ class SessionDatabase:
         why_failed: str,
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
     ) -> str:
-        """Log a project dead end (delegates to BreadcrumbRepository)"""
+        """Log a project dead end (delegates to BreadcrumbRepository)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). If None, auto-derives from latest CASCADE.
+        """
+        # Auto-derive impact from latest CASCADE if not provided
+        if impact is None:
+            impact = self._get_latest_impact_score(session_id)
+
         return self.breadcrumbs.log_dead_end(project_id, session_id, approach,
-                                             why_failed, goal_id, subtask_id, subject)
+                                             why_failed, goal_id, subtask_id, subject, impact)
     
     def add_reference_doc(
         self,
@@ -3553,7 +3855,8 @@ class SessionDatabase:
         cost_estimate: Optional[str] = None,
         root_cause_vector: Optional[str] = None,
         prevention: Optional[str] = None,
-        goal_id: Optional[str] = None
+        goal_id: Optional[str] = None,
+        project_id: Optional[str] = None
     ) -> str:
         """Log a mistake for learning (delegates to BreadcrumbRepository)
 
@@ -3570,7 +3873,7 @@ class SessionDatabase:
             mistake_id: UUID string
         """
         return self.breadcrumbs.log_mistake(session_id, mistake, why_wrong,
-                                           cost_estimate, root_cause_vector, prevention, goal_id)
+                                           cost_estimate, root_cause_vector, prevention, goal_id, project_id)
     
     def get_mistakes(
         self,

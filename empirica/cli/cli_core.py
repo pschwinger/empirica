@@ -43,7 +43,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                 'Utilities': ['goal-analysis', 'log-token-saving', 'config', 'performance'],
                 'Vision': ['vision'],
                 'Epistemics': ['epistemics-list', 'epistemics-show'],
-                'User Interface': ['chat']
+                'User Interface': ['chat', 'dashboard']
             }
             
             parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -287,7 +287,8 @@ def main(args=None):
             
             # User interface commands
             'chat': handle_chat_command,
-            
+            'dashboard': handle_dashboard_command,
+
             # Vision commands
             'vision': handle_vision_analyze,
             

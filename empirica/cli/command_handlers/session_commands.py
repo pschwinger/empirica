@@ -573,7 +573,6 @@ def handle_memory_compact_command(args):
             # Create new session linked via git notes (metadata linkage for future)
             continuation_session_id = db.create_session(
                 ai_id=ai_id,
-                bootstrap_level=1,  # Bootstrap loaded
                 subject=None
             )
 

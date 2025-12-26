@@ -102,16 +102,23 @@ class BreadcrumbRepository(BaseRepository):
         why_failed: str,
         goal_id: Optional[str] = None,
         subtask_id: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        impact: float = 0.5
     ) -> str:
-        """Log a project dead end (what didn't work)"""
+        """Log a project dead end (what didn't work)
+
+        Args:
+            impact: Impact score 0.0-1.0 (importance). Default 0.5 if not provided.
+        """
         dead_end_id = str(uuid.uuid4())
 
         dead_end_data = {
             "approach": approach,
             "why_failed": why_failed,
             "goal_id": goal_id,
-            "subtask_id": subtask_id
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
         }
 
         self._execute("""
@@ -233,7 +240,8 @@ class BreadcrumbRepository(BaseRepository):
         cost_estimate: Optional[str] = None,
         root_cause_vector: Optional[str] = None,
         prevention: Optional[str] = None,
-        goal_id: Optional[str] = None
+        goal_id: Optional[str] = None,
+        project_id: Optional[str] = None
     ) -> str:
         """
         Log a mistake for learning and future prevention.
@@ -263,12 +271,12 @@ class BreadcrumbRepository(BaseRepository):
 
         self._execute("""
             INSERT INTO mistakes_made (
-                id, session_id, goal_id, mistake, why_wrong,
+                id, session_id, goal_id, project_id, mistake, why_wrong,
                 cost_estimate, root_cause_vector, prevention,
                 created_timestamp, mistake_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            mistake_id, session_id, goal_id, mistake, why_wrong,
+            mistake_id, session_id, goal_id, project_id, mistake, why_wrong,
             cost_estimate, root_cause_vector, prevention,
             time.time(), json.dumps(mistake_data)
         ))

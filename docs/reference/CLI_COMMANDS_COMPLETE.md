@@ -1,8 +1,8 @@
 # CLI Commands - Complete Reference
 
-**Empirica v4.0 - All 49 Commands**
+**Empirica v4.0 - All 74 Commands**
 
-**Date:** 2025-12-08  
+**Date:** 2025-12-25
 **Status:** Production-ready
 
 ---
@@ -21,7 +21,7 @@
 10. [User Interface (3 commands)](#user-interface)
 11. [Utility Commands (1 command)](#utility-commands)
 
-**Total: 49 commands**
+**Total: 74 commands**
 
 ---
 

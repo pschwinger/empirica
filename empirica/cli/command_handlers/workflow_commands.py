@@ -154,7 +154,8 @@ def handle_preflight_submit_command(args):
             else:
                 print(f"❌ {result.get('message', 'Failed to submit PREFLIGHT assessment')}")
 
-        return result
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Preflight submit", getattr(args, 'verbose', False))
@@ -355,7 +356,8 @@ def handle_check_submit_command(args):
         vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
         decision = args.decision
         reasoning = args.reasoning
-        cycle = getattr(args, 'cycle', None) or 1  # Handle None case
+        cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
+        round_num = getattr(args, 'round', 1)  # Default to 1 if not provided, don't depend on cycle
         
         # Validate inputs
         if not isinstance(vectors, dict):
@@ -381,14 +383,15 @@ def handle_check_submit_command(args):
             # Add checkpoint - this writes to ALL 3 storage layers
             checkpoint_id = logger_instance.add_checkpoint(
                 phase="CHECK",
-                round_num=cycle,
+                round_num=round_num,
                 vectors=vectors,
                 metadata={
                     "decision": decision,
                     "reasoning": reasoning,
                     "confidence": confidence,
                     "gaps": gaps,
-                    "cycle": cycle
+                    "cycle": cycle,
+                    "round": round_num
                 }
             )
 
@@ -403,13 +406,15 @@ def handle_check_submit_command(args):
                             "empirica", "checkpoint-create",
                             "--session-id", session_id,
                             "--phase", "CHECK",
-                            "--round", str(cycle),
+                            "--round", str(round_num),
                             "--metadata", json.dumps({
                                 "auto_checkpoint": True,
                                 "reason": "risky_decision",
                                 "uncertainty": uncertainty,
                                 "decision": decision,
-                                "gaps": gaps
+                                "gaps": gaps,
+                                "cycle": cycle,
+                                "round": round_num
                             })
                         ],
                         capture_output=True,
@@ -459,8 +464,9 @@ def handle_check_submit_command(args):
             print(f"   Storage: SQLite + Git Notes + JSON")
             if reasoning:
                 print(f"   Reasoning: {reasoning[:80]}...")
-        
-        return result
+
+        # Return None to avoid exit code issues and duplicate output
+        return None
         
     except Exception as e:
         handle_cli_error(e, "Check submit", getattr(args, 'verbose', False))
@@ -878,7 +884,8 @@ def handle_postflight_submit_command(args):
             except Exception:
                 pass
 
-        return result
+        # Return None to avoid exit code issues and duplicate output
+        return None
 
     except Exception as e:
         handle_cli_error(e, "Postflight submit", getattr(args, 'verbose', False))

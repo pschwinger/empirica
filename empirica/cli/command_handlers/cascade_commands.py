@@ -269,7 +269,7 @@ def handle_preflight_command(args):
         from empirica.data.session_database import SessionDatabase
         db = SessionDatabase(db_path=".empirica/sessions/sessions.db")
         try:
-            db.create_session(ai_id=ai_id, bootstrap_level=1, components_loaded=5, user_id=None)
+            db.create_session(ai_id=ai_id, components_loaded=5, user_id=None)
         except:
             pass  # Session might already exist
 

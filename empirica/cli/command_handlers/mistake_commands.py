@@ -16,6 +16,7 @@ def handle_mistake_log_command(args):
         from empirica.data.session_database import SessionDatabase
 
         # Parse arguments
+        project_id = getattr(args, 'project_id', None)
         session_id = args.session_id
         mistake = args.mistake
         why_wrong = args.why_wrong
@@ -33,7 +34,8 @@ def handle_mistake_log_command(args):
             cost_estimate=cost_estimate,
             root_cause_vector=root_cause_vector,
             prevention=prevention,
-            goal_id=goal_id
+            goal_id=goal_id,
+            project_id=project_id  # Add project_id parameter
         )
         db.close()
 
