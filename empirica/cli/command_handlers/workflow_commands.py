@@ -208,20 +208,16 @@ def handle_check_command(args):
             }))
             sys.exit(1)
 
-        baseline_vectors = preflight
+        # Extract vectors from preflight (it's a dict with 'vectors' key)
+        baseline_vectors = preflight.get('vectors', preflight) if isinstance(preflight, dict) else preflight
 
         # 2. Load current checkpoint (latest assessment)
         checkpoints = git_logger.list_checkpoints(limit=1)
         if not checkpoints:
-            print(json.dumps({
-                "ok": False,
-                "error": "No checkpoints found",
-                "hint": "This is first CHECK - creating baseline checkpoint"
-            }))
             # For first CHECK, baseline = current
             current_vectors = baseline_vectors
             drift = 0.0
-            deltas = {k: 0.0 for k in baseline_vectors.keys()}
+            deltas = {k: 0.0 for k in baseline_vectors.keys() if isinstance(baseline_vectors.get(k), (int, float))}
         else:
             current_checkpoint = checkpoints[0]
             current_vectors = current_checkpoint.get('vectors', {})
@@ -240,36 +236,21 @@ def handle_check_command(args):
 
             drift = drift_sum / drift_count if drift_count > 0 else 0.0
 
-        # 4. Auto-load findings/unknowns from database
+        # 4. Auto-load findings/unknowns from database using BreadcrumbRepository
         try:
             # Get project_id from session
             session_data = db.get_session(session_id)
             project_id = session_data.get('project_id') if session_data else None
 
             if project_id:
-                # Query findings/unknowns for this session
-                cursor = db.conn.cursor()
+                # Use BreadcrumbRepository to query findings/unknowns
+                findings_list = db.breadcrumbs.get_project_findings(project_id)
+                unknowns_list = db.breadcrumbs.get_project_unknowns(project_id, resolved=False)
 
-                # Get findings
-                cursor.execute("""
-                    SELECT finding, timestamp, impact
-                    FROM breadcrumbs
-                    WHERE session_id = ? AND type = 'finding'
-                    ORDER BY timestamp DESC
-                """, (session_id,))
-                findings_rows = cursor.fetchall()
-                findings = [{"finding": row['finding'], "impact": row.get('impact')}
-                           for row in findings_rows]
-
-                # Get unknowns
-                cursor.execute("""
-                    SELECT unknown, timestamp
-                    FROM breadcrumbs
-                    WHERE session_id = ? AND type = 'unknown'
-                    ORDER BY timestamp DESC
-                """, (session_id,))
-                unknowns_rows = cursor.fetchall()
-                unknowns = [row['unknown'] for row in unknowns_rows]
+                # Extract just the finding/unknown text for display
+                findings = [{"finding": f.get('finding', ''), "impact": f.get('impact')}
+                           for f in findings_list]
+                unknowns = [u.get('unknown', '') for u in unknowns_list]
             else:
                 findings = []
                 unknowns = []
