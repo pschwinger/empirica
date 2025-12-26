@@ -2073,6 +2073,121 @@ class SessionDatabase:
             logger.warning(f"Error generating file tree: {e}")
             return None
     
+
+    def _resolve_and_validate_project(self, project_id: str) -> Optional[Dict]:
+        """Resolve project name to UUID and validate it exists"""
+        resolved_id = self.resolve_project_id(project_id)
+        if not resolved_id:
+            return None
+
+        project = self.get_project(resolved_id)
+        return project
+
+    def _load_breadcrumbs_for_mode(self, project_id: str, mode: str, subject: Optional[str] = None) -> Dict:
+        """Load all breadcrumbs (findings, unknowns, dead_ends, mistakes, reference_docs) based on mode"""
+        if mode == "session_start":
+            # FAST: Recent items only
+            findings = self.breadcrumbs.get_project_findings(project_id, limit=10, subject=subject)
+            unknowns = self.breadcrumbs.get_project_unknowns(project_id, resolved=False, subject=subject)
+            dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, limit=5, subject=subject)
+
+            # Recent mistakes (top 5)
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT mistake, prevention, cost_estimate, root_cause_vector
+                FROM mistakes_made m
+                JOIN sessions s ON m.session_id = s.session_id
+                WHERE s.project_id = ?
+                ORDER BY m.created_timestamp DESC
+                LIMIT 5
+            """, (project_id,))
+            recent_mistakes = [dict(row) for row in cursor.fetchall()]
+
+        else:  # mode == "live"
+            # COMPLETE: All items
+            findings = self.breadcrumbs.get_project_findings(project_id, subject=subject)
+            unknowns = self.breadcrumbs.get_project_unknowns(project_id, subject=subject)
+            dead_ends = self.breadcrumbs.get_project_dead_ends(project_id, subject=subject)
+
+            # All mistakes
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT mistake, prevention, cost_estimate, root_cause_vector
+                FROM mistakes_made m
+                JOIN sessions s ON m.session_id = s.session_id
+                WHERE s.project_id = ?
+                ORDER BY m.created_timestamp DESC
+            """, (project_id,))
+            recent_mistakes = [dict(row) for row in cursor.fetchall()]
+
+        reference_docs = self.breadcrumbs.get_project_reference_docs(project_id)
+
+        return {
+            'findings': findings,
+            'unknowns': unknowns,
+            'dead_ends': dead_ends,
+            'mistakes_to_avoid': recent_mistakes,
+            'reference_docs': reference_docs
+        }
+
+    def _load_goals_for_project(self, project_id: str) -> Dict:
+        """Load incomplete and active goals for project"""
+        # Get incomplete goals
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT id, objective, scope, status, created_timestamp
+            FROM goals
+            WHERE session_id IN (SELECT session_id FROM sessions WHERE project_id = ?)
+            AND is_completed = 0
+            ORDER BY created_timestamp DESC
+        """, (project_id,))
+        incomplete_goals = [dict(row) for row in cursor.fetchall()]
+
+        # Get active goals (more detailed)
+        cursor.execute("""
+            SELECT g.id, g.objective, g.scope, g.status, g.goal_data,
+                   COUNT(DISTINCT s.id) as subtask_count,
+                   SUM(CASE WHEN s.status = 'completed' THEN 1 ELSE 0 END) as completed_subtasks
+            FROM goals g
+            LEFT JOIN subtasks s ON g.id = s.goal_id
+            WHERE g.session_id IN (SELECT session_id FROM sessions WHERE project_id = ?)
+            AND g.is_completed = 0
+            GROUP BY g.id
+            ORDER BY g.created_timestamp DESC
+        """, (project_id,))
+        active_goals = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            'incomplete_work': incomplete_goals,
+            'goals': active_goals
+        }
+
+    def _capture_live_state_if_requested(
+        self,
+        session_id: Optional[str],
+        project_id: str,
+        include_live_state: bool,
+        fresh_assess: bool,
+        trigger: Optional[str]
+    ) -> Optional[Dict]:
+        """Capture live epistemic state if requested"""
+        if not include_live_state:
+            return None
+
+        # Auto-resolve session_id if not provided
+        if not session_id:
+            session_id = self._auto_resolve_session(project_id, trigger)
+
+        if not session_id:
+            return None
+
+        # Capture or load live state
+        if fresh_assess:
+            return self._capture_fresh_state(session_id, project_id)
+        else:
+            return self._load_latest_checkpoint_state(session_id)
+
+
     def bootstrap_project_breadcrumbs(
         self,
         project_id: str,
@@ -2098,536 +2213,73 @@ class SessionDatabase:
             project_root: Optional path to project root (defaults to cwd)
             check_integrity: If True, analyze doc-code integrity (adds ~2s)
             task_description: Task description for context load balancing (optional)
-            epistemic_state: Epistemic vectors (uncertainty, know, do, etc.) for intelligent routing (optional)
-            context_to_inject: If True, generate markdown context string for AI prompt injection (optional)
+            epistemic_state: Epistemic vectors for intelligent routing (optional)
+            context_to_inject: If True, generate markdown context string (optional)
+            subject: Filter breadcrumbs by subject (optional)
+            session_id: Session ID for live state capture (optional, auto-resolved if needed)
+            include_live_state: Include current epistemic state (optional)
+            fresh_assess: Use fresh self-assessment vs loading checkpoint (optional)
+            trigger: Trigger context for session resolution (pre_compact/post_compact/manual)
+            depth: Context depth (minimal/moderate/full/auto)
 
-        Returns quick context: findings, unknowns, dead_ends, mistakes, decisions, incomplete work, suggested skills.
+        Returns quick context: findings, unknowns, dead_ends, mistakes, decisions, incomplete work.
         """
         import os
-        import yaml
-        from empirica.core.context_load_balancer import ContextLoadBalancer
 
         if project_root is None:
             project_root = os.getcwd()
-        
-        # Resolve project name to UUID if needed
-        resolved_id = self.resolve_project_id(project_id)
-        if not resolved_id:
-            return {"error": f"Project not found: {project_id}"}
-        
-        project = self.get_project(resolved_id)
+
+        # 1. Resolve and validate project
+        project = self._resolve_and_validate_project(project_id)
         if not project:
-            return {"error": "Project not found"}
-        
-        # Get latest handoff
+            return {"error": f"Project not found: {project_id}"}
+
+        resolved_id = project['id']
+
+        # 2. Get latest handoff
         latest_handoff = self.get_latest_project_handoff(resolved_id)
-        
-        if mode == "session_start":
-            # FAST: Recent items only for quick bootstrap
-            findings = self.get_project_findings(resolved_id, limit=10, subject=subject)
-            unknowns = self.get_project_unknowns(resolved_id, resolved=False, subject=subject)  # Only unresolved
-            dead_ends = self.get_project_dead_ends(resolved_id, limit=5, subject=subject)
-            
-            # Get recent mistakes (top 5)
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT mistake, prevention, cost_estimate, root_cause_vector
-                FROM mistakes_made m
-                JOIN sessions s ON m.session_id = s.session_id
-                WHERE s.project_id = ?
-                ORDER BY m.created_timestamp DESC
-                LIMIT 5
-            """, (project_id,))
-            recent_mistakes = [dict(row) for row in cursor.fetchall()]
-            
-            reference_docs = self.get_project_reference_docs(resolved_id)
-            
-        elif mode == "live":
-            # COMPLETE: All items for full context
-            findings = self.get_project_findings(resolved_id, subject=subject)
-            unknowns = self.get_project_unknowns(resolved_id, subject=subject)  # All unknowns
-            dead_ends = self.get_project_dead_ends(resolved_id, subject=subject)
-            
-            # Get ALL mistakes
-            cursor = self.conn.cursor()
-            cursor.execute("""
-                SELECT mistake, prevention, cost_estimate, root_cause_vector
-                FROM mistakes_made m
-                JOIN sessions s ON m.session_id = s.session_id
-                WHERE s.project_id = ?
-                ORDER BY m.created_timestamp DESC
-            """, (resolved_id,))
-            recent_mistakes = [dict(row) for row in cursor.fetchall()]
-            
-            reference_docs = self.get_project_reference_docs(resolved_id)
-        
-        else:
-            return {"error": f"Invalid mode: {mode}"}
-        
-        # Get incomplete goals
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            SELECT g.objective, g.id,
-                   (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id) as total_subtasks,
-                   (SELECT COUNT(*) FROM subtasks WHERE goal_id = g.id AND completed_timestamp IS NOT NULL) as completed_subtasks
-            FROM goals g
-            JOIN sessions s ON g.session_id = s.session_id
-            WHERE s.project_id = ? AND g.status != 'complete' AND g.is_completed != 1
-            ORDER BY g.created_timestamp DESC
-        """, (resolved_id,))
-        incomplete_goals = [dict(row) for row in cursor.fetchall()]
-        
-        # ===== NEW: Active Work Context =====
-        # Get active sessions (not ended)
-        cursor.execute("""
-            SELECT session_id, ai_id, start_time, subject
-            FROM sessions
-            WHERE project_id = ? AND end_time IS NULL
-            ORDER BY start_time DESC
-            LIMIT 5
-        """, (resolved_id,))
-        active_sessions = [dict(row) for row in cursor.fetchall()]
-        
-        # Get goals in_progress (active work)
-        cursor.execute("""
-            SELECT g.id, g.objective, g.status, g.session_id, g.beads_issue_id,
-                   COUNT(st.id) as subtask_count,
-                   s.ai_id, s.start_time
-            FROM goals g
-            JOIN sessions s ON g.session_id = s.session_id
-            LEFT JOIN subtasks st ON g.id = st.goal_id
-            WHERE s.project_id = ? AND g.status = 'in_progress'
-            GROUP BY g.id, g.objective, g.status, g.session_id, g.beads_issue_id, s.ai_id, s.start_time
-            ORDER BY g.created_timestamp DESC
-            LIMIT 10
-        """, (resolved_id,))
-        active_goals = [dict(row) for row in cursor.fetchall()]
-        
-        # Get findings linked to active goals
-        active_goal_ids = [g['id'] for g in active_goals]
-        findings_with_goals = []
-        if active_goal_ids:
-            placeholders = ','.join('?' * len(active_goal_ids))
-            cursor.execute(f"""
-                SELECT pf.finding, pf.goal_id, pf.session_id, pf.created_timestamp,
-                       g.objective as goal_objective
-                FROM project_findings pf
-                LEFT JOIN goals g ON pf.goal_id = g.id
-                WHERE pf.project_id = ? AND pf.goal_id IN ({placeholders})
-                ORDER BY pf.created_timestamp DESC
-                LIMIT 10
-            """, (resolved_id, *active_goal_ids))
-            findings_with_goals = [dict(row) for row in cursor.fetchall()]
-        
-        # Get AI activity summary (last 7 days)
-        cursor.execute("""
-            SELECT ai_id, COUNT(*) as session_count,
-                   MAX(start_time) as last_session
-            FROM sessions
-            WHERE project_id = ? 
-              AND start_time >= datetime('now', '-7 days')
-            GROUP BY ai_id
-            ORDER BY session_count DESC
-            LIMIT 10
-        """, (resolved_id,))
-        ai_activity = [dict(row) for row in cursor.fetchall()]
-        
-        # Scan for epistemic artifacts (audit files, test results)
-        epistemic_artifacts = []
-        try:
-            import glob
-            artifact_patterns = [
-                '/tmp/empirica_*.json',
-                '/tmp/*_audit.json',
-                os.path.join(project_root, '*.audit.json'),
-                os.path.join(project_root, '.empirica', 'artifacts', '*.json')
-            ]
-            for pattern in artifact_patterns:
-                for filepath in glob.glob(pattern):
-                    try:
-                        # Get file size and mtime
-                        stat = os.stat(filepath)
-                        epistemic_artifacts.append({
-                            'path': filepath,
-                            'size': stat.st_size,
-                            'modified': stat.st_mtime,
-                            'type': 'audit' if 'audit' in filepath else 'artifact'
-                        })
-                    except:
-                        pass
-        except Exception as e:
-            logger.debug(f"Could not scan for epistemic artifacts: {e}")
-        
-        # ===== Flow State Metrics =====
-        # Calculate flow metrics for recent sessions to show productivity patterns
-        flow_metrics_data = []
-        try:
-            from empirica.metrics.flow_state import FlowStateMetrics
-            flow_metrics = FlowStateMetrics(self)
-            
-            # Get recent completed sessions (last 5)
-            cursor.execute("""
-                SELECT session_id, ai_id, start_time, end_time
-                FROM sessions
-                WHERE project_id = ? AND end_time IS NOT NULL
-                ORDER BY start_time DESC
-                LIMIT 5
-            """, (resolved_id,))
-            recent_sessions = cursor.fetchall()
-            
-            for sess in recent_sessions:
-                try:
-                    flow_result = flow_metrics.calculate_flow_score(sess['session_id'])
-                    if 'error' not in flow_result:
-                        flow_metrics_data.append({
-                            'session_id': sess['session_id'][:8] + '...',
-                            'ai_id': sess['ai_id'],
-                            'flow_score': flow_result['flow_score'],
-                            'components': flow_result['components'],
-                            'recommendations': flow_result['recommendations']
-                        })
-                except Exception as e:
-                    logger.debug(f"Could not calculate flow for session {sess['session_id']}: {e}")
-        except Exception as e:
-            logger.debug(f"Could not calculate flow metrics: {e}")
-        
-        # ===== Database Schema Summary (Dynamic Context) =====
-        # Show which tables have data and recent activity
-        database_summary = {}
-        try:
-            cursor = self.conn.cursor()
-            
-            # Get all tables
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-            all_tables = [row['name'] for row in cursor.fetchall()]
-            
-            # Get tables with data (row count)
-            tables_with_data = []
-            for table in all_tables:
-                try:
-                    cursor.execute(f"SELECT COUNT(*) as count FROM {table}")
-                    count = cursor.fetchone()['count']
-                    if count > 0:
-                        tables_with_data.append({
-                            'name': table,
-                            'rows': count
-                        })
-                except:
-                    pass
-            
-            # Sort by row count
-            tables_with_data.sort(key=lambda x: x['rows'], reverse=True)
-            
-            # Key tables for quick reference (static knowledge embedded as reminder)
-            key_tables = {
-                'sessions': 'Work sessions with PREFLIGHT/POSTFLIGHT',
-                'goals': 'Hierarchical objectives with scope',
-                'reflexes': 'CASCADE assessments (PREFLIGHT/CHECK/POSTFLIGHT)',
-                'project_findings': 'Findings linked to goals/subtasks',
-                'breadcrumbs': 'Legacy findings/unknowns/dead_ends',
-                'subtasks': 'Goal breakdown with completion tracking'
-            }
-            
-            database_summary = {
-                'total_tables': len(all_tables),
-                'tables_with_data': len(tables_with_data),
-                'top_tables': [
-                    f"{t['name']} ({t['rows']} rows)" 
-                    for t in tables_with_data[:10]
-                ],
-                'key_tables': key_tables,
-                'schema_doc': 'docs/reference/DATABASE_SCHEMA_GENERATED.md'
-            }
-        except Exception as e:
-            logger.debug(f"Could not generate database summary: {e}")
-        
-        # ===== Structure Health Analysis (Dynamic Context) =====
-        # Detect project pattern and assess conformance
-        structure_health = {}
-        try:
-            from empirica.utils.structure_health import analyze_structure_health
-            structure_health = analyze_structure_health(project_root)
-        except Exception as e:
-            logger.debug(f"Could not analyze structure health: {e}")
-        
-        # Get recent artifacts/modified files from handoff reports
-        # This tells AI which files were changed and may need doc updates
-        # Include sessions with matching project_id OR NULL project_id (legacy sessions)
-        cursor.execute("""
-            SELECT h.session_id, h.task_summary, h.artifacts_created, h.timestamp, s.ai_id
-            FROM handoff_reports h
-            JOIN sessions s ON h.session_id = s.session_id
-            WHERE (s.project_id = ? OR s.project_id IS NULL)
-              AND h.artifacts_created IS NOT NULL
-              AND h.artifacts_created != '[]'
-            ORDER BY h.created_at DESC
-            LIMIT 10
-        """, (project_id,))
-        
-        recent_artifacts = []
-        for row in cursor.fetchall():
-            artifacts = json.loads(row['artifacts_created']) if row['artifacts_created'] else []
-            if artifacts:
-                recent_artifacts.append({
-                    'session_id': row['session_id'][:8] + '...',
-                    'task_summary': row['task_summary'][:80] + '...' if len(row['task_summary']) > 80 else row['task_summary'],
-                    'files_modified': artifacts,
-                    'ai_id': row['ai_id']
-                })
 
-        # Calculate context budget using ContextLoadBalancer
-        balancer = ContextLoadBalancer()
-        budget = balancer.calculate_context_budget(
-            task=task_description or "",
-            epistemic_state=epistemic_state or {"uncertainty": 0.5}
+        # 3. Load all breadcrumbs based on mode
+        breadcrumbs = self._load_breadcrumbs_for_mode(resolved_id, mode, subject)
+
+        # 4. Load goals
+        goals_data = self._load_goals_for_project(resolved_id)
+        breadcrumbs.update(goals_data)
+
+        # 5. Generate file tree
+        file_tree = self.generate_file_tree(project_root)
+        breadcrumbs['file_tree'] = file_tree
+
+        # 6. Capture live state if requested
+        live_state = self._capture_live_state_if_requested(
+            session_id, resolved_id, include_live_state, fresh_assess, trigger
         )
-        
-        # Load available skills from project_skills/*.yaml
-        # If task_description provided, load FULL content for matched skills only
-        # Otherwise, load metadata only (backward compatible)
-        available_skills = []
-        full_skills = []  # Full skill content for matched skills
-        skills_dir = os.path.join(project_root, 'project_skills')
-        
-        if os.path.exists(skills_dir):
-            try:
-                for filename in os.listdir(skills_dir):
-                    if filename.endswith(('.yaml', '.yml')):
-                        skill_path = os.path.join(skills_dir, filename)
-                        try:
-                            with open(skill_path, 'r', encoding='utf-8') as f:
-                                skill = yaml.safe_load(f)
-                                if skill:
-                                    skill_id = skill.get('id', filename.replace('.yaml', '').replace('.yml', ''))
-                                    
-                                    # Always add metadata
-                                    available_skills.append({
-                                        'id': skill_id,
-                                        'title': skill.get('title', filename),
-                                        'tags': skill.get('tags', []),
-                                        'source': 'local'
-                                    })
-                                    
-                                    # If this skill matches task tags, load FULL content
-                                    if task_description and skill_id in budget['skills_to_inject']:
-                                        full_skills.append({
-                                            'id': skill_id,
-                                            'title': skill.get('title', filename),
-                                            'tags': skill.get('tags', []),
-                                            'summary': skill.get('summary', ''),
-                                            'steps': skill.get('steps', []),
-                                            'gotchas': skill.get('gotchas', []),
-                                            'references': skill.get('references', []),
-                                            'source': 'local'
-                                        })
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+        if live_state:
+            breadcrumbs['live_state'] = live_state
+            breadcrumbs['session_id'] = session_id or live_state.get('session_id')
 
-        # Load essential docs from PROJECT_CONFIG.yaml (project-specific configuration)
-        project_config_docs = []
-        project_config_path = os.path.join(project_root, '.empirica-project', 'PROJECT_CONFIG.yaml')
-        if os.path.exists(project_config_path):
-            try:
-                with open(project_config_path, 'r') as f:
-                    project_config = yaml.safe_load(f)
-                    if project_config and 'essential_docs' in project_config:
-                        for doc in project_config['essential_docs']:
-                            if isinstance(doc, dict):
-                                project_config_docs.append({
-                                    'path': doc.get('path', ''),
-                                    'purpose': doc.get('purpose', ''),
-                                    'source': 'PROJECT_CONFIG'
-                                })
-            except Exception as e:
-                logger.debug(f"Could not load PROJECT_CONFIG.yaml: {e}")
-
-        # Load semantic index docs (for quick reference to core documentation)
-        semantic_docs = []
-        # Load semantic index (per-project, with graceful fallback)
-        from empirica.config.semantic_index_loader import load_semantic_index
-        semantic_index = load_semantic_index(project_root)
-        if semantic_index:
-            try:
-                index = semantic_index.get('index', {}) or {}
-                # Include top 5 most relevant docs (core-concept tagged ones)
-                for doc_path, meta in list(index.items())[:5]:
-                    tags = meta.get('tags', [])
-                    if 'core-concept' in tags or not semantic_docs:  # Prioritize core concepts, but include all if no core ones
-                        semantic_docs.append({
-                            'path': doc_path,
-                            'title': meta.get('title', doc_path),
-                            'tags': tags,
-                            'source': 'semantic-index'
-                        })
-            except Exception:
-                pass
-
-        # Build breadcrumbs
-        handoff_data = json.loads(latest_handoff['handoff_data']) if latest_handoff else {}
-        
-        breadcrumbs = {
-            "project": {
-                "name": project['name'],
-                "description": project['description'],
-                "repos": json.loads(project['repos']) if project['repos'] else [],
-                "total_sessions": project['total_sessions'],
-                "learning_deltas": json.loads(project['total_epistemic_deltas']) if project.get('total_epistemic_deltas') else {}
-            },
-            "last_activity": {
-                "summary": latest_handoff['project_summary'] if latest_handoff else "No handoff yet",
-                "timestamp": latest_handoff['created_timestamp'] if latest_handoff else None,
-                "next_focus": handoff_data.get("next_session_bootstrap", {}).get("suggested_focus", "Continue project work")
-            },
-            "findings": [f['finding'] for f in findings],
-            "unknowns": [
-                {
-                    "unknown": u['unknown'],
-                    "is_resolved": bool(u['is_resolved'])
-                }
-                for u in unknowns
-            ],
-            "dead_ends": [
-                {
-                    "approach": d['approach'],
-                    "why_failed": d['why_failed']
-                }
-                for d in dead_ends
-            ],
-            "mistakes_to_avoid": [
-                {
-                    "mistake": m['mistake'],
-                    "prevention": m['prevention'],
-                    "cost": m['cost_estimate'],
-                    "root_cause": m['root_cause_vector']
-                }
-                for m in recent_mistakes
-            ],
-            "key_decisions": handoff_data.get("key_decisions", [])[-5:] if handoff_data else [],
-            "reference_docs": [
-                {
-                    "path": d['doc_path'],
-                    "type": d['doc_type'],
-                    "description": d['description'],
-                    "source": "database"
-                }
-                for d in reference_docs
-            ] + project_config_docs,  # Add docs from PROJECT_CONFIG.yaml
-            "incomplete_work": [
-                {
-                    "goal": g['objective'],
-                    "progress": f"{g['completed_subtasks']}/{g['total_subtasks']}"
-                }
-                for g in incomplete_goals
-            ],
-            # ===== NEW: Active Work Context =====
-            "active_sessions": active_sessions,
-            "active_goals": active_goals,
-            "findings_with_goals": findings_with_goals,
-            "ai_activity": ai_activity,
-            "epistemic_artifacts": epistemic_artifacts,
-            # ===== END NEW =====
-            # Flow state metrics
-            "flow_metrics": flow_metrics_data,
-            # Database schema summary (dynamic context)
-            "database_summary": database_summary,
-            # Structure health (dynamic context)
-            "structure_health": structure_health,
-            # File tree structure
-            "file_tree": self.generate_file_tree(project_root, max_depth=3, use_cache=True),
-            "recent_artifacts": recent_artifacts,
-            "available_skills": available_skills,
-            "full_skills": full_skills,  # Full content for matched skills
-            "context_budget": budget if (task_description or epistemic_state) else None,  # Include budget if task or epistemic_state provided
-            "semantic_docs": semantic_docs,
-            "mode": mode
+        # 7. Add project metadata
+        breadcrumbs['project'] = {
+            'id': project['id'],
+            'name': project.get('name', 'Unknown'),
+            'description': project.get('description', ''),
+            'status': project.get('status', 'active')
         }
-        
-        # Optional: Doc-Code Integrity Analysis
-        if check_integrity:
-            try:
-                from empirica.utils.doc_code_integrity import DocCodeIntegrityAnalyzer
-                analyzer = DocCodeIntegrityAnalyzer(project_root)
-                integrity = analyzer.get_detailed_gaps()
-                breadcrumbs["integrity_analysis"] = {
-                    "cli_commands": {
-                        "total_in_code": integrity["cli_commands"]["total_commands"],
-                        "total_in_docs": integrity["cli_commands"]["documented_commands"],
-                        "integrity_score": integrity["cli_commands"]["integrity_score"],
-                        "missing_implementations": integrity["missing_code_details"],  # Full list
-                        "missing_documentation": integrity["missing_docs_details"]  # Full list
-                    }
-                }
-            except Exception as e:
-                breadcrumbs["integrity_analysis"] = {"error": str(e)}
-        
-        # Add The AI Epistemic Ledger PDF (foundational philosophy)
-        pdf_path = os.path.join(project_root, 'The_AI_Epistemic_Ledger (1).pdf')
-        if os.path.exists(pdf_path):
-            breadcrumbs["epistemic_ledger_pdf"] = {
-                "path": pdf_path,
-                "description": "Foundational philosophy: Functional Self-Awareness, Not Simulated Consciousness",
-                "purpose": "Explains calibration crisis, CASCADE workflow, knowledge distillation flywheel"
-            }
-        
-        # Add NotebookLM Architecture Slide Deck (visual overview)
-        slides_path = os.path.join(project_root, 'Empirica_Reliable_AI_Architecture.pdf')
-        if os.path.exists(slides_path):
-            breadcrumbs["architecture_slides_pdf"] = {
-                "path": slides_path,
-                "description": "Visual slide deck: Contextual Memory Loading, Bootstrap, Snapshot, BEADS",
-                "purpose": "Explains project-bootstrap, session-snapshot, epistemic sources, goals-ready command"
-            }
-        
-        # Optional: Add session snapshot if session_id provided
-        if epistemic_state and 'session_id' in epistemic_state:
-            session_snapshot = self.get_session_snapshot(epistemic_state['session_id'])
-            if session_snapshot:
-                breadcrumbs["session_snapshot"] = session_snapshot
-        
-        # Add epistemic sources (evidence grounding)
-        sources = self.get_epistemic_sources(resolved_id, min_confidence=0.7, limit=10)
-        if sources:
-            breadcrumbs["epistemic_sources"] = [{
-                'title': s['title'],
-                'type': s['source_type'],
-                'confidence': s['confidence'],
-                'layer': s.get('epistemic_layer'),
-                'url': s.get('source_url')
-            } for s in sources]
-        
-        # Optional: Generate markdown context for injection
+
+        if latest_handoff:
+            breadcrumbs['latest_handoff'] = latest_handoff
+
+        # 8. Generate context markdown if requested
         if context_to_inject:
-            breadcrumbs["context_markdown"] = self._generate_context_markdown(breadcrumbs)
+            context_markdown = self._generate_context_markdown(breadcrumbs)
+            breadcrumbs['context_markdown'] = context_markdown
 
-        # ===== NEW: Live State Capture =====
-        if include_live_state:
-            # Auto-resolve session_id if not provided
-            if not session_id:
-                session_id = self._auto_resolve_session(resolved_id, trigger)
-
-            if session_id:
-                # Capture or load live state
-                if fresh_assess:
-                    # Fresh self-assessment (current state, not old checkpoint)
-                    breadcrumbs["live_state"] = self._capture_fresh_state(session_id, resolved_id)
-                else:
-                    # Load latest checkpoint from session
-                    breadcrumbs["live_state"] = self._load_latest_checkpoint_state(session_id)
-
-                # Always include session linkage
-                breadcrumbs["session_id"] = session_id
-            else:
-                breadcrumbs["live_state"] = None
-                breadcrumbs["live_state_error"] = "No session found. Create session first."
-
-        # ===== Adaptive Depth (for drift-based loading) =====
+        # 9. Apply adaptive depth filtering if needed
         if depth != "auto" or trigger == "post_compact":
-            # Apply depth filtering to breadcrumbs
             breadcrumbs = self._apply_depth_filter(breadcrumbs, depth, trigger)
 
         return breadcrumbs
+
 
     def _generate_context_markdown(self, breadcrumbs: Dict) -> str:
         """
