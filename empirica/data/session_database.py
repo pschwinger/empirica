@@ -1239,45 +1239,66 @@ class SessionDatabase:
         }
 
     def _get_checkpoint_from_reflexes(self, session_id: str, phase: Optional[str] = None) -> Optional[Dict]:
-        """SQLite fallback for checkpoint retrieval (Phase 2)"""
+        """SQLite fallback for checkpoint retrieval using reflexes table"""
         cursor = self.conn.cursor()
         
-        # Try preflight_assessments first (most common)
+        # Query reflexes table (unified storage)
         query = """
             SELECT 
-                assessment_id,
-                'preflight' as phase,
-                vectors_json,
-                assessed_at as created_at
-            FROM preflight_assessments
+                id,
+                phase,
+                engagement,
+                know, do, context,
+                clarity, coherence, signal, density,
+                state, change, completion, impact,
+                uncertainty,
+                timestamp,
+                reasoning
+            FROM reflexes
             WHERE session_id = ?
         """
         params = [session_id]
         
-        if phase and phase.lower() == 'postflight':
-            # Use postflight_assessments instead
-            query = """
-                SELECT 
-                    assessment_id,
-                    'postflight' as phase,
-                    vectors_json,
-                    assessed_at as created_at
-                FROM postflight_assessments
-                WHERE session_id = ?
-            """
+        if phase:
+            query += " AND phase = ?"
+            params.append(phase.upper())
         
-        query += " ORDER BY assessed_at DESC LIMIT 1"
+        query += " ORDER BY timestamp DESC LIMIT 1"
         
         cursor.execute(query, params)
         result = cursor.fetchone()
         
         if result:
+            # Build vectors dict from individual columns
+            vectors = {
+                "engagement": result['engagement'],
+                "foundation": {
+                    "know": result['know'],
+                    "do": result['do'],
+                    "context": result['context']
+                },
+                "comprehension": {
+                    "clarity": result['clarity'],
+                    "coherence": result['coherence'],
+                    "signal": result['signal'],
+                    "density": result['density']
+                },
+                "execution": {
+                    "state": result['state'],
+                    "change": result['change'],
+                    "completion": result['completion'],
+                    "impact": result['impact']
+                },
+                "uncertainty": result['uncertainty']
+            }
+            
             return {
-                "checkpoint_id": result['assessment_id'],
-                "vectors": json.loads(result['vectors_json']) if result['vectors_json'] else {},
+                "checkpoint_id": str(result['id']),  # Use id as checkpoint_id
+                "vectors": vectors,
                 "phase": result['phase'],
-                "timestamp": result['created_at'],
-                "round": 0,  # SQLite doesn't track rounds
+                "timestamp": result['timestamp'],
+                "reasoning": result['reasoning'],
+                "round": 0,  # SQLite doesn't track rounds in checkpoint
                 "source": "sqlite_fallback",
                 "token_count": None  # Not tracked in SQLite
             }

@@ -33,6 +33,56 @@ empirica postflight-submit -  # JSON via stdin
 
 ---
 
+## 📝 EPISTEMIC ARTIFACTS CREATION GUIDE
+
+**CRITICAL:** Epistemic artifacts are Empirica's memory foundation. Create them proactively during CASCADE workflow.
+
+### Quick Reference: When to Create Artifacts
+
+| Artifact | Purpose | CLI Command | Example |
+|----------|---------|-------------|---------|
+| **Finding** | What you learned | `finding-log --finding "..." --impact 0.1-1.0` | "CLI uses Context-Aware philosophy" |
+| **Unknown** | What's unclear | `unknown-log --unknown "..."` | "Token refresh timing unclear" |
+| **Dead End** | What didn't work | `deadend-log --approach "..." --why-failed "..."` | "JWT custom claims blocked by security" |
+| **Mistake** | Errors to avoid | `mistake-log --mistake "..." --prevention "..."` | "Implemented without checking design system" |
+
+### CASCADE Workflow Integration
+
+**PREFLIGHT:** Identify unknowns, document baseline
+```bash
+empirica unknown-log --session-id <ID> --unknown "Need to research X"
+```
+
+**THINK:** Log findings from analysis
+```bash
+empirica finding-log --session-id <ID> --finding "Discovered Y" --impact 0.7
+```
+
+**INVESTIGATE:** Document dead ends, resolve unknowns
+```bash
+empirica deadend-log --session-id <ID> --approach "Tried Z" --why-failed "Failed because..."
+empirica unknown-resolve --unknown-id <UUID> --resolved-by "Research completed"
+```
+
+**CHECK:** Validate findings, log mistakes if needed
+```bash
+empirica finding-log --session-id <ID> --finding "Confirmed hypothesis" --impact 0.8
+empirica mistake-log --session-id <ID> --mistake "Overlooked edge case" --prevention "Add validation"
+```
+
+**POSTFLIGHT:** Summarize learnings
+```bash
+empirica finding-log --session-id <ID> --finding "Completed task with results" --impact 0.9
+```
+
+### Impact Scoring Guide (0.1-1.0)
+- **0.1-0.3:** Trivial (typos, minor fixes)
+- **0.4-0.6:** Important (design decisions, architecture)
+- **0.7-0.9:** Critical (blocking issues, major discoveries)
+- **1.0:** Transformative (paradigm shifts, breakthroughs)
+
+---
+
 ## ⚠️ DOCUMENTATION POLICY - CRITICAL
 
 **DEFAULT: DO NOT CREATE DOCUMENTATION FILES**

@@ -84,7 +84,13 @@ def main():
             drift = None
             drift_details = {}
             if pre_snapshot and bootstrap.get('live_state'):
-                pre_vectors = pre_snapshot.get('live_state', {}).get('vectors', {})
+                # Handle both old and new snapshot formats
+                # Old format: checkpoint.vectors
+                # New format: live_state.vectors
+                pre_vectors = (
+                    pre_snapshot.get('live_state', {}).get('vectors', {}) or
+                    pre_snapshot.get('checkpoint', {}).get('vectors', {})
+                )
                 post_vectors = bootstrap['live_state'].get('vectors', {})
 
                 # Calculate drift for each vector
@@ -93,7 +99,7 @@ def main():
                         drift_details[key] = post_vectors[key] - pre_vectors[key]
 
                 # Average absolute drift
-                drift = sum(abs(v) for v in drift_details.values()) / len(drift_details) if drift_details else 0.0
+                drift = sum(abs(v) for v in drift_details.values()) / len(drift_details) if drift_details else None
 
             # Print structured output for Claude Code to inject
             print(json.dumps({
@@ -103,7 +109,10 @@ def main():
                 "drift_details": drift_details,
                 "pre_snapshot": {
                     "timestamp": pre_snapshot.get('timestamp') if pre_snapshot else None,
-                    "vectors": pre_snapshot.get('live_state', {}).get('vectors', {}) if pre_snapshot else {}
+                    "vectors": (
+                        pre_snapshot.get('live_state', {}).get('vectors', {}) or
+                        pre_snapshot.get('checkpoint', {}).get('vectors', {})
+                    ) if pre_snapshot else {}
                 },
                 "post_state": {
                     "vectors": bootstrap.get('live_state', {}).get('vectors', {}),
@@ -127,11 +136,13 @@ def main():
             }), file=sys.stdout)
 
             # User-visible summary message
+            drift_msg = f"{drift:.1%} ({_drift_level(drift)})" if drift is not None else "N/A (no pre-state)"
+
             print(f"""
 🔄 Empirica: Post-compact context loaded
 
 📊 Drift Analysis:
-   Overall drift: {drift:.1%} ({_drift_level(drift)})
+   Overall drift: {drift_msg}
 """, file=sys.stderr)
 
             if drift_details:
@@ -139,14 +150,17 @@ def main():
                     direction = "↑" if value > 0 else "↓" if value < 0 else "→"
                     print(f"   {key}: {direction} {abs(value):.2f}", file=sys.stderr)
 
+            depth_msg = _get_depth_from_bootstrap(bootstrap)
+            drift_context = f"based on {drift:.1%} drift" if drift is not None else "based on available context"
+
             print(f"""
 📚 Bootstrap Evidence:
    Findings: {len(bootstrap.get('findings', []))}
    Unknowns: {len(bootstrap.get('unknowns', []))}
    Goals: {len(bootstrap.get('goals', []))}
 
-💡 Context depth: {_get_depth_from_bootstrap(bootstrap)}
-   Adaptive loading based on {drift:.1%} drift
+💡 Context depth: {depth_msg}
+   Adaptive loading {drift_context}
 """, file=sys.stderr)
 
             sys.exit(0)
