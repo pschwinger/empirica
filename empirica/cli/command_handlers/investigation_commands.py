@@ -221,10 +221,7 @@ def _investigate_directory(dir_path: str, verbose: bool = False) -> dict:
 def _investigate_concept(concept: str, context: str = None, verbose: bool = False) -> dict:
     """Investigate a concept or abstract idea"""
     try:
-        from empirica.core.canonical.canonical_epistemic_assessment import CanonicalEpistemicAssessor
-        
-        # Use canonical assessor (LLM-based, no heuristics)
-        evaluator = CanonicalEpistemicAssessor(agent_id="concept-investigation")
+        # NOTE: EpistemicAssessor moved to empirica-sentinel repo
         context_data = parse_json_safely(context)
         
         # Use available method or create mock result

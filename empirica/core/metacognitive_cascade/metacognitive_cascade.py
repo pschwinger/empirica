@@ -6,7 +6,7 @@ Uses genuine LLM-powered self-assessment without heuristics.
 Implements ENGAGEMENT gate, Reflex Frame logging, and canonical weights.
 
 Key Changes from Old Version:
-- Uses CanonicalEpistemicAssessor (LLM-powered, no heuristics)
+- NOTE: EpistemicAssessor moved to empirica-sentinel repo
 - Enforces ENGAGEMENT gate (≥0.60 required)
 - Logs to Reflex Frames for temporal separation
 - Uses canonical weights: 35/25/25/15
@@ -34,7 +34,6 @@ if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
 
 from empirica.core.canonical import (
-    CanonicalEpistemicAssessor,
     ReflexLogger,
     Action,
     CANONICAL_WEIGHTS,
@@ -211,8 +210,7 @@ class CanonicalEpistemicCascade:
         enable_perspective_caching: bool = True,  # Phase 2 optimization
         cache_ttl: int = 300,  # Phase 2: Cache TTL in seconds
         enable_session_db: bool = True,  # Session database tracking
-        enable_git_notes: bool = True,  # Phase 1.5: Git-enhanced checkpoints
-        session_id: Optional[str] = None,  # Phase 1.5: Session ID for git notes
+        session_id: Optional[str] = None,  # Session ID for git notes (always enabled)
         epistemic_bus: Optional['EpistemicBus'] = None  # Optional event bus for external observers
     ):
         """
@@ -238,8 +236,9 @@ class CanonicalEpistemicCascade:
             enable_perspective_caching: Enable Phase 2 optimization - cache perspectives (default: True)
             cache_ttl: Phase 2 cache time-to-live in seconds (default: 300)
             enable_session_db: Enable session database for epistemic tracking (default: True)
-            enable_git_notes: Enable Phase 1.5 git-enhanced checkpoints (~85% token reduction) (default: True)
             session_id: Session ID for git notes tracking (default: auto-generated)
+                       Git notes ALWAYS enabled for token efficiency (~85% reduction).
+                       Gracefully falls back to SQLite-only if git unavailable.
             epistemic_bus: Optional EpistemicBus for publishing epistemic events to external observers (default: None)
         """
         # Load investigation profile
@@ -284,29 +283,27 @@ class CanonicalEpistemicCascade:
         # Optional epistemic bus for external observers (Sentinels, MCO, etc.)
         self.epistemic_bus = epistemic_bus
 
-        # Initialize canonical assessor (LLM-powered, no heuristics)
-        self.assessor = CanonicalEpistemicAssessor(agent_id=agent_id)
+        # NOTE: EpistemicAssessor moved to empirica-sentinel repo
+        # self.assessor no longer initialized here
 
-        # Initialize Git-Enhanced Logger for 3-layer storage (no more dual loggers!)
-        self.enable_git_notes = enable_git_notes
+        # Initialize Git-Enhanced Logger for 3-layer storage (ALWAYS enabled)
+        # Git notes are REQUIRED for token efficiency - graceful fallback if git unavailable
+        self.enable_git_notes = True  # Always enabled (falls back to SQLite if git unavailable)
         self.session_id = session_id or f"cascade-{agent_id}-{int(time.time())}"
-        
+
         try:
             from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
             from empirica.metrics.token_efficiency import TokenEfficiencyMetrics
-            
-            # Always use git_logger (works with or without git notes)
+
+            # Always attempt git-enhanced checkpoints (graceful fallback built-in)
             self.git_logger = GitEnhancedReflexLogger(
                 session_id=self.session_id,
-                enable_git_notes=self.enable_git_notes  # True = 3-layer, False = JSON only
+                enable_git_notes=True  # Always True - no longer optional
             )
-            
-            if self.enable_git_notes:
-                self.token_metrics = TokenEfficiencyMetrics(session_id=self.session_id)
-                logger.info(f"Git-enhanced checkpoints enabled (session: {self.session_id})")
-            else:
-                self.token_metrics = None
-                logger.info(f"JSON-only logging enabled (session: {self.session_id})")
+
+            # Always enable token metrics (tracks efficiency even if git unavailable)
+            self.token_metrics = TokenEfficiencyMetrics(session_id=self.session_id)
+            logger.info(f"Git-enhanced checkpoints enabled (session: {self.session_id})")
         except Exception as e:
             logger.error(f"Failed to initialize GitEnhancedReflexLogger: {e}")
             self.git_logger = None
@@ -440,8 +437,9 @@ class CanonicalEpistemicCascade:
         logger.info(f"{'='*70}")
         
         # Phase 2: Track assessment checkpoint, not phase enforcement
-        self.state.current_assessment = AssessmentType.PRE
-        self.state.work_context = "baseline assessment"
+        if self.current_state:
+            self.current_state.current_assessment = AssessmentType.PRE
+            self.current_state.work_context = "baseline assessment"
         
         # Get baseline epistemic self-assessment (all 13 vectors)
         preflight_assessment = await self._assess_epistemic_state(
@@ -545,7 +543,8 @@ class CanonicalEpistemicCascade:
         logger.info(f"{'='*70}")
         
         # Phase 2: Optional work context (not enforced)
-        self.state.work_context = "thinking"
+        if self.current_state:
+            self.current_state.work_context = "thinking"
 
         # Get LLM-powered self-assessment
         assessment = await self._assess_epistemic_state(task, context, task_id, CascadePhase.THINK)
@@ -602,11 +601,23 @@ class CanonicalEpistemicCascade:
         # Simple check: Should we create a goal now, or investigate first?
         from empirica.core.goals.decision_logic import decide_goal_creation, format_decision_for_ai
         
+        # Get health score if available
+        health_score = None
+        if self.session_db and hasattr(self, 'project_id') and self.project_id:
+            try:
+                health_data = self.session_db.calculate_health_score(self.project_id, limit=1)
+                if health_data and 'current_health' in health_data and health_data['current_health']:
+                    health_score = health_data['current_health']['health_score']
+            except Exception as e:
+                logger.debug(f"Could not calculate health score: {e}")
+                health_score = None
+        
         goal_decision = decide_goal_creation(
             clarity=assessment.clarity.score,
             signal=assessment.signal.score,
             know=assessment.know.score,
-            context=assessment.context.score
+            context=assessment.context.score,
+            health_score=health_score
         )
         
         logger.info(f"\n{format_decision_for_ai(goal_decision)}")
@@ -620,7 +631,9 @@ class CanonicalEpistemicCascade:
             'clarity': goal_decision.clarity_score,
             'signal': goal_decision.signal_score,
             'know': goal_decision.know_score,
-            'context': goal_decision.context_score
+            'context': goal_decision.context_score,
+            'health_score': goal_decision.health_score,
+            'health_gate_passed': goal_decision.health_gate_passed
         }
         
         # Publish goal decision to epistemic bus (external observers can act on this)
@@ -832,7 +845,8 @@ class CanonicalEpistemicCascade:
 
             investigation_rounds += 1
             # Phase 2: Optional work context for observability
-            self.state.work_context = "investigating"
+            if self.current_state:
+                self.current_state.work_context = "investigating"
 
             # Conduct investigation using new strategy
             investigation_results = await self._conduct_investigation(
@@ -885,8 +899,9 @@ class CanonicalEpistemicCascade:
         # PHASE 4: CHECK - Verify readiness to act
         # ================================================================
         # Phase 2: Track CHECK assessment checkpoint
-        self.state.current_assessment = AssessmentType.CHECK
-        self.state.work_context = "verifying readiness"
+        if self.current_state:
+            self.current_state.current_assessment = AssessmentType.CHECK
+            self.current_state.work_context = "verifying readiness"
 
         check_result = self._verify_readiness(current_assessment)
 
@@ -930,7 +945,8 @@ class CanonicalEpistemicCascade:
         # PHASE 5: ACT - Make final decision
         # ================================================================
         # Phase 2: Optional work context (not enforced)
-        self.state.work_context = "deciding"
+        if self.current_state:
+            self.current_state.work_context = "deciding"
 
         final_decision = self._make_final_decision(current_assessment, check_result, investigation_rounds)
 
@@ -1001,8 +1017,9 @@ class CanonicalEpistemicCascade:
         logger.info(f"{'='*70}")
         
         # Phase 2: Track POST assessment checkpoint
-        self.state.current_assessment = AssessmentType.POST
-        self.state.work_context = "calibration"
+        if self.current_state:
+            self.current_state.current_assessment = AssessmentType.POST
+            self.current_state.work_context = "calibration"
         
         # Get final epistemic self-assessment (measure learning)
         postflight_assessment = await self._assess_epistemic_state(
@@ -1195,66 +1212,62 @@ class CanonicalEpistemicCascade:
                 # Return NEW schema directly
                 return real_assessment_old
         
-        # Get self-assessment prompt from canonical assessor
-        assessment_request = await self.assessor.assess(task, context)
-        
-        # Check if we need AI self-assessment
-        if isinstance(assessment_request, dict) and 'self_assessment_prompt' in assessment_request:
-            # No MCP assessment found - use baseline with NEW schema
-            logger.info(f"\n   🤔 No MCP assessment found - using baseline for phase: {phase}")
-            logger.info(f"\n   📋 (In MCP mode, call execute_{phase} to get self-assessment prompt)")
-            
-            # Import for baseline creation
-            from empirica.core.schemas.epistemic_assessment import VectorAssessment
-            
-            # Create baseline assessment with NEW schema format
-            if phase == CascadePhase.PREFLIGHT:
-                # PREFLIGHT: Conservative baseline
-                baseline = EpistemicAssessmentSchema(
-                    # GATE
-                    engagement=VectorAssessment(0.70, "Baseline engagement - needs self-assessment"),
-                    # FOUNDATION (with "foundation_" prefix)
-                    foundation_know=VectorAssessment(0.55, "PREFLIGHT: Limited initial knowledge"),
-                    foundation_do=VectorAssessment(0.60, "PREFLIGHT: Capability needs verification"),
-                    foundation_context=VectorAssessment(0.65, "PREFLIGHT: Context understood at surface level"),
-                    # COMPREHENSION (with "comprehension_" prefix)
-                    comprehension_clarity=VectorAssessment(0.65, "PREFLIGHT: Initial clarity"),
-                    comprehension_coherence=VectorAssessment(0.70, "PREFLIGHT: Basic coherence"),
-                    comprehension_signal=VectorAssessment(0.60, "PREFLIGHT: Priority identified"),
-                    comprehension_density=VectorAssessment(0.65, "PREFLIGHT: Manageable complexity"),
-                    # EXECUTION (with "execution_" prefix)
-                    execution_state=VectorAssessment(0.60, "PREFLIGHT: Environment not yet mapped"),
-                    execution_change=VectorAssessment(0.55, "PREFLIGHT: Changes not tracked"),
-                    execution_completion=VectorAssessment(0.30, "PREFLIGHT: Not yet started"),
-                    execution_impact=VectorAssessment(0.50, "PREFLIGHT: Impact needs analysis"),
-                    # UNCERTAINTY
-                    uncertainty=VectorAssessment(0.60, "PREFLIGHT: High initial uncertainty"),
-                    # METADATA
-                    phase=new_phase,
-                    round_num=round_num or 0,
-                    investigation_count=investigation_rounds
-                )
-            elif phase == CascadePhase.POSTFLIGHT:
-                # POSTFLIGHT: Awaiting genuine reassessment
-                baseline = EpistemicAssessmentSchema(
-                    engagement=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine self-assessment"),
-                    foundation_know=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of knowledge"),
-                    foundation_do=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of capability"),
-                    foundation_context=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of context"),
-                    comprehension_clarity=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of clarity"),
-                    comprehension_coherence=VectorAssessment(0.75, "POSTFLIGHT: Awaiting genuine reassessment of coherence"),
-                    comprehension_signal=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of signal"),
-                    comprehension_density=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of density"),
-                    execution_state=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of state"),
-                    execution_change=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of change"),
-                    execution_completion=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of completion"),
-                    execution_impact=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of impact"),
-                    uncertainty=VectorAssessment(0.50, "POSTFLIGHT: Awaiting genuine reassessment of uncertainty"),
-                    phase=new_phase,
-                    round_num=round_num or 0,
-                    investigation_count=investigation_rounds
-                )
-            else:
+        # No MCP assessment found - use baseline with NEW schema
+        # NOTE: EpistemicAssessor removed - use genuine MCP assessment or baseline
+        logger.info(f"\n   🤔 No MCP assessment found - using baseline for phase: {phase}")
+        logger.info(f"\n   📋 For genuine assessment, use MCP tools to call execute_{phase}")
+
+        # Import for baseline creation
+        from empirica.core.schemas.epistemic_assessment import VectorAssessment
+
+        # Create baseline assessment with NEW schema format
+        if phase == CascadePhase.PREFLIGHT:
+            # PREFLIGHT: Conservative baseline
+            baseline = EpistemicAssessmentSchema(
+                # GATE
+                engagement=VectorAssessment(0.70, "Baseline engagement - needs self-assessment"),
+                # FOUNDATION (with "foundation_" prefix)
+                foundation_know=VectorAssessment(0.55, "PREFLIGHT: Limited initial knowledge"),
+                foundation_do=VectorAssessment(0.60, "PREFLIGHT: Capability needs verification"),
+                foundation_context=VectorAssessment(0.65, "PREFLIGHT: Context understood at surface level"),
+                # COMPREHENSION (with "comprehension_" prefix)
+                comprehension_clarity=VectorAssessment(0.65, "PREFLIGHT: Initial clarity"),
+                comprehension_coherence=VectorAssessment(0.70, "PREFLIGHT: Basic coherence"),
+                comprehension_signal=VectorAssessment(0.60, "PREFLIGHT: Priority identified"),
+                comprehension_density=VectorAssessment(0.65, "PREFLIGHT: Manageable complexity"),
+                # EXECUTION (with "execution_" prefix)
+                execution_state=VectorAssessment(0.60, "PREFLIGHT: Environment not yet mapped"),
+                execution_change=VectorAssessment(0.55, "PREFLIGHT: Changes not tracked"),
+                execution_completion=VectorAssessment(0.30, "PREFLIGHT: Not yet started"),
+                execution_impact=VectorAssessment(0.50, "PREFLIGHT: Impact needs analysis"),
+                # UNCERTAINTY
+                uncertainty=VectorAssessment(0.60, "PREFLIGHT: High initial uncertainty"),
+                # METADATA
+                phase=new_phase,
+                round_num=round_num or 0,
+                investigation_count=investigation_rounds
+            )
+        elif phase == CascadePhase.POSTFLIGHT:
+            # POSTFLIGHT: Awaiting genuine reassessment
+            baseline = EpistemicAssessmentSchema(
+                engagement=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine self-assessment"),
+                foundation_know=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of knowledge"),
+                foundation_do=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of capability"),
+                foundation_context=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of context"),
+                comprehension_clarity=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of clarity"),
+                comprehension_coherence=VectorAssessment(0.75, "POSTFLIGHT: Awaiting genuine reassessment of coherence"),
+                comprehension_signal=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of signal"),
+                comprehension_density=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of density"),
+                execution_state=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of state"),
+                execution_change=VectorAssessment(0.70, "POSTFLIGHT: Awaiting genuine reassessment of change"),
+                execution_completion=VectorAssessment(0.60, "POSTFLIGHT: Awaiting genuine reassessment of completion"),
+                execution_impact=VectorAssessment(0.65, "POSTFLIGHT: Awaiting genuine reassessment of impact"),
+                uncertainty=VectorAssessment(0.50, "POSTFLIGHT: Awaiting genuine reassessment of uncertainty"),
+                phase=new_phase,
+                round_num=round_num or 0,
+                investigation_count=investigation_rounds
+            )
+        else:
                 # Other phases: Moderate baseline
                 baseline = EpistemicAssessmentSchema(
                     engagement=VectorAssessment(0.70, "Baseline engagement - needs self-assessment"),
@@ -1274,9 +1287,9 @@ class CanonicalEpistemicCascade:
                     round_num=round_num or 0,
                     investigation_count=investigation_rounds
                 )
-            
-            return baseline
-        else:
+
+        return baseline
+    else:
             # Already an EpistemicAssessmentSchema - return as is
             return assessment_request
 

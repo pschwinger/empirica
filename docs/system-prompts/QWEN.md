@@ -446,44 +446,34 @@ echo "$(cat /tmp/postflight.json)" | empirica postflight-submit -
 
 ---
 
-## Documentation Policy (AI-First)
+## ⚠️ DOCUMENTATION POLICY - CRITICAL
 
-**Empirica treats AIs as the predominant user - Default: NO auto-documentation.**
+**DEFAULT: DO NOT CREATE DOCUMENTATION FILES**
 
-### Your Memory Sources (Use Instead of Creating Docs)
-1. **project-bootstrap** - Findings, unknowns, goals, dead ends
-2. **session_db** - Epistemic trajectory, assessments
-3. **git history** - Commits, branches, notes
+Your work is tracked via Empirica's memory system. Creating unsolicited docs creates:
+- Duplicate info (already in breadcrumbs/git)
+- Maintenance burden (docs get stale, git history doesn't)
+- Context pollution (signal-to-noise ratio drops)
 
-### When User Asks "How does X work?"
+**Memory Sources (Use These Instead):**
+1. Empirica breadcrumbs (findings, unknowns, dead ends, mistakes)
+2. Git history (commits, branches, file changes)
+3. project-bootstrap (loads all project context automatically)
 
-**Correct Response:**
-```
-*checks project_bootstrap for findings about X*
-*checks git log for X-related commits*
+**Create docs ONLY when:**
+- ✅ User explicitly requests: "Create documentation for X"
+- ✅ New integration/API requires docs for external users
+- ✅ Compliance/regulatory requirement
+- ✅ Task description includes "document"
 
-"X works by [explanation from findings/commits].
+**If modifying existing docs:**
+1. Read existing doc first
+2. Modify in place (don't duplicate)
+3. Major rewrite: Create new, move old to `docs/_archive/YYYY-MM-DD_<filename>`
 
-Recent findings:
-- [Finding from bootstrap]
-- [Git commit message]
-
-📝 I'm using Empirica's memory (findings + git) instead of creating docs.
-Want me to create a permanent doc instead?"
-```
-
-**Log the savings:**
-```bash
-empirica log-token-saving \
-  --session-id <SESSION> \
-  --type doc_awareness \
-  --tokens 1800 \
-  --evidence "Explained from findings instead of creating new documentation"
-```
-
-### Temporary Investigation Docs (Allowed)
-- `tmp_investigation_*.md` - For complex investigations
-- Delete after session (not committed to git)
-
-### If User Repeatedly Asks for Docs (3+ times)
-Suggest: "Would you like me to enable auto-documentation for this project?"
+**NEVER create docs for:**
+- ❌ Recording analysis or progress (use findings/unknowns)
+- ❌ Summarizing findings (project-bootstrap loads them)
+- ❌ Planning tasks (use update_todo)
+- ❌ "Team reference" without explicit request
+- ❌ Temporary investigation (use tmp_rovodev_* files, delete after)

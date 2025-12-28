@@ -78,6 +78,11 @@ def handle_session_create_command(args):
             components_loaded=6,  # Standard component count
             subject=subject
         )
+        db.close()  # Close connection before auto-capture (prevents lock)
+
+        # NOTE: PREFLIGHT must be user-submitted with genuine vectors
+        # Do NOT auto-generate - breaks continuity and learning metrics
+        # Users must submit: empirica preflight-submit - < preflight.json
 
         # Initialize auto-capture for this session
         from empirica.core.issue_capture import initialize_auto_capture
@@ -89,6 +94,9 @@ def handle_session_create_command(args):
             if output_format != 'json':
                 print(f"⚠️  Auto-capture initialization warning: {e}")
 
+        # Re-open database for project linking
+        db = SessionDatabase()
+        
         # Try to auto-detect project from git remote URL (if not explicitly provided)
         if not project_id:
             try:

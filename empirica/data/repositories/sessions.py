@@ -15,7 +15,8 @@ class SessionRepository(BaseRepository):
         ai_id: str,
         components_loaded: int = 0,
         user_id: Optional[str] = None,
-        subject: Optional[str] = None
+        subject: Optional[str] = None,
+        bootstrap_level: int = 1
     ) -> str:
         """
         Create a new session
@@ -25,6 +26,7 @@ class SessionRepository(BaseRepository):
             components_loaded: Number of pre-loaded components
             user_id: Optional user identifier
             subject: Optional subject/topic for filtering
+            bootstrap_level: Bootstrap configuration level (1-3, default 1)
 
         Returns:
             session_id: UUID string
@@ -32,11 +34,11 @@ class SessionRepository(BaseRepository):
         session_id = str(uuid.uuid4())
         cursor = self._execute("""
             INSERT INTO sessions (
-                session_id, ai_id, user_id, start_time, components_loaded, subject
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                session_id, ai_id, user_id, start_time, components_loaded, subject, bootstrap_level
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             session_id, ai_id, user_id, datetime.utcnow().isoformat(),
-            components_loaded, subject
+            components_loaded, subject, bootstrap_level
         ))
         return session_id
 

@@ -42,14 +42,67 @@ def format_uncertainty_output(uncertainty_scores: Dict[str, float], verbose: boo
     return "\n".join(output)
 
 
-def handle_cli_error(error: Exception, command: str, verbose: bool = False) -> None:
-    """Standardized error handling for CLI commands"""
+def handle_cli_error(error: Exception, command: str, verbose: bool = False, session_id: Optional[str] = None) -> None:
+    """
+    Standardized error handling for CLI commands with auto-capture integration.
+
+    Args:
+        error: The exception that occurred
+        command: Name of the command that failed
+        verbose: Whether to print detailed traceback
+        session_id: Optional session ID for auto-capture (auto-detected if not provided)
+    """
     print(f"❌ {command} error: {error}")
-    
+
     if verbose:
         import traceback
         print("🔍 Detailed error information:")
         print(traceback.format_exc())
+
+    # Auto-capture the error for handoff to other AIs
+    try:
+        from empirica.core.issue_capture import get_auto_capture, initialize_auto_capture, IssueSeverity, IssueCategory
+
+        # Get or initialize auto-capture service
+        service = get_auto_capture()
+        if not service:
+            # Try to auto-detect session_id if not provided
+            if not session_id:
+                try:
+                    from empirica.data.session_database import SessionDatabase
+                    db = SessionDatabase()
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT session_id FROM sessions
+                        WHERE end_time IS NULL
+                        ORDER BY start_time DESC
+                        LIMIT 1
+                    """)
+                    row = cursor.fetchone()
+                    session_id = row['session_id'] if row else None
+                    db.close()
+                except:
+                    pass
+
+            # Initialize service if we have a session_id
+            if session_id:
+                service = initialize_auto_capture(session_id, enable=True)
+
+        # Capture the error if service is available
+        if service:
+            issue_id = service.capture_error(
+                message=f"{command} command failed: {str(error)}",
+                severity=IssueSeverity.HIGH,
+                category=IssueCategory.ERROR,
+                context={"command": command},
+                exc_info=error
+            )
+            if verbose and issue_id:
+                print(f"📋 Auto-captured as issue {issue_id[:8]}... for handoff")
+    except Exception as capture_error:
+        # Don't fail the error handler if auto-capture fails
+        if verbose:
+            print(f"⚠️  Auto-capture failed: {capture_error}")
 
 
 def parse_json_safely(json_string: Optional[str], default: Dict = None) -> Dict[str, Any]:

@@ -5,6 +5,7 @@ def add_session_parsers(subparsers):
     """Add session management command parsers"""
     # Sessions list command
     sessions_list_parser = subparsers.add_parser('sessions-list', help='List all sessions')
+    sessions_list_parser.add_argument('--ai-id', help='Filter by AI identifier')
     sessions_list_parser.add_argument('--limit', type=int, default=50, help='Maximum sessions to show')
     sessions_list_parser.add_argument('--verbose', action='store_true', help='Show detailed info')
     sessions_list_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
@@ -27,5 +28,15 @@ def add_session_parsers(subparsers):
     sessions_export_parser.add_argument('--session-id', dest='session_id_named', help='Session ID (alternative to positional argument)')
     sessions_export_parser.add_argument('--output', '-o', help='Output file path (default: session_<id>.json)')
     
+    # Memory compact command (AI-first JSON stdin)
+    memory_compact_parser = subparsers.add_parser('memory-compact',
+        help='Create epistemic continuity across memory compaction boundaries')
+    memory_compact_parser.add_argument('config', nargs='?',
+        help='JSON config file path or "-" for stdin (AI-first mode, default: stdin)')
+    memory_compact_parser.add_argument('--output', choices=['human', 'json'], default='json',
+        help='Output format (default: json)')
+    memory_compact_parser.add_argument('--verbose', action='store_true',
+        help='Show detailed operation info')
+
     # Session end command
     # session-end removed - use handoff-create instead (better parameter names, already in MCP)

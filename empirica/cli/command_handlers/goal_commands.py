@@ -590,6 +590,7 @@ def handle_goals_list_command(args):
         
         # Parse arguments
         session_id = getattr(args, 'session_id', None)
+        ai_id = getattr(args, 'ai_id', None)
         completed = getattr(args, 'completed', None)
         
         # Parse scope filtering parameters
@@ -608,12 +609,32 @@ def handle_goals_list_command(args):
         
         if session_id:
             goals = goal_repo.get_session_goals(session_id)
+        elif ai_id:
+            # Get goals for all sessions of a specific AI
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            cursor = db.conn.cursor()
+
+            # Get all session IDs for the specified AI
+            cursor.execute("""
+                SELECT session_id FROM sessions WHERE ai_id = ?
+                ORDER BY start_time DESC
+            """, (ai_id,))
+            session_ids = [row[0] for row in cursor.fetchall()]
+
+            # Get goals from all those sessions
+            goals = []
+            for sid in session_ids:
+                session_goals = goal_repo.get_session_goals(sid)
+                goals.extend(session_goals)
+
+            db.close()
         else:
             # Show helpful reminder with preview of recent goals
             from empirica.data.session_database import SessionDatabase
             preview_db = SessionDatabase()
             cursor = preview_db.conn.cursor()
-            
+
             # Get 5 most recent goals across all sessions
             cursor.execute("""
                 SELECT g.id, g.objective, g.created_timestamp, g.session_id,
@@ -623,13 +644,13 @@ def handle_goals_list_command(args):
                 ORDER BY g.created_timestamp DESC
                 LIMIT 5
             """)
-            
+
             preview_goals = []
             for row in cursor.fetchall():
                 total = row[4] or 0
                 completed = row[5] or 0
                 completion_pct = (completed / total * 100) if total > 0 else 0.0
-                
+
                 preview_goals.append({
                     "goal_id": row[0],
                     "objective": row[1][:80] + "..." if len(row[1]) > 80 else row[1],
@@ -638,7 +659,7 @@ def handle_goals_list_command(args):
                     "completion_percentage": completion_pct,
                     "subtasks": f"{completed}/{total}"
                 })
-            
+
             preview_db.close()
             
             result = {
@@ -735,6 +756,7 @@ def handle_goals_list_command(args):
         result = {
             "ok": True,
             "session_id": session_id,
+            "ai_id": ai_id,
             "goals_count": len(goals_dict),
             "goals": goals_dict,
             "scope_filters_applied": {k: v for k, v in scope_filters.items() if v is not None},
@@ -745,7 +767,12 @@ def handle_goals_list_command(args):
         if hasattr(args, 'output') and args.output == 'json':
             print(json.dumps(result, indent=2))
         else:
-            print(f"✅ Found {len(goals_dict)} goal(s) for session {session_id}:")
+            if session_id:
+                print(f"✅ Found {len(goals_dict)} goal(s) for session {session_id}:")
+            elif ai_id:
+                print(f"✅ Found {len(goals_dict)} goal(s) for AI {ai_id}:")
+            else:
+                print(f"✅ Found {len(goals_dict)} goal(s):")
             
             # Show applied filters if any
             active_filters = [f"{k.replace('_', ' ').title()}: {v}" for k, v in scope_filters.items() if v is not None]
@@ -764,6 +791,7 @@ def handle_goals_list_command(args):
                 print(f"   Created: {created_date}")
         
         goal_repo.close()
+        task_repo.close()  # Close task repository too
         # Return None to avoid exit code issues and duplicate output
         return None
 

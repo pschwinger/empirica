@@ -451,6 +451,20 @@ def handle_pre_summary_snapshot(session_id: str, output_format: str, cycle=None,
         logger.warning(f"Could not load bootstrap: {e}")
         bootstrap = {}
 
+    # Get MCO configuration for this session
+    from empirica.config.mco_loader import get_mco_config
+    mco = get_mco_config()
+
+    # Get AI ID from session to infer model/persona
+    ai_id = session_data.get('ai_id') if session_data else None
+
+    # Export MCO snapshot
+    mco_snapshot = mco.export_snapshot(
+        session_id=session_id,
+        ai_id=ai_id,
+        cascade_style='default'  # TODO: Track active cascade_style in session
+    )
+
     # Create ref-doc snapshot
     timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     snapshot = {
@@ -468,7 +482,8 @@ def handle_pre_summary_snapshot(session_id: str, output_format: str, cycle=None,
             "unknowns_count": len(bootstrap.get('unknowns', [])),
             "goals_count": len(bootstrap.get('goals', [])),
             "dead_ends_count": len(bootstrap.get('dead_ends', []))
-        }
+        },
+        "mco_config": mco_snapshot  # ← NEW: MCO configuration preserved
     }
 
     # Save as ref-doc
@@ -833,3 +848,133 @@ def handle_check_drift_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Check Drift", getattr(args, 'verbose', False))
+
+
+def handle_mco_load_command(args):
+    """
+    Load and present MCO (Meta-Agent Configuration Object) configuration.
+
+    Used for:
+    1. Session start - Load fresh MCO config for AI
+    2. Post-compact - Reload MCO config from pre-summary snapshot
+    3. Manual query - Check active MCO configuration
+
+    Args from argparse:
+        session_id: Session identifier (optional)
+        ai_id: AI identifier (optional, for model/persona inference)
+        snapshot: Path to pre_summary snapshot (optional, for post-compact reload)
+        model: Explicit model override (optional)
+        persona: Explicit persona override (optional)
+        output: Output format ('json' or 'human', default 'human')
+    """
+    from empirica.config.mco_loader import get_mco_config
+    from empirica.data.session_database import SessionDatabase
+    from pathlib import Path
+    import json
+
+    try:
+        session_id = getattr(args, 'session_id', None)
+        ai_id = getattr(args, 'ai_id', None)
+        snapshot_path = getattr(args, 'snapshot', None)
+        model = getattr(args, 'model', None)
+        persona = getattr(args, 'persona', None)
+        output_format = getattr(args, 'output', 'human')
+
+        mco = get_mco_config()
+
+        # Load from snapshot if post-compact
+        if snapshot_path:
+            try:
+                with open(snapshot_path) as f:
+                    snapshot_data = json.load(f)
+                    mco_snapshot = snapshot_data.get('mco_config', {})
+
+                if not mco_snapshot:
+                    if output_format == 'json':
+                        print(json.dumps({
+                            "ok": False,
+                            "error": "No MCO config found in snapshot",
+                            "message": "Snapshot may be from older version before MCO integration"
+                        }))
+                    else:
+                        print("\n⚠️  No MCO Configuration in Snapshot")
+                        print("=" * 70)
+                        print("   This snapshot was created before MCO integration.")
+                        print("   Falling back to fresh MCO load from files...")
+                        print("=" * 70)
+                        # Fall through to fresh load
+                    snapshot_path = None
+
+                else:
+                    formatted = mco.format_for_prompt(mco_snapshot)
+
+                    if output_format == 'json':
+                        print(json.dumps({
+                            "ok": True,
+                            "source": "pre_summary_snapshot",
+                            "snapshot_path": snapshot_path,
+                            "mco_config": mco_snapshot,
+                            "formatted": formatted
+                        }))
+                    else:
+                        print("\n🔧 MCO Configuration (Post-Compact Reload)")
+                        print("=" * 70)
+                        print(f"   Source: {snapshot_path}")
+                        print("=" * 70)
+                        print(formatted)
+                        print("\n💡 Your configuration has been restored from pre-compact snapshot.")
+                        print("   Apply these bias corrections when doing PREFLIGHT/CHECK/POSTFLIGHT.")
+
+                    return
+
+            except Exception as e:
+                logger.error(f"Failed to load snapshot: {e}")
+                if output_format == 'json':
+                    print(json.dumps({"ok": False, "error": str(e)}))
+                else:
+                    print(f"\n❌ Error loading snapshot: {e}")
+                return
+
+        # Fresh load from MCO files
+        if session_id:
+            db = SessionDatabase()
+            try:
+                session_data = db.get_session(session_id)
+                if session_data:
+                    ai_id = ai_id or session_data.get('ai_id')
+            except:
+                pass
+
+        # Export snapshot
+        mco_snapshot = mco.export_snapshot(
+            session_id=session_id or 'unknown',
+            ai_id=ai_id,
+            model=model,
+            persona=persona,
+            cascade_style='default'
+        )
+
+        formatted = mco.format_for_prompt(mco_snapshot)
+
+        if output_format == 'json':
+            print(json.dumps({
+                "ok": True,
+                "source": "mco_files",
+                "session_id": session_id,
+                "ai_id": ai_id,
+                "mco_config": mco_snapshot,
+                "formatted": formatted
+            }))
+        else:
+            print("\n🔧 MCO Configuration (Fresh Load)")
+            print("=" * 70)
+            if session_id:
+                print(f"   Session ID: {session_id}")
+            if ai_id:
+                print(f"   AI ID: {ai_id}")
+            print("=" * 70)
+            print(formatted)
+            print("\n💡 Internalize these values. Apply bias corrections during CASCADE assessments.")
+
+    except Exception as e:
+        handle_cli_error(e, "MCO Load", getattr(args, 'verbose', False))

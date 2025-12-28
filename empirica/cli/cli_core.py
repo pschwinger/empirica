@@ -36,7 +36,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
         try:
             if isinstance(action, argparse._SubParsersAction):
                 categories = {
-                    'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot'],
+                    'Session Management': ['session-create', 'sessions-list', 'sessions-show', 'sessions-export', 'sessions-resume', 'session-snapshot', 'memory-compact'],
                     'CASCADE Workflow': ['preflight', 'preflight-submit', 'check', 'check-submit', 'postflight', 'postflight-submit', 'workflow'],
                     'Goals & Tasks': ['goals-create', 'goals-list', 'goals-complete', 'goals-claim', 'goals-add-subtask', 'goals-complete-subtask', 'goals-get-subtasks', 'goals-progress', 'goals-discover', 'goals-ready', 'goals-resume'],
                     'Project Management': ['project-init', 'project-create', 'project-list', 'project-bootstrap', 'project-handoff', 'project-search', 'project-embed', 'doc-check'],
@@ -44,7 +44,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Checkpoints': ['checkpoint-create', 'checkpoint-load', 'checkpoint-list', 'checkpoint-diff', 'checkpoint-sign', 'checkpoint-verify', 'checkpoint-signatures'],
                     'Identity': ['identity-create', 'identity-export', 'identity-list', 'identity-verify'],
                     'Handoffs': ['handoff-create', 'handoff-query'],
-                    'Logging': ['finding-log', 'unknown-log', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
+                    'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
                     'Monitoring': ['monitor', 'check-drift', 'efficiency-report'],
@@ -110,7 +110,7 @@ def create_argument_parser():
     """Create and configure the main argument parser"""
     parser = argparse.ArgumentParser(
         prog='empirica',
-        description='🧠 Empirica - Semantic Self-Aware AI Framework',
+        description='🧠 Empirica - Epistemic Vector-Based Functional Self-Awareness Framework',
         formatter_class=GroupedHelpFormatter,
         epilog="Global Flags (must come BEFORE command name):\n  empirica [--version] [--verbose] <command> [args]\n\nExamples:\n  empirica session-create --ai-id myai      # Create session\n  empirica --verbose sessions-list          # Show debug info\n  empirica preflight-submit --session-id xyz # PREFLIGHT\n  empirica --verbose check --session-id xyz # CHECK with debugging"
     )
@@ -191,6 +191,7 @@ def main(args=None):
             'sessions-export': handle_sessions_export_command,
             'sessions-resume': handle_sessions_resume_command,
             'session-snapshot': handle_session_snapshot_command,
+            'memory-compact': handle_memory_compact_command,
             
             # CASCADE commands
             'preflight': handle_preflight_command,
@@ -229,7 +230,8 @@ def main(args=None):
             # Monitor commands
             'monitor': handle_monitor_command,
             'check-drift': handle_check_drift_command,
-            
+            'mco-load': handle_mco_load_command,
+
             # Checkpoint commands
             'checkpoint-create': handle_checkpoint_create_command,
             'checkpoint-load': handle_checkpoint_load_command,
@@ -269,6 +271,7 @@ def main(args=None):
             # Finding/unknown/deadend logging
             'finding-log': handle_finding_log_command,
             'unknown-log': handle_unknown_log_command,
+            'unknown-resolve': handle_unknown_resolve_command,
             'deadend-log': handle_deadend_log_command,
             'refdoc-add': handle_refdoc_add_command,
             

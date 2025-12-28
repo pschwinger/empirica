@@ -20,6 +20,7 @@ SCHEMAS = [
                     avg_confidence REAL,
                     drift_detected BOOLEAN DEFAULT 0,
                     session_notes TEXT,
+                    bootstrap_level INTEGER DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
     """,

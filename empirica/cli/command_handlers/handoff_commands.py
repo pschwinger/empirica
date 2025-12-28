@@ -245,11 +245,12 @@ def handle_handoff_create_command(args):
             else:
                 print(f"   Type: Documentation-only (no CASCADE workflow assessments)")
 
-        return handoff
+        print(json.dumps(handoff, indent=2))
+        return 0
 
     except Exception as e:
         handle_cli_error(e, "Handoff create", getattr(args, 'verbose', False))
-        return None
+        return 1
 
 
 def handle_handoff_query_command(args):
@@ -308,12 +309,14 @@ def handle_handoff_query_command(args):
                 print(f"   Task: {h['task_summary'][:60]}...")
                 print(f"   Calibration: {h['calibration_status']}")
                 print(f"   Token count: ~{len(h.get('compressed_json', '')) // 4}")
-
-        return {"handoffs": handoffs}
+            
+            print(json.dumps({"handoffs": handoffs}, indent=2))
+        
+        return 0
 
     except Exception as e:
         handle_cli_error(e, "Handoff query", getattr(args, 'verbose', False))
-        return None
+        return 1
 
 
 # DELETE THIS - No longer needed!

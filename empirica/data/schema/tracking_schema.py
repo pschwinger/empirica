@@ -124,6 +124,7 @@ SCHEMAS = [
                     id TEXT PRIMARY KEY,
                     session_id TEXT NOT NULL,
                     goal_id TEXT,
+                    project_id TEXT,
                     mistake TEXT NOT NULL,
                     why_wrong TEXT NOT NULL,
                     cost_estimate TEXT,
@@ -133,7 +134,8 @@ SCHEMAS = [
                     mistake_data TEXT NOT NULL,
     
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id),
-                    FOREIGN KEY (goal_id) REFERENCES goals(id)
+                    FOREIGN KEY (goal_id) REFERENCES goals(id),
+                    FOREIGN KEY (project_id) REFERENCES projects(id)
                 )
     """,
 

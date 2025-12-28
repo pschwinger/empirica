@@ -189,18 +189,69 @@ class BreadcrumbRepository(BaseRepository):
 
         return doc_id
 
-    def get_project_findings(self, project_id: str, limit: Optional[int] = None, subject: Optional[str] = None) -> List[Dict]:
-        """Get all findings for a project, optionally filtered by subject"""
+    def get_project_findings(
+        self,
+        project_id: str,
+        limit: Optional[int] = None,
+        subject: Optional[str] = None,
+        depth: str = "moderate",
+        uncertainty: Optional[float] = None
+    ) -> List[Dict]:
+        """
+        Get findings for a project with deprecation filtering.
+        
+        Args:
+            project_id: Project identifier
+            limit: Optional limit on results (applied after filtering)
+            subject: Optional subject filter
+            depth: Relevance depth ("minimal", "moderate", "full", "complete", "auto")
+            uncertainty: Epistemic uncertainty (for auto-depth, 0.0-1.0)
+            
+        Returns:
+            Filtered list of findings
+        """
+        # Query all findings
         if subject:
             query = "SELECT * FROM project_findings WHERE project_id = ? AND subject = ? ORDER BY created_timestamp DESC"
             params = (project_id, subject)
         else:
             query = "SELECT * FROM project_findings WHERE project_id = ? ORDER BY created_timestamp DESC"
             params = (project_id,)
-        if limit:
-            query += f" LIMIT {limit}"
+        
         cursor = self._execute(query, params)
-        return [dict(row) for row in cursor.fetchall()]
+        findings = [dict(row) for row in cursor.fetchall()]
+        
+        # Apply deprecation filtering
+        from empirica.core.findings_deprecation import FindingsDeprecationEngine
+        
+        # Auto-depth based on uncertainty if requested
+        if depth == "auto" and uncertainty is not None:
+            if uncertainty > 0.5:
+                depth = "full"
+            elif uncertainty > 0.3:
+                depth = "moderate"
+            else:
+                depth = "minimal"
+        
+        # Calculate relevance scores
+        relevance_scores = [
+            FindingsDeprecationEngine.calculate_relevance_score(f)
+            for f in findings
+        ]
+        
+        # Filter by depth
+        filtered = FindingsDeprecationEngine.filter_by_depth(
+            findings,
+            depth=depth,
+            relevance_scores=relevance_scores,
+            uncertainty=uncertainty or 0.5
+        )
+        
+        # Apply limit if specified
+        if limit:
+            filtered = filtered[:limit]
+        
+        return filtered
 
     def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None) -> List[Dict]:
         """Get unknowns for a project (optionally filter by resolved status and subject)"""

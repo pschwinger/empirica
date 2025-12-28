@@ -697,7 +697,7 @@
         "subparsers"
       ],
       "returns": "",
-      "docstring": "Add cascade command parsers (DEPRECATED - use MCP tools instead)\n\nThe 'cascade' command was part of ModalitySwitcher plugin.\nFor CASCADE workflow, use MCP tools:\n- empirica execute-preflight\n- empiric",
+      "docstring": "Add cascade command parsers (Primary CLI interface for epistemic assessments)\n\nThe CASCADE workflow commands are the primary interface for AI-based epistemic assessments.\nMCP tools provide GUI/IDE integration that maps to these CLI commands:\n- MCP execute-preflight maps to CLI preflight command\n- MCP execute-check maps to CLI check command\n- MCP execute-postflight maps to CLI postflight command",
       "decorators": [],
       "calls": [
         "add_parser",

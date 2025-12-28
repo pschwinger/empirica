@@ -96,11 +96,20 @@ class AutoIssueCaptureService:
         """Get default database path from session DB"""
         from empirica.config.path_resolver import get_session_db_path
         return get_session_db_path()
-    
+
+    def _get_connection(self) -> sqlite3.Connection:
+        """Get database connection with proper timeout and WAL configuration"""
+        conn = sqlite3.connect(str(self.db_path), timeout=30.0)
+        # Enable WAL mode for better concurrency
+        conn.execute("PRAGMA journal_mode=WAL")
+        # Set busy timeout as additional protection
+        conn.execute("PRAGMA busy_timeout=30000")
+        return conn
+
     def _ensure_schema(self) -> None:
         """Create auto_captured_issues table if it doesn't exist"""
         try:
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             cursor.execute("""
@@ -264,6 +273,81 @@ class AutoIssueCaptureService:
             category=IssueCategory.TODO
         )
     
+    @staticmethod
+    def classify_issue_type(message: str, category: str) -> str:
+        """
+        Classify issue into type: 'genuine_mistake', 'system_prompt', or 'project_specific'
+        
+        This is important for general-purpose usage - allows filtering what's worth learning from.
+        
+        Classifications:
+        - genuine_mistake: Real bugs, performance issues, etc. (applicable to any repo)
+        - system_prompt: TODOs, documentation, known limitations (from instructions)
+        - project_specific: Framework/tool-specific design decisions (not general)
+        
+        Args:
+            message: Issue message
+            category: Issue category
+            
+        Returns:
+            Issue type: 'genuine_mistake', 'system_prompt', or 'project_specific'
+        """
+        msg_lower = message.lower()
+        cat_lower = category.lower()
+        
+        # System prompt indicators
+        system_prompt_keywords = [
+            "todo", "fixme", "hack", "refactor", "limitation", "known issue",
+            "documentation", "docstring", "comment needed", "system prompt"
+        ]
+        
+        if any(kw in msg_lower for kw in system_prompt_keywords) or cat_lower == "todo":
+            return "system_prompt"
+        
+        # Genuine mistakes (bugs, errors, performance, compatibility)
+        genuine_keywords = [
+            "error", "exception", "timeout", "failed", "crash", "traceback",
+            "performance", "slow", "memory", "cpu", "database", "connection",
+            "bug", "defect", "regression", "broken"
+        ]
+        
+        if any(kw in msg_lower for kw in genuine_keywords) or cat_lower in ["error", "bug", "performance", "compatibility"]:
+            return "genuine_mistake"
+        
+        # Project-specific (architecture, design, framework features)
+        # Default: if can't classify as genuine_mistake or system_prompt, it's likely project-specific
+        return "project_specific"
+    
+    def update_issue_classification(self, issue_id: str) -> None:
+        """Update issue_category field based on classification logic"""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            
+            # Get issue details
+            cursor.execute("""
+                SELECT message, category FROM auto_captured_issues WHERE id = ?
+            """, (issue_id,))
+            
+            row = cursor.fetchone()
+            if not row:
+                return
+            
+            message, category = row
+            issue_type = self.classify_issue_type(message, category)
+            
+            # Update issue_category field
+            cursor.execute("""
+                UPDATE auto_captured_issues 
+                SET issue_category = ? 
+                WHERE id = ?
+            """, (issue_type, issue_id))
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.warning(f"Failed to update issue classification: {e}")
+    
     def _extract_safe_context(self, locals_dict: Dict[str, Any]) -> Dict[str, str]:
         """Extract safe context from locals (avoid sensitive/large objects)"""
         safe_context = {}
@@ -287,9 +371,9 @@ class AutoIssueCaptureService:
     def _store_issue(self, issue: Dict[str, Any]) -> None:
         """Store issue in SQLite database"""
         try:
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 INSERT INTO auto_captured_issues
                 (id, session_id, severity, category, code_location, message, stack_trace, context, status, created_at, updated_at)
@@ -307,7 +391,7 @@ class AutoIssueCaptureService:
                 issue["created_at"],
                 issue["created_at"]
             ))
-            
+
             conn.commit()
             conn.close()
         except Exception as e:
@@ -333,10 +417,10 @@ class AutoIssueCaptureService:
             List of issue dictionaries
         """
         try:
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             query = "SELECT * FROM auto_captured_issues WHERE session_id = ?"
             params = [self.session_id]
             
@@ -378,9 +462,9 @@ class AutoIssueCaptureService:
             Success status
         """
         try:
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 UPDATE auto_captured_issues
                 SET status = ?, assigned_to_ai = ?, updated_at = ?
@@ -414,9 +498,9 @@ class AutoIssueCaptureService:
             Success status
         """
         try:
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 UPDATE auto_captured_issues
                 SET status = ?, resolution = ?, updated_at = ?
@@ -444,7 +528,7 @@ class AutoIssueCaptureService:
         """
         # Get all handoff issues for this AI
         try:
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
@@ -472,7 +556,7 @@ class AutoIssueCaptureService:
     def get_stats(self) -> Dict[str, Any]:
         """Get capture statistics for this session"""
         try:
-            conn = sqlite3.connect(str(self.db_path))
+            conn = self._get_connection()
             cursor = conn.cursor()
             
             cursor.execute("""

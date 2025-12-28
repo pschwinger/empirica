@@ -352,6 +352,16 @@ def add_checkpoint_parsers(subparsers):
     unknown_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     unknown_log_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
+    # Unknown resolve command
+    unknown_resolve_parser = subparsers.add_parser(
+        'unknown-resolve',
+        help='Mark unknown as resolved'
+    )
+    unknown_resolve_parser.add_argument('--unknown-id', required=True, help='Unknown UUID')
+    unknown_resolve_parser.add_argument('--resolved-by', required=True, help='How was this unknown resolved?')
+    unknown_resolve_parser.add_argument('--output', choices=['human', 'json'], default='json', help='Output format (default: json)')
+    unknown_resolve_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+
     # Dead end log command
     deadend_log_parser = subparsers.add_parser(
         'deadend-log',
@@ -435,6 +445,7 @@ def add_checkpoint_parsers(subparsers):
     
     # Goals list command
     goals_list_parser = subparsers.add_parser('goals-list', help='List goals')
+    goals_list_parser.add_argument('--ai-id', help='Filter by AI identifier')
     goals_list_parser.add_argument('--session-id', help='Filter by session ID')
     goals_list_parser.add_argument('--scope-breadth-min', type=float, help='Filter by minimum breadth (0.0-1.0)')
     goals_list_parser.add_argument('--scope-breadth-max', type=float, help='Filter by maximum breadth (0.0-1.0)')
@@ -448,7 +459,7 @@ def add_checkpoint_parsers(subparsers):
 
     # goals-ready command (BEADS integration - Phase 1)
     goals_ready_parser = subparsers.add_parser('goals-ready', help='Query ready work (BEADS + epistemic filtering)')
-    goals_ready_parser.add_argument('--session-id', required=True, help='Session UUID')
+    goals_ready_parser.add_argument('--session-id', required=False, help='Session UUID (auto-detects active session if not provided)')
     goals_ready_parser.add_argument('--min-confidence', type=float, default=0.7, help='Minimum confidence threshold (0.0-1.0)')
     goals_ready_parser.add_argument('--max-uncertainty', type=float, default=0.3, help='Maximum uncertainty threshold (0.0-1.0)')
     goals_ready_parser.add_argument('--min-priority', type=int, help='Minimum BEADS priority (1, 2, or 3)')

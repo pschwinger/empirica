@@ -39,6 +39,12 @@ try:
     import git
     GitRepo = git.Repo
     GitCommandError = git.GitCommandError
+    GIT_PYTHON_AVAILABLE = True
+except ImportError:
+    # GitPython not installed - use fallback
+    GitRepo = None
+    GitCommandError = Exception
+    GIT_PYTHON_AVAILABLE = False
 finally:
     # Restore empirica.core.git if it was there
     if _empirica_git_module is not None:
@@ -94,7 +100,11 @@ class SignedGitOperations:
 
         Raises:
             git.InvalidGitRepositoryError: If path is not a git repo
+            ImportError: If GitPython not installed
         """
+        if not GIT_PYTHON_AVAILABLE:
+            raise ImportError("GitPython not installed - git operations unavailable. Install with: pip install gitpython")
+
         self.repo = GitRepo(repo_path)
         self.git = self.repo.git
 

@@ -1,15 +1,15 @@
 """CASCADE workflow command parsers."""
 
 def add_cascade_parsers(subparsers):
-    """Add cascade command parsers (DEPRECATED - use MCP tools instead)
-    
-    The 'cascade' command was part of ModalitySwitcher plugin.
-    For CASCADE workflow, use MCP tools:
-    - empirica execute-preflight
-    - empirica execute-check  
-    - empirica execute-postflight
-    
-    This function is kept for backward compatibility but does nothing.
+    """Add cascade command parsers (Primary CLI interface for epistemic assessments)
+
+    The CASCADE workflow commands are the primary interface for AI-based epistemic assessments.
+    MCP tools are available as GUI/IDE interfaces that map to these CLI commands:
+    - MCP execute-preflight maps to CLI preflight command
+    - MCP execute-check maps to CLI check command
+    - MCP execute-postflight maps to CLI postflight command
+
+    This function provides the core CLI interface for epistemic self-assessment.
     """
     # Deprecated - CASCADE workflow now uses MCP tools
     pass

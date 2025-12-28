@@ -161,6 +161,39 @@ def migration_008_migrate_legacy_to_reflexes(cursor: sqlite3.Cursor):
 
 
 # All migrations in execution order
+# Migration 9: Add project_id to goals
+def migration_009_goals_project_id(cursor: sqlite3.Cursor):
+    """Add project_id to goals table and populate from sessions"""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # Add column
+    add_column_if_missing(cursor, "goals", "project_id", "TEXT")
+
+    # Populate project_id from sessions
+    cursor.execute("""
+        UPDATE goals
+        SET project_id = (
+            SELECT project_id FROM sessions WHERE sessions.session_id = goals.session_id
+        )
+        WHERE project_id IS NULL
+    """)
+    rows_updated = cursor.rowcount
+    logger.info(f"✓ Updated {rows_updated} goals with project_id from sessions")
+
+
+# Migration 10: Add bootstrap_level to sessions
+def migration_010_sessions_bootstrap_level(cursor: sqlite3.Cursor):
+    """Add bootstrap_level column to sessions table"""
+    add_column_if_missing(cursor, "sessions", "bootstrap_level", "INTEGER", "1")
+
+
+# Migration 11: Add project_id to mistakes_made
+def migration_011_mistakes_project_id(cursor: sqlite3.Cursor):
+    """Add project_id column to mistakes_made table"""
+    add_column_if_missing(cursor, "mistakes_made", "project_id", "TEXT")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -170,4 +203,7 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("006_sessions_subject", "Add subject filtering to sessions", migration_006_sessions_subject),
     ("007_findings_impact", "Add impact scoring to project_findings", migration_007_findings_impact),
     ("008_migrate_legacy_to_reflexes", "Migrate legacy epistemic tables to reflexes", migration_008_migrate_legacy_to_reflexes),
+    ("009_goals_project_id", "Add project_id to goals table", migration_009_goals_project_id),
+    ("010_sessions_bootstrap_level", "Add bootstrap_level to sessions", migration_010_sessions_bootstrap_level),
+    ("011_mistakes_project_id", "Add project_id to mistakes_made", migration_011_mistakes_project_id),
 ]

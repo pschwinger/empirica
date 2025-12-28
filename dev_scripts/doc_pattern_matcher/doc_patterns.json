@@ -11555,7 +11555,7 @@
       "level": 3,
       "doc_path": "docs/archive/v3/02_QUICKSTART_CLI.md",
       "line_number": 251,
-      "section_content": "\n**Note:** For automated genuine self-assessment, use **MCP server** instead. CLI is best for manual workflows or scripting with pre-computed assessments.\n\n---\n"
+      "section_content": "\n**Note:** CLI is primary for genuine self-assessment. MCP server provides GUI/IDE integration that maps to CLI commands.\n\n---\n"
     },
     {
       "text": "MCP Parameter Guidance",
