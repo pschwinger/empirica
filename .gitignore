@@ -78,6 +78,12 @@ docs/MARKET_STRATEGY.md
 docs/WHY_BLUE_OCEAN.md
 docs/MEETINGS_ADAPTER_DESIGN.md
 
+# External projects (separate repos, don't commit)
+empirica-epre/
+
+# Deprecated/archived spec files
+memory_compact_spec.md
+
 # Temporary AI investigation docs (not committed)
 tmp_investigation_*
 docs/tmp_*
