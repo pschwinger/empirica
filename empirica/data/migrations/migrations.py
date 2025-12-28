@@ -194,6 +194,12 @@ def migration_011_mistakes_project_id(cursor: sqlite3.Cursor):
     add_column_if_missing(cursor, "mistakes_made", "project_id", "TEXT")
 
 
+# Migration 12: Add impact column to project_unknowns
+def migration_012_unknowns_impact(cursor: sqlite3.Cursor):
+    """Add impact scoring to project_unknowns for importance weighting"""
+    add_column_if_missing(cursor, "project_unknowns", "impact", "REAL", "0.5")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -206,4 +212,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("009_goals_project_id", "Add project_id to goals table", migration_009_goals_project_id),
     ("010_sessions_bootstrap_level", "Add bootstrap_level to sessions", migration_010_sessions_bootstrap_level),
     ("011_mistakes_project_id", "Add project_id to mistakes_made", migration_011_mistakes_project_id),
+    ("012_unknowns_impact", "Add impact scoring to project_unknowns", migration_012_unknowns_impact),
 ]
