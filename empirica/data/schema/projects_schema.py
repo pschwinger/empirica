@@ -84,6 +84,8 @@ SCHEMAS = [
                     finding TEXT NOT NULL,
                     created_timestamp REAL NOT NULL,
                     finding_data TEXT NOT NULL,
+                    subject TEXT,
+                    impact REAL DEFAULT 0.5,
                     
                     FOREIGN KEY (project_id) REFERENCES projects(id),
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id),
@@ -106,6 +108,8 @@ SCHEMAS = [
                     created_timestamp REAL NOT NULL,
                     resolved_timestamp REAL,
                     unknown_data TEXT NOT NULL,
+                    subject TEXT,
+                    impact REAL DEFAULT 0.5,
                     
                     FOREIGN KEY (project_id) REFERENCES projects(id),
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id),
@@ -126,6 +130,8 @@ SCHEMAS = [
                     why_failed TEXT NOT NULL,
                     created_timestamp REAL NOT NULL,
                     dead_end_data TEXT NOT NULL,
+                    subject TEXT,
+                    impact REAL DEFAULT 0.5,
                     
                     FOREIGN KEY (project_id) REFERENCES projects(id),
                     FOREIGN KEY (session_id) REFERENCES sessions(session_id),
