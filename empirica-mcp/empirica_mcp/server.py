@@ -71,6 +71,23 @@ if not EMPIRICA_CLI:
 app = Server("empirica-v2")
 
 # ============================================================================
+# Epistemic Middleware (Optional)
+# ============================================================================
+
+# Enable epistemic mode via environment variable
+import os
+ENABLE_EPISTEMIC = os.getenv("EMPIRICA_EPISTEMIC_MODE", "false").lower() == "true"
+EPISTEMIC_PERSONALITY = os.getenv("EMPIRICA_PERSONALITY", "balanced_architect")
+
+if ENABLE_EPISTEMIC:
+    from .epistemic_middleware import EpistemicMiddleware
+    logger.info(f"🧠 Epistemic mode ENABLED with personality: {EPISTEMIC_PERSONALITY}")
+    epistemic_middleware = EpistemicMiddleware(personality=EPISTEMIC_PERSONALITY)
+else:
+    epistemic_middleware = None
+    logger.info("⚙️  Standard mode (epistemic disabled)")
+
+# ============================================================================
 # Tool Definitions
 # ============================================================================
 
@@ -703,7 +720,24 @@ async def call_tool(name: str, arguments: dict) -> List[types.TextContent]:
     Note: validate_input=False allows flexible AI self-assessment.
     Schemas provide guidance, but don't enforce rigid validation.
     Handlers parse parameters flexibly (strings, objects, etc.)
+    
+    Epistemic Middleware: If enabled (EMPIRICA_EPISTEMIC_MODE=true),
+    wraps all calls with vector-driven self-awareness.
     """
+    
+    # If epistemic middleware enabled, route through it
+    if epistemic_middleware:
+        return await epistemic_middleware.handle_request(
+            tool_name=name,
+            arguments=arguments,
+            original_handler=lambda tn, args: _call_tool_impl(tn, args)
+        )
+    else:
+        return await _call_tool_impl(name, arguments)
+
+
+async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]:
+    """Internal tool call implementation (wrapped by middleware if enabled)"""
 
     try:
         # Category 1: Stateless tools (handle directly)
