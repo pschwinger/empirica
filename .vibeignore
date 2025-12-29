@@ -1,0 +1,39 @@
+# Python virtual environments
+.venv*/
+venv*/
+env*/
+.env/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+__pycache__/
+
+# Testing and coverage
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage/
+htmlcov/
+
+# Git
+.git/
+
+# Archives and workspace
+_archive/
+workspace/
+
+# IDE
+.idea/
+.vscode/
+
+# Node modules (if any)
+node_modules/
+
+# Compiled files
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.dylib

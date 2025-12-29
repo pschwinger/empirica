@@ -5,6 +5,28 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2025-12-29
+
+### Fixed
+- **Flow State Display Slice Error** - Fixed TypeError in project-bootstrap command where flow_data was incorrectly treated as a list when it's actually a dictionary. Changed to properly access flow_metrics['flow_scores']. This was causing "slice(None, 5, None)" error messages in bootstrap output.
+- **Missing Flow Metrics Components** - Added 'components' and 'recommendations' fields to flow metrics data structure. Components now show weighted breakdown of flow score factors (engagement, capability, clarity, etc.), and recommendations are generated from identify_flow_blockers().
+
+### Added
+- **Auto-Capture Logging Hooks** - Implemented true automatic error capture via Python's logging system:
+  - Added `AutoCaptureLoggingHandler` class that hooks into logging.ERROR and logging.CRITICAL
+  - Added `install_auto_capture_hooks()` function that installs both logging.Handler and sys.excepthook
+  - Integrated into session creation - errors are now captured automatically during CLI execution
+  - Captures context (logger name, module, function, line number) for better debugging
+  - Non-blocking design - capture errors don't break the application
+- Auto-capture now truly "auto" - no explicit calls needed, errors logged anywhere in codebase are captured
+
+### Verified
+- JSON output working correctly for project-bootstrap and session-snapshot commands
+- Cross-project isolation confirmed with 15 projects
+- Dynamic context loading via --depth parameter (minimal/moderate/full/auto)
+- Session-optional commands working as documented
+- Learning delta calculation accurate in session snapshots
+
 ## [1.1.2] - 2025-12-29
 
 ### Fixed
