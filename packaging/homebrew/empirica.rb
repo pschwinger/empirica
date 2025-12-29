@@ -12,8 +12,8 @@ class Empirica < Formula
 
   desc "Epistemic self-assessment framework for AI agents"
   homepage "https://github.com/nubaeon/empirica"
-  url "https://github.com/Nubaeon/empirica/releases/download/v1.1.1/empirica-1.1.1.tar.gz"
-  sha256 "0126deaae3faecfefac32ec548f219fd349ec8366a660a10fdc3b776bf1170b3"
+  url "https://github.com/Nubaeon/empirica/releases/download/v1.1.2/empirica-1.1.2.tar.gz"
+  sha256 "2c928028e367fb92f896e9b91c5247b152f4490a4656c5059f22c4155b34e94e"
   license "MIT"
   
   depends_on "python@3.11"
@@ -21,17 +21,17 @@ class Empirica < Formula
   # Runtime Python dependencies
   resource "click" do
     url "https://files.pythonhosted.org/packages/source/c/click/click-8.1.7.tar.gz"
-    sha256 "0126deaae3faecfefac32ec548f219fd349ec8366a660a10fdc3b776bf1170b3"
+    sha256 "2c928028e367fb92f896e9b91c5247b152f4490a4656c5059f22c4155b34e94e"
   end
 
   resource "pyyaml" do
     url "https://files.pythonhosted.org/packages/source/p/pyyaml/PyYAML-6.0.1.tar.gz"
-    sha256 "0126deaae3faecfefac32ec548f219fd349ec8366a660a10fdc3b776bf1170b3"
+    sha256 "2c928028e367fb92f896e9b91c5247b152f4490a4656c5059f22c4155b34e94e"
   end
 
   resource "pydantic" do
     url "https://files.pythonhosted.org/packages/source/p/pydantic/pydantic-2.5.0.tar.gz"
-    sha256 "0126deaae3faecfefac32ec548f219fd349ec8366a660a10fdc3b776bf1170b3"
+    sha256 "2c928028e367fb92f896e9b91c5247b152f4490a4656c5059f22c4155b34e94e"
   end
 
   # Add more resources as needed - see requirements.txt
