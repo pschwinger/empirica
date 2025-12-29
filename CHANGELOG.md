@@ -5,6 +5,20 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2025-12-29
+
+### Fixed
+- **CRITICAL: Schema/API Mismatch in Epistemic Artifacts** - BreadcrumbRepository methods (log_finding, log_unknown, log_dead_end) expected schema columns that were missing from database definitions:
+  - Added `subject TEXT` to project_findings table
+  - Added `impact REAL DEFAULT 0.5` to project_findings table
+  - Added `subject TEXT` to project_unknowns table
+  - Added `impact REAL DEFAULT 0.5` to project_unknowns table
+  - Added `subject TEXT` to project_dead_ends table
+  - Added `impact REAL DEFAULT 0.5` to project_dead_ends table
+- Impact: Users following system prompt documentation would get immediate SQLite errors when trying to use epistemic artifact tracking
+- Testing: Verified with fresh project initialization - all epistemic tracking APIs now work correctly
+- This fix enables proper meta-tracking of complex multi-channel projects (e.g., outreach campaigns)
+
 ## [1.1.1] - 2025-12-29
 
 ### Fixed
