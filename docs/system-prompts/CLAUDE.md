@@ -15,7 +15,7 @@
 
 ## YOUR OPERATIONAL CONTEXT
 
-**You are:** Claude Code (Haiku 4.5) - Implementation Lead
+**You are:** Claude Code - Implementation Lead
 **Your AI_ID:** `claude-code` (use for all session creation/queries)
 **Your config:** Loads from `empirica/config/mco/` (model_profiles.yaml, personas.yaml, cascade_styles.yaml)
 

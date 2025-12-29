@@ -581,6 +581,114 @@ class AutoIssueCaptureService:
 _auto_capture_instance: Optional[AutoIssueCaptureService] = None
 
 
+class AutoCaptureLoggingHandler(logging.Handler):
+    """
+    Logging handler that automatically captures ERROR/CRITICAL logs.
+    
+    Integrates with Python's logging system to capture errors without
+    modifying every try/except block.
+    """
+    
+    def __init__(self, capture_service: AutoIssueCaptureService):
+        """
+        Initialize handler for ERROR and above.
+        
+        Args:
+            capture_service: AutoIssueCaptureService instance to use
+        """
+        super().__init__(level=logging.ERROR)
+        self.capture_service = capture_service
+        
+    def emit(self, record: logging.LogRecord) -> None:
+        """
+        Capture log record as an issue.
+        
+        Args:
+            record: LogRecord to capture
+        """
+        if not self.capture_service or not self.capture_service.enable:
+            return
+        
+        try:
+            # Map logging levels to severity
+            severity_map = {
+                logging.ERROR: IssueSeverity.HIGH,
+                logging.CRITICAL: IssueSeverity.BLOCKER,
+                logging.WARNING: IssueSeverity.MEDIUM
+            }
+            
+            # Determine category based on exception info
+            category = IssueCategory.ERROR
+            if record.exc_info:
+                exc_type = record.exc_info[0]
+                if exc_type and issubclass(exc_type, DeprecationWarning):
+                    category = IssueCategory.DEPRECATION
+            
+            # Build context from log record
+            context = {
+                'logger': record.name,
+                'module': record.module,
+                'function': record.funcName,
+                'line': record.lineno,
+                'thread': record.thread,
+                'process': record.process
+            }
+            
+            # Capture the error
+            self.capture_service.capture_error(
+                message=record.getMessage(),
+                severity=severity_map.get(record.levelno, IssueSeverity.MEDIUM),
+                category=category,
+                context=context,
+                exc_info=record.exc_info[1] if record.exc_info else None
+            )
+        except Exception:
+            # Don't let handler errors break logging
+            self.handleError(record)
+
+
+def install_auto_capture_hooks(service: AutoIssueCaptureService) -> None:
+    """
+    Install logging handler and exception hook for automatic error capture.
+    
+    This enables true "auto-capture" by hooking into Python's logging system
+    and sys.excepthook. Errors will be captured automatically without
+    explicit calls to capture_error().
+    
+    Args:
+        service: AutoIssueCaptureService instance to use for capture
+    """
+    # Install logging handler for ERROR and above
+    handler = AutoCaptureLoggingHandler(service)
+    logging.root.addHandler(handler)
+    logger.debug("Auto-capture logging handler installed (level=ERROR)")
+    
+    # Install exception hook for uncaught exceptions
+    original_hook = sys.excepthook
+    
+    def auto_capture_excepthook(exc_type, exc_value, exc_traceback):
+        """Capture uncaught exceptions then call original hook"""
+        if service and service.enable:
+            try:
+                service.capture_error(
+                    message=f"Uncaught {exc_type.__name__}: {exc_value}",
+                    severity=IssueSeverity.BLOCKER,
+                    category=IssueCategory.ERROR,
+                    exc_info=exc_value
+                )
+            except Exception:
+                # Don't let capture errors break exception handling
+                pass
+        
+        # Always call original hook
+        original_hook(exc_type, exc_value, exc_traceback)
+    
+    sys.excepthook = auto_capture_excepthook
+    logger.debug("Auto-capture exception hook installed")
+    
+    logger.info("✓ Auto-capture hooks installed (logging.Handler + sys.excepthook)")
+
+
 def initialize_auto_capture(session_id: str, enable: bool = True) -> AutoIssueCaptureService:
     """Initialize the global auto-capture service"""
     global _auto_capture_instance

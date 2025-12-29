@@ -85,11 +85,12 @@ def handle_session_create_command(args):
         # Users must submit: empirica preflight-submit - < preflight.json
 
         # Initialize auto-capture for this session
-        from empirica.core.issue_capture import initialize_auto_capture
+        from empirica.core.issue_capture import initialize_auto_capture, install_auto_capture_hooks
         try:
             auto_capture = initialize_auto_capture(session_id, enable=True)
+            install_auto_capture_hooks(auto_capture)  # Install logging hooks
             if output_format != 'json':
-                print(f"✅ Auto-capture enabled for this session")
+                print(f"✅ Auto-capture enabled with logging hooks")
         except Exception as e:
             if output_format != 'json':
                 print(f"⚠️  Auto-capture initialization warning: {e}")

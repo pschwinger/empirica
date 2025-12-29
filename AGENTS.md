@@ -1,7 +1,7 @@
 
 ## Issue Tracking with bd (beads)
 
-**IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
+**IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods, do use Empirica Goals and subtasks.
 
 ### Why bd?
 

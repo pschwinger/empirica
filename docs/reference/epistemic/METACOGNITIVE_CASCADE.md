@@ -22,7 +22,7 @@ The metacognitive cascade provides:
 **Purpose**: Core cascade implementation with canonical assessment and adaptive behavior
 
 **Attributes**:
-- `assessor` (`CanonicalEpistemicAssessor`): LLM-powered epistemic assessor
+
 - `logger` (`ReflexLogger`): Reflex frame logger for temporal tracking
 - `strategy_selector` (`StrategySelector`): Investigation strategy selector
 - `plugin_registry` (`PluginRegistry`): Investigation plugin registry
@@ -57,7 +57,7 @@ cascade = EpistemicCascade(custom_config)
 ```
 
 **Related**:
-- `CanonicalEpistemicAssessor` - Epistemic assessment engine
+
 - `ReflexLogger` - Temporal logging system
 
 ---
@@ -461,7 +461,6 @@ graph TD
 
 ### Key Integrations
 
-1. **CanonicalEpistemicAssessor**: Provides genuine LLM-powered self-assessment
 2. **ReflexLogger**: Tracks temporal state and decisions
 3. **StrategySelector**: Chooses appropriate investigation strategies
 4. **PluginRegistry**: Manages investigation plugins

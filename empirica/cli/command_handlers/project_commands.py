@@ -683,7 +683,8 @@ def handle_project_bootstrap_command(args):
                 print(f"📊 Flow State Analysis (Recent Sessions):")
                 print()
                 
-                flow_data = breadcrumbs['flow_metrics']
+                flow_metrics = breadcrumbs['flow_metrics']
+                flow_data = flow_metrics.get('flow_scores', [])
                 if flow_data:
                     for i, session in enumerate(flow_data[:5], 1):
                         score = session['flow_score']

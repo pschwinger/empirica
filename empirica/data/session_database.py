@@ -862,6 +862,20 @@ class SessionDatabase:
             # Calculate flow score
             flow_score = calculate_flow_score(vectors)
             state_name, emoji = classify_flow_state(flow_score)
+            
+            # Calculate component contributions for display
+            components = {
+                'engagement': vectors['engagement'] * 0.25 * 100,
+                'capability': ((vectors['know'] + vectors['do']) / 2) * 0.20 * 100,
+                'clarity': vectors['clarity'] * 0.15 * 100,
+                'confidence': (1.0 - vectors['uncertainty']) * 0.15 * 100,
+                'completion': vectors['completion'] * 0.10 * 100,
+                'impact': vectors['impact'] * 0.10 * 100,
+                'coherence': vectors['coherence'] * 0.05 * 100
+            }
+            
+            # Generate recommendations based on low vectors
+            recommendations = identify_flow_blockers(vectors)
 
             flow_data.append({
                 'session_id': session_id,
@@ -870,7 +884,9 @@ class SessionDatabase:
                 'flow_score': flow_score,
                 'flow_state': state_name,
                 'emoji': emoji,
-                'vectors': vectors
+                'vectors': vectors,
+                'components': components,
+                'recommendations': recommendations
             })
 
         # Get latest (most recent) session data

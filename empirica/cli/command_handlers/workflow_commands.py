@@ -195,6 +195,9 @@ def handle_check_command(args):
         round_num = getattr(args, 'round', None) or (config_data.get('round') if config_data else None)
         output_format = getattr(args, 'output', 'json') or (config_data.get('output', 'json') if config_data else 'json')
         verbose = getattr(args, 'verbose', False) or (config_data.get('verbose', False) if config_data else False)
+        
+        # Extract explicit confidence from input (GATE CHECK uses stated confidence, not derived)
+        explicit_confidence = config_data.get('confidence') if config_data else None
 
         if not session_id:
             print(json.dumps({
@@ -273,36 +276,44 @@ def handle_check_command(args):
         completion = current_vectors.get('completion', 0.0)
         uncertainty = current_vectors.get('uncertainty', 0.5)
 
-        # Evidence-based decision logic
+        # Calculate confidence (use explicit if provided, else derive from uncertainty)
+        confidence = explicit_confidence if explicit_confidence is not None else (1.0 - uncertainty)
+
+        # GATE LOGIC: Primary decision based on confidence threshold (≥0.70)
+        # Secondary validation based on evidence (drift, unknowns)
         suggestions = []
 
-        if drift > 0.3 and unknowns_count > 5:
-            decision = "investigate"
-            strength = "strong"
-            reasoning = f"High drift ({drift:.2f}) from baseline + {unknowns_count} unknowns remaining suggests further investigation needed"
-            suggestions.append("Investigate critical unknowns before proceeding")
-            suggestions.append("Consider whether drift indicates learning or confusion")
-        elif drift > 0.2 or unknowns_count > 3:
-            decision = "investigate"
-            strength = "moderate"
-            reasoning = f"Moderate drift ({drift:.2f}) and {unknowns_count} unknowns suggest investigation may be beneficial"
-            suggestions.append("Review unknowns to determine if they block next steps")
-        elif drift < 0.1 and unknowns_count == 0:
-            decision = "proceed"
-            strength = "strong"
-            reasoning = f"Low drift ({drift:.2f}) from baseline + no unknowns suggests readiness to proceed"
-            suggestions.append("Evidence supports proceeding to action phase")
-        elif completion > 0.8:
-            decision = "proceed"
-            strength = "moderate"
-            reasoning = f"High completion ({completion:.2f}) suggests task nearly done, proceed with final steps"
-            suggestions.append("Task nearing completion - wrap up remaining work")
+        if confidence >= 0.70:
+            # PROCEED path - confidence threshold met
+            if drift > 0.3 or unknowns_count > 5:
+                # High evidence of gaps - warn but allow proceed
+                decision = "proceed"
+                strength = "moderate"
+                reasoning = f"Confidence ({confidence:.2f}) meets threshold, but {unknowns_count} unknowns and drift ({drift:.2f}) suggest caution"
+                suggestions.append("Confidence threshold met - you may proceed")
+                suggestions.append(f"Be aware: {unknowns_count} unknowns remain and drift is {drift:.2f}")
+            else:
+                # Clean proceed
+                decision = "proceed"
+                strength = "strong"
+                reasoning = f"Confidence ({confidence:.2f}) ≥ 0.70 threshold, low drift ({drift:.2f}), {unknowns_count} unknowns"
+                suggestions.append("Evidence supports proceeding to action phase")
         else:
-            decision = "proceed_with_caution"
-            strength = "weak"
-            reasoning = f"Medium drift ({drift:.2f}), {unknowns_count} unknowns, completion at {completion:.2f}"
-            suggestions.append("Assess whether unknowns block immediate next steps")
-            suggestions.append("Proceed if context warrants, investigate if blocked")
+            # INVESTIGATE path - confidence below threshold
+            if unknowns_count > 5 or drift > 0.3:
+                # Strong evidence backing the low confidence
+                decision = "investigate"
+                strength = "strong"
+                reasoning = f"Confidence ({confidence:.2f}) < 0.70 threshold + {unknowns_count} unknowns and drift ({drift:.2f}) - investigation required"
+                suggestions.append("Confidence below threshold - investigate before proceeding")
+                suggestions.append(f"Address {unknowns_count} unknowns to increase confidence")
+            else:
+                # Low confidence but low evidence - possible calibration issue
+                decision = "investigate"
+                strength = "moderate"
+                reasoning = f"Confidence ({confidence:.2f}) < 0.70 threshold, but only {unknowns_count} unknowns and drift ({drift:.2f}) - investigate to validate"
+                suggestions.append("Confidence below threshold - investigate or recalibrate")
+                suggestions.append("Evidence doesn't fully explain low confidence")
 
         # Determine drift level
         if drift > 0.3:
@@ -328,13 +339,16 @@ def handle_check_command(args):
         )
 
         # 7. Build result
+        # Use explicit confidence if provided (GATE CHECK), else derive from uncertainty
+        confidence_value = explicit_confidence if explicit_confidence is not None else (1.0 - uncertainty)
+        
         result = {
             "ok": True,
             "session_id": session_id,
             "checkpoint_id": checkpoint_id,
             "decision": decision,
             "suggestion_strength": strength,
-            "confidence": 1.0 - uncertainty,
+            "confidence": confidence_value,
             "drift_analysis": {
                 "overall_drift": drift,
                 "drift_level": drift_level,
