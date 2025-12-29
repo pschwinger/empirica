@@ -12,8 +12,8 @@ class Empirica < Formula
 
   desc "Epistemic self-assessment framework for AI agents"
   homepage "https://github.com/nubaeon/empirica"
-  url "https://github.com/Nubaeon/empirica/releases/download/v1.1.2/empirica-1.1.2.tar.gz"
-  sha256 "2c928028e367fb92f896e9b91c5247b152f4490a4656c5059f22c4155b34e94e"
+  url "https://files.pythonhosted.org/packages/source/e/empirica/empirica-1.1.3.tar.gz"
+  sha256 "766eb8f7b1bc3a147792473fdb6d7ed73eb2183dc6bf7256eb1d437f44e9d0df"
   license "MIT"
   
   depends_on "python@3.11"
@@ -47,7 +47,7 @@ class Empirica < Formula
 
   test do
     # Test that the CLI works
-    assert_match "1.1.0", shell_output("#{bin}/empirica --version")
+    assert_match "1.1.3", shell_output("#{bin}/empirica --version")
     
     # Test that bootstrap command exists
     system "#{bin}/empirica", "bootstrap", "--help"
