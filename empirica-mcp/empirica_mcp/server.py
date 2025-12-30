@@ -43,6 +43,14 @@ from empirica.data.session_database import SessionDatabase
 from empirica.config.path_resolver import get_session_db_path
 from empirica.utils.session_resolver import resolve_session_id
 
+# Auto-capture for error tracking
+try:
+    from empirica.core.issue_capture import get_auto_capture, IssueSeverity, IssueCategory
+except ImportError:
+    get_auto_capture = None
+    IssueSeverity = None
+    IssueCategory = None
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp import types
@@ -223,6 +231,63 @@ async def list_tools() -> List[types.Tool]:
         # ========== Goal/Task Management (Route to CLI) ==========
 
         types.Tool(
+            name="finding_log",
+            description="Log a finding (what was learned) to the current session",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "finding": {"type": "string", "description": "What was learned or discovered"},
+                    "impact": {"type": "number", "description": "Impact score 0.0-1.0", "minimum": 0.0, "maximum": 1.0}
+                },
+                "required": ["session_id", "finding"]
+            }
+        ),
+
+        types.Tool(
+            name="unknown_log",
+            description="Log an unknown (what remains unclear) to the current session",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "unknown": {"type": "string", "description": "What remains unclear or needs investigation"}
+                },
+                "required": ["session_id", "unknown"]
+            }
+        ),
+
+        types.Tool(
+            name="mistake_log",
+            description="Log a mistake (error to avoid in future) to the current session",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "mistake": {"type": "string", "description": "What was done wrong"},
+                    "why_wrong": {"type": "string", "description": "Why it was wrong"},
+                    "prevention": {"type": "string", "description": "How to prevent in future"},
+                    "cost_estimate": {"type": "string", "description": "Time/resources wasted (e.g., '2 hours')"}
+                },
+                "required": ["session_id", "mistake", "why_wrong", "prevention"]
+            }
+        ),
+
+        types.Tool(
+            name="deadend_log",
+            description="Log a dead-end (approach that didn't work) to the current session",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "approach": {"type": "string", "description": "What approach was tried"},
+                    "why_failed": {"type": "string", "description": "Why it didn't work"}
+                },
+                "required": ["session_id", "approach", "why_failed"]
+            }
+        ),
+
+        types.Tool(
             name="create_goal",
             description="Create new structured goal",
             inputSchema={
@@ -329,6 +394,69 @@ async def list_tools() -> List[types.Tool]:
         ),
 
         # ========== Session Management (Route to CLI) ==========
+
+        types.Tool(
+            name="project_bootstrap",
+            description="Load project context dynamically based on uncertainty (findings, unknowns, dead-ends, mistakes, goals)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "string", "description": "Project ID (optional, auto-detects from git if not provided)"},
+                    "depth": {"type": "string", "description": "Context depth: minimal, moderate, full, auto", "enum": ["minimal", "moderate", "full", "auto"]}
+                },
+                "required": []
+            }
+        ),
+
+        types.Tool(
+            name="session_snapshot",
+            description="Get complete session snapshot with learning delta, findings, unknowns, mistakes, active goals",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"}
+                },
+                "required": ["session_id"]
+            }
+        ),
+
+        types.Tool(
+            name="goals_ready",
+            description="Get goals that are ready to work on (unblocked by dependencies and epistemic state)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID (optional)"}
+                },
+                "required": []
+            }
+        ),
+
+        types.Tool(
+            name="goals_claim",
+            description="Claim a goal and create epistemic branch for work",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "goal_id": {"type": "string", "description": "Goal UUID to claim"}
+                },
+                "required": ["goal_id"]
+            }
+        ),
+
+        types.Tool(
+            name="investigate",
+            description="Run systematic investigation with epistemic tracking",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "investigation_goal": {"type": "string", "description": "What to investigate"},
+                    "max_rounds": {"type": "integer", "description": "Max investigation rounds", "default": 5}
+                },
+                "required": ["session_id", "investigation_goal"]
+            }
+        ),
 
         types.Tool(
             name="get_epistemic_state",
@@ -767,6 +895,20 @@ async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]
             return await route_to_cli(name, arguments)
 
     except Exception as e:
+        # Auto-capture error if service available
+        if get_auto_capture:
+            try:
+                auto_capture = get_auto_capture()
+                if auto_capture:
+                    auto_capture.capture_error(
+                        message=f"MCP tool error: {name} - {str(e)}",
+                        severity=IssueSeverity.HIGH,
+                        category=IssueCategory.ERROR,
+                        context={"tool": name, "arguments": arguments}
+                    )
+            except Exception:
+                pass  # Don't let auto-capture errors break the response
+        
         # Return structured error
         return [types.TextContent(
             type="text",
