@@ -50,10 +50,13 @@ def main():
         sys.exit(0)
 
     # Run project-bootstrap with fresh assessment and adaptive depth
+    # CRITICAL: Must pass --ai-id to find the session
+    ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
     try:
         result = subprocess.run(
             [
                 'empirica', 'project-bootstrap',
+                '--ai-id', ai_id,
                 '--include-live-state',
                 '--fresh-assess',
                 '--trigger', 'post_compact',  # Auto-loads pre-snapshot, calculates drift

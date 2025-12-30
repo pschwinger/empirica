@@ -79,10 +79,13 @@ def main():
         pass
 
     # Run project-bootstrap with fresh assessment
+    # CRITICAL: Must pass --ai-id to find the session
+    ai_id = os.getenv('EMPIRICA_AI_ID', 'claude-code')
     try:
         result = subprocess.run(
             [
                 'empirica', 'project-bootstrap',
+                '--ai-id', ai_id,
                 '--include-live-state',
                 '--fresh-assess',
                 '--trigger', 'pre_compact',
