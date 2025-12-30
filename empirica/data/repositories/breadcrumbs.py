@@ -158,6 +158,163 @@ class BreadcrumbRepository(BaseRepository):
 
         return dead_end_id
 
+    # ========================================================================
+    # SESSION-SCOPED BREADCRUMBS (Dual-Scope Phase 1)
+    # ========================================================================
+    
+    def log_session_finding(
+        self,
+        session_id: str,
+        finding: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
+    ) -> str:
+        """Log a session-scoped finding (ephemeral, session-specific learning)"""
+        finding_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
+
+        finding_data = {
+            "finding": finding,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
+        }
+
+        self._execute("""
+            INSERT INTO session_findings (
+                id, session_id, goal_id, subtask_id,
+                finding, created_timestamp, finding_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            finding_id, session_id, goal_id, subtask_id,
+            finding, time.time(), json.dumps(finding_data), subject, impact
+        ))
+
+        self.commit()
+        logger.info(f"📝 Session finding logged: {finding[:50]}...")
+
+        return finding_id
+    
+    def log_session_unknown(
+        self,
+        session_id: str,
+        unknown: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
+    ) -> str:
+        """Log a session-scoped unknown (what's still unclear in this session)"""
+        unknown_id = str(uuid.uuid4())
+
+        if impact is None:
+            impact = 0.5
+
+        unknown_data = {
+            "unknown": unknown,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
+        }
+
+        self._execute("""
+            INSERT INTO session_unknowns (
+                id, session_id, goal_id, subtask_id,
+                unknown, is_resolved, created_timestamp, unknown_data, subject, impact
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            unknown_id, session_id, goal_id, subtask_id,
+            unknown, False, time.time(), json.dumps(unknown_data), subject, impact
+        ))
+
+        self.commit()
+        logger.info(f"❓ Session unknown logged: {unknown[:50]}...")
+
+        return unknown_id
+    
+    def log_session_dead_end(
+        self,
+        session_id: str,
+        approach: str,
+        why_failed: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: float = 0.5
+    ) -> str:
+        """Log a session-scoped dead end (what didn't work in this session)"""
+        dead_end_id = str(uuid.uuid4())
+
+        dead_end_data = {
+            "approach": approach,
+            "why_failed": why_failed,
+            "goal_id": goal_id,
+            "subtask_id": subtask_id,
+            "impact": impact,
+            "timestamp": time.time()
+        }
+
+        self._execute("""
+            INSERT INTO session_dead_ends (
+                id, session_id, goal_id, subtask_id,
+                approach, why_failed, created_timestamp, dead_end_data, subject
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            dead_end_id, session_id, goal_id, subtask_id,
+            approach, why_failed, time.time(), json.dumps(dead_end_data), subject
+        ))
+
+        self.commit()
+        logger.info(f"💀 Session dead end logged: {approach[:50]}...")
+
+        return dead_end_id
+    
+    def log_session_mistake(
+        self,
+        session_id: str,
+        mistake: str,
+        why_wrong: str,
+        cost_estimate: Optional[str] = None,
+        root_cause_vector: Optional[str] = None,
+        prevention: Optional[str] = None,
+        goal_id: Optional[str] = None
+    ) -> str:
+        """Log a session-scoped mistake (learning from failures in this session)"""
+        mistake_id = str(uuid.uuid4())
+
+        mistake_data = {
+            "mistake": mistake,
+            "why_wrong": why_wrong,
+            "cost_estimate": cost_estimate,
+            "root_cause_vector": root_cause_vector,
+            "prevention": prevention,
+            "goal_id": goal_id,
+            "timestamp": time.time()
+        }
+
+        self._execute("""
+            INSERT INTO session_mistakes (
+                id, session_id, goal_id, mistake, why_wrong,
+                cost_estimate, root_cause_vector, prevention,
+                created_timestamp, mistake_data
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            mistake_id, session_id, goal_id, mistake, why_wrong,
+            cost_estimate, root_cause_vector, prevention,
+            time.time(), json.dumps(mistake_data)
+        ))
+
+        self.commit()
+        logger.info(f"🔴 Session mistake logged: {mistake[:50]}...")
+
+        return mistake_id
+
     def add_reference_doc(
         self,
         project_id: str,

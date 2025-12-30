@@ -2303,6 +2303,75 @@ class SessionDatabase:
             project_id, session_id, finding, goal_id, subtask_id, subject, impact
         )
     
+    def log_session_finding(
+        self,
+        session_id: str,
+        finding: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
+    ) -> str:
+        """Log a session-scoped finding (ephemeral, session-specific learning)"""
+        # Auto-derive impact from latest CASCADE if not provided
+        if impact is None:
+            impact = self._get_latest_impact_score(session_id)
+
+        return self.breadcrumbs.log_session_finding(
+            session_id, finding, goal_id, subtask_id, subject, impact
+        )
+    
+    def log_session_unknown(
+        self,
+        session_id: str,
+        unknown: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
+    ) -> str:
+        """Log a session-scoped unknown"""
+        if impact is None:
+            impact = self._get_latest_impact_score(session_id)
+
+        return self.breadcrumbs.log_session_unknown(
+            session_id, unknown, goal_id, subtask_id, subject, impact
+        )
+    
+    def log_session_dead_end(
+        self,
+        session_id: str,
+        approach: str,
+        why_failed: str,
+        goal_id: Optional[str] = None,
+        subtask_id: Optional[str] = None,
+        subject: Optional[str] = None,
+        impact: Optional[float] = None
+    ) -> str:
+        """Log a session-scoped dead end"""
+        if impact is None:
+            impact = self._get_latest_impact_score(session_id)
+
+        return self.breadcrumbs.log_session_dead_end(
+            session_id, approach, why_failed, goal_id, subtask_id, subject, impact
+        )
+    
+    def log_session_mistake(
+        self,
+        session_id: str,
+        mistake: str,
+        why_wrong: str,
+        cost_estimate: Optional[str] = None,
+        root_cause_vector: Optional[str] = None,
+        prevention: Optional[str] = None,
+        goal_id: Optional[str] = None
+    ) -> str:
+        """Log a session-scoped mistake"""
+        return self.breadcrumbs.log_session_mistake(
+            session_id, mistake, why_wrong, cost_estimate,
+            root_cause_vector, prevention, goal_id
+        )
+    
     def log_unknown(
         self,
         project_id: str,

@@ -89,73 +89,116 @@ def handle_epistemics_search_command(args):
 
 def handle_epistemics_stats_command(args):
     """
-    Show aggregate statistics for epistemic trajectories in a project.
+    Show detailed epistemic trajectory for a session (epistemics-show).
     
     Usage:
-        empirica epistemics-stats --project-id <UUID> --output json
+        empirica epistemics-show --session-id <UUID> --output json
+        empirica epistemics-show --session-id <UUID> --phase PREFLIGHT
     """
     try:
-        project_id = args.project_id
+        session_id = args.session_id
+        phase_filter = getattr(args, 'phase', None)
         output_format = getattr(args, 'output', 'json')
         
-        if not project_id:
+        if not session_id:
             print(json.dumps({
                 "ok": False,
-                "error": "project_id is required"
+                "error": "session_id is required"
             }))
             sys.exit(1)
         
-        # Get all trajectories (no query, high limit)
-        all_trajectories = search_trajectories(
-            project_id=project_id,
-            query="",
-            limit=1000  # High limit to get all
-        )
+        # Get reflexes from database
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
         
-        if not all_trajectories:
+        # First get session info
+        cursor.execute("SELECT project_id, ai_id FROM sessions WHERE session_id = ?", (session_id,))
+        session_row = cursor.fetchone()
+        
+        if not session_row:
             print(json.dumps({
-                "ok": True,
-                "message": "No trajectories found for this project",
-                "stats": {}
+                "ok": False,
+                "error": f"Session {session_id} not found"
             }))
-            return
+            db.close()
+            sys.exit(1)
         
-        # Compute statistics
-        stats = {
-            "total_sessions": len(all_trajectories),
-            "avg_know_delta": sum(t.get('deltas', {}).get('know', 0.0) for t in all_trajectories) / len(all_trajectories),
-            "avg_uncertainty_delta": sum(t.get('deltas', {}).get('uncertainty', 0.0) for t in all_trajectories) / len(all_trajectories),
-            "high_learning_sessions": sum(1 for t in all_trajectories if t.get('deltas', {}).get('know', 0.0) >= 0.2),
-            "calibration_breakdown": {
-                "good": sum(1 for t in all_trajectories if t.get('calibration_accuracy') == 'good'),
-                "fair": sum(1 for t in all_trajectories if t.get('calibration_accuracy') == 'fair'),
-                "poor": sum(1 for t in all_trajectories if t.get('calibration_accuracy') == 'poor')
-            },
-            "investigation_rate": sum(1 for t in all_trajectories if t.get('investigation_phase', False)) / len(all_trajectories)
-        }
+        project_id = session_row['project_id']
+        ai_id = session_row['ai_id']
+        
+        # Get reflexes with optional phase filter
+        if phase_filter:
+            cursor.execute("""
+                SELECT phase, engagement, know, do, context, clarity, coherence, 
+                       signal, density, state, change, completion, impact, uncertainty,
+                       reasoning, timestamp
+                FROM reflexes
+                WHERE session_id = ? AND phase = ?
+                ORDER BY timestamp ASC
+            """, (session_id, phase_filter))
+        else:
+            cursor.execute("""
+                SELECT phase, engagement, know, do, context, clarity, coherence,
+                       signal, density, state, change, completion, impact, uncertainty,
+                       reasoning, timestamp
+                FROM reflexes
+                WHERE session_id = ?
+                ORDER BY timestamp ASC
+            """, (session_id,))
+        
+        reflexes = []
+        for row in cursor.fetchall():
+            reflexes.append({
+                "phase": row['phase'],
+                "vectors": {
+                    "engagement": row['engagement'],
+                    "know": row['know'],
+                    "do": row['do'],
+                    "context": row['context'],
+                    "clarity": row['clarity'],
+                    "coherence": row['coherence'],
+                    "signal": row['signal'],
+                    "density": row['density'],
+                    "state": row['state'],
+                    "change": row['change'],
+                    "completion": row['completion'],
+                    "impact": row['impact'],
+                    "uncertainty": row['uncertainty']
+                },
+                "reasoning": row['reasoning'],
+                "timestamp": row['timestamp']
+            })
+        
+        db.close()
         
         if output_format == 'json':
             print(json.dumps({
                 "ok": True,
+                "session_id": session_id,
                 "project_id": project_id,
-                "stats": stats
+                "ai_id": ai_id,
+                "count": len(reflexes),
+                "phase_filter": phase_filter,
+                "trajectories": reflexes
             }, indent=2))
         else:
-            # Human-readable format
-            print(f"\n📊 Epistemic Trajectory Statistics")
+            print(f"\n📊 Epistemic Trajectory for Session: {session_id}")
             print(f"{'=' * 70}")
             print(f"Project: {project_id}")
-            print(f"\nTotal Sessions: {stats['total_sessions']}")
-            print(f"Average Learning:")
-            print(f"  • Know delta: {stats['avg_know_delta']:+.2f}")
-            print(f"  • Uncertainty delta: {stats['avg_uncertainty_delta']:+.2f}")
-            print(f"\nHigh Learning Sessions (know Δ ≥0.2): {stats['high_learning_sessions']}")
-            print(f"\nCalibration Breakdown:")
-            print(f"  • Good: {stats['calibration_breakdown']['good']}")
-            print(f"  • Fair: {stats['calibration_breakdown']['fair']}")
-            print(f"  • Poor: {stats['calibration_breakdown']['poor']}")
-            print(f"\nInvestigation Rate: {stats['investigation_rate']:.1%}")
-            print()
+            print(f"AI: {ai_id}")
+            if phase_filter:
+                print(f"Phase Filter: {phase_filter}")
+            print(f"\nTotal Reflexes: {len(reflexes)}\n")
+            
+            for i, reflex in enumerate(reflexes, 1):
+                print(f"{i}. Phase: {reflex['phase']}")
+                print(f"   Time: {reflex['timestamp']}")
+                vectors = reflex['vectors']
+                print(f"   Know: {vectors['know']:.2f}, Uncertainty: {vectors['uncertainty']:.2f}")
+                print(f"   Context: {vectors['context']:.2f}, Completion: {vectors['completion']:.2f}")
+                if reflex['reasoning']:
+                    print(f"   Reasoning: {reflex['reasoning'][:80]}...")
+                print()
         
     except Exception as e:
         print(json.dumps({
@@ -207,7 +250,9 @@ def handle_epistemics_list_command(args):
         
         # Get all reflexes for this session
         cursor.execute("""
-            SELECT reflex_type, vector_values, reasoning, timestamp
+            SELECT phase, engagement, know, do, context, clarity, coherence,
+                   signal, density, state, change, completion, impact, uncertainty,
+                   reasoning, timestamp
             FROM reflexes
             WHERE session_id = ?
             ORDER BY timestamp ASC
@@ -216,8 +261,22 @@ def handle_epistemics_list_command(args):
         reflexes = []
         for row in cursor.fetchall():
             reflexes.append({
-                "phase": row['reflex_type'],
-                "vectors": json.loads(row['vector_values']) if row['vector_values'] else {},
+                "phase": row['phase'],
+                "vectors": {
+                    "engagement": row['engagement'],
+                    "know": row['know'],
+                    "do": row['do'],
+                    "context": row['context'],
+                    "clarity": row['clarity'],
+                    "coherence": row['coherence'],
+                    "signal": row['signal'],
+                    "density": row['density'],
+                    "state": row['state'],
+                    "change": row['change'],
+                    "completion": row['completion'],
+                    "impact": row['impact'],
+                    "uncertainty": row['uncertainty']
+                },
                 "reasoning": row['reasoning'],
                 "timestamp": row['timestamp']
             })

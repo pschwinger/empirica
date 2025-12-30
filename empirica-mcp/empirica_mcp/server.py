@@ -868,13 +868,13 @@ async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]
     """Internal tool call implementation (wrapped by middleware if enabled)"""
 
     try:
-        # Category 1: Stateless tools (handle directly)
+        # Category 1: Stateless tools (handle directly - sync functions)
         if name == "get_empirica_introduction":
-            return handle_introduction()
+            return handle_introduction()  # Returns List[TextContent] directly
         elif name == "get_workflow_guidance":
-            return handle_guidance(arguments)
+            return handle_guidance(arguments)  # Returns List[TextContent] directly
         elif name == "cli_help":
-            return handle_cli_help()
+            return handle_cli_help()  # Returns List[TextContent] directly
 
         # Category 2: Direct Python handlers (AI-centric, no CLI conversion)
         elif name == "create_goal":

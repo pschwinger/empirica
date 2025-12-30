@@ -174,6 +174,7 @@ def add_checkpoint_parsers(subparsers):
     mistake_log_parser.add_argument('--root-cause-vector', help='Epistemic vector that caused the mistake (e.g., "KNOW", "CONTEXT")')
     mistake_log_parser.add_argument('--prevention', help='How to prevent this mistake in the future')
     mistake_log_parser.add_argument('--goal-id', help='Optional goal identifier this mistake relates to')
+    mistake_log_parser.add_argument('--scope', choices=['session', 'project', 'both'], help='Scope: session (ephemeral), project (persistent), or both (dual-log). Auto-inferred if omitted.')
     mistake_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     mistake_log_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
@@ -333,6 +334,7 @@ def add_checkpoint_parsers(subparsers):
     finding_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
     finding_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
     finding_log_parser.add_argument('--impact', type=float, help='Impact score 0.0-1.0 (importance of this finding, auto-derived from CASCADE if omitted)')
+    finding_log_parser.add_argument('--scope', choices=['session', 'project', 'both'], help='Scope: session (ephemeral), project (persistent), or both (dual-log). Auto-inferred if omitted.')
     finding_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     finding_log_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
@@ -349,6 +351,7 @@ def add_checkpoint_parsers(subparsers):
     unknown_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
     unknown_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
     unknown_log_parser.add_argument('--impact', type=float, help='Impact score 0.0-1.0 (importance of this unknown, auto-derived from CASCADE if omitted)')
+    unknown_log_parser.add_argument('--scope', choices=['session', 'project', 'both'], help='Scope: session (ephemeral), project (persistent), or both (dual-log). Auto-inferred if omitted.')
     unknown_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     unknown_log_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
@@ -376,6 +379,7 @@ def add_checkpoint_parsers(subparsers):
     deadend_log_parser.add_argument('--subtask-id', help='Optional subtask UUID')
     deadend_log_parser.add_argument('--subject', help='Subject/workstream identifier (auto-detected from directory if omitted)')
     deadend_log_parser.add_argument('--impact', type=float, help='Impact score 0.0-1.0 (importance of this dead end, auto-derived from CASCADE if omitted)')
+    deadend_log_parser.add_argument('--scope', choices=['session', 'project', 'both'], help='Scope: session (ephemeral), project (persistent), or both (dual-log). Auto-inferred if omitted.')
     deadend_log_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     deadend_log_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
 
