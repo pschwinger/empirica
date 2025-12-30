@@ -47,16 +47,16 @@
 # 1. Create session (AI-first JSON mode)
 echo '{"ai_id": "copilot-workstream"}' | empirica session-create -
 
-# 2. PREFLIGHT - Assess baseline (13 vectors)
-echo '{"session_id":"<ID>","vectors":{"engagement":0.9,"foundation":{"know":0.8,"do":0.9,"context":0.7},"comprehension":{"clarity":0.85,"coherence":0.8,"signal":0.75,"density":0.6},"execution":{"state":0.6,"change":0.7,"completion":0.0,"impact":0.3},"uncertainty":0.25},"reasoning":"Baseline assessment"}' | empirica preflight-submit -
+# 2. PREFLIGHT - Assess baseline (13 vectors - be honest about what you ACTUALLY know)
+echo '{"session_id":"<ID>","vectors":{"engagement":<YOUR_VALUE>,"foundation":{"know":<YOUR_VALUE>,"do":<YOUR_VALUE>,"context":<YOUR_VALUE>},"comprehension":{"clarity":<YOUR_VALUE>,"coherence":<YOUR_VALUE>,"signal":<YOUR_VALUE>,"density":<YOUR_VALUE>},"execution":{"state":<YOUR_VALUE>,"change":<YOUR_VALUE>,"completion":0.0,"impact":<YOUR_VALUE>},"uncertainty":<YOUR_VALUE>},"reasoning":"<YOUR_HONEST_ASSESSMENT>"}' | empirica preflight-submit -
 
 # 3. [DO YOUR WORK] - System observes via git diffs
 
 # 4. CHECK (MANDATORY if: uncertainty >0.5 OR scope >0.6 OR complex decisions OR >2 hours)
-echo '{"session_id":"<ID>","confidence":0.75,"findings":["Found X","Learned Y"],"unknowns":["Unclear: Z"]}' | empirica check -
+echo '{"session_id":"<ID>","confidence":<YOUR_VALUE>,"findings":["<WHAT_YOU_LEARNED>"],"unknowns":["<WHAT_REMAINS_UNCLEAR>"]}' | empirica check -
 
-# 5. POSTFLIGHT - Measure learning
-echo '{"session_id":"<ID>","vectors":{...updated vectors...},"reasoning":"KNOW +0.15, UNCERTAINTY -0.40"}' | empirica postflight-submit -
+# 5. POSTFLIGHT - Measure what you ACTUALLY learned (compare to PREFLIGHT)
+echo '{"session_id":"<ID>","vectors":{<YOUR_UPDATED_VECTORS>},"reasoning":"<DESCRIBE_YOUR_LEARNING: e.g., KNOW +0.15, UNCERTAINTY -0.40>"}' | empirica postflight-submit -
 ```
 
 **For trivial tasks:** Skip CASCADE, just work.
