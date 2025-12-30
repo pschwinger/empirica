@@ -76,6 +76,30 @@ class EpistemicMiddleware:
         if not self.enable_epistemic:
             return await original_handler(tool_name, arguments)
         
+        # Skip epistemic for known/safe tools
+        # These are standard CLI tools with clear semantics
+        safe_tools = {
+            'get_empirica_introduction',
+            'get_workflow_guidance', 
+            'cli_help',
+            'session_create',
+            'session_snapshot',
+            'session_resume',
+            'preflight_submit',
+            'check',
+            'postflight_submit',
+            'goals_create',
+            'goals_complete',
+            'finding_log',
+            'unknown_log',
+            'mistake_log'
+        }
+        
+        # Skip epistemic for safe tools - they have well-defined semantics
+        if tool_name in safe_tools:
+            self.request_count += 1
+            return await original_handler(tool_name, arguments)
+        
         self.request_count += 1
         
         # Step 1: Assess request

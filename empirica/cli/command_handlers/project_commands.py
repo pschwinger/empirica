@@ -1472,23 +1472,47 @@ def handle_deadend_log_command(args):
             if active_goal:
                 goal_id = active_goal['id']
 
-        dead_end_id = db.log_dead_end(
-            project_id=project_id,
-            session_id=session_id,
-            approach=approach,
-            why_failed=why_failed,
-            goal_id=goal_id,
-            subtask_id=subtask_id,
-            subject=subject,
-            impact=impact
-        )
+        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
+        explicit_scope = config_data.get('scope') if config_data else getattr(args, 'scope', None)
+        scope = infer_scope(session_id, project_id, explicit_scope)
+        
+        dead_end_ids = []
+        
+        if scope in ['session', 'both']:
+            # Log to session_dead_ends
+            dead_end_id_session = db.log_session_dead_end(
+                session_id=session_id,
+                approach=approach,
+                why_failed=why_failed,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            dead_end_ids.append(('session', dead_end_id_session))
+        
+        if scope in ['project', 'both']:
+            # Log to project_dead_ends (legacy table)
+            dead_end_id_project = db.log_dead_end(
+                project_id=project_id,
+                session_id=session_id,
+                approach=approach,
+                why_failed=why_failed,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            dead_end_ids.append(('project', dead_end_id_project))
+        
         db.close()
 
         result = {
             "ok": True,
-            "dead_end_id": dead_end_id,
-            "project_id": project_id,
-            "message": "Dead end logged successfully"
+            "scope": scope,
+            "dead_ends": [{"scope": s, "dead_end_id": did} for s, did in dead_end_ids],
+            "project_id": project_id if project_id else None,
+            "message": f"Dead end logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
         if output_format == 'json':

@@ -767,46 +767,61 @@ class SessionDatabase:
                 'url': s.get('source_url')
             } for s in sources]
         
-        # Get findings, unknowns, mistakes, dead-ends for this session
+        # Get findings, unknowns, mistakes, dead-ends for this session (DUAL-SCOPE)
         findings = []
         unknowns = []
         mistakes = []
         dead_ends = []
         
-        if project_id:
-            cursor_local = self.conn.cursor()
-            
-            # Get findings
-            cursor_local.execute("""
-                SELECT id, finding, impact, created_timestamp FROM project_findings 
-                WHERE session_id = ? ORDER BY created_timestamp DESC
-            """, (session_id,))
-            findings = [{'id': row[0], 'finding': row[1], 'impact': row[2], 'timestamp': row[3]} 
-                       for row in cursor_local.fetchall()]
-            
-            # Get unknowns
-            cursor_local.execute("""
-                SELECT id, unknown, is_resolved, created_timestamp FROM project_unknowns 
-                WHERE session_id = ? ORDER BY created_timestamp DESC
-            """, (session_id,))
-            unknowns = [{'id': row[0], 'unknown': row[1], 'resolved': row[2], 'timestamp': row[3]} 
-                       for row in cursor_local.fetchall()]
-            
-            # Get mistakes
-            cursor_local.execute("""
-                SELECT id, mistake, cost_estimate, created_timestamp FROM mistakes_made 
-                WHERE session_id = ? ORDER BY created_timestamp DESC
-            """, (session_id,))
-            mistakes = [{'id': row[0], 'mistake': row[1], 'cost': row[2], 'timestamp': row[3]} 
-                       for row in cursor_local.fetchall()]
-            
-            # Get dead-ends
-            cursor_local.execute("""
-                SELECT id, approach, why_failed, created_timestamp FROM project_dead_ends 
-                WHERE session_id = ? ORDER BY created_timestamp DESC
-            """, (session_id,))
-            dead_ends = [{'id': row[0], 'approach': row[1], 'why_failed': row[2], 'timestamp': row[3]} 
-                        for row in cursor_local.fetchall()]
+        cursor_local = self.conn.cursor()
+        
+        # Get findings from BOTH session_findings and project_findings
+        cursor_local.execute("""
+            SELECT id, finding, impact, created_timestamp, 'session' as scope FROM session_findings 
+            WHERE session_id = ? 
+            UNION ALL
+            SELECT id, finding, impact, created_timestamp, 'project' as scope FROM project_findings 
+            WHERE session_id = ? 
+            ORDER BY created_timestamp DESC
+        """, (session_id, session_id))
+        findings = [{'id': row[0], 'finding': row[1], 'impact': row[2], 'timestamp': row[3], 'scope': row[4]} 
+                   for row in cursor_local.fetchall()]
+        
+        # Get unknowns from BOTH session_unknowns and project_unknowns
+        cursor_local.execute("""
+            SELECT id, unknown, is_resolved, created_timestamp, 'session' as scope FROM session_unknowns 
+            WHERE session_id = ? 
+            UNION ALL
+            SELECT id, unknown, is_resolved, created_timestamp, 'project' as scope FROM project_unknowns 
+            WHERE session_id = ? 
+            ORDER BY created_timestamp DESC
+        """, (session_id, session_id))
+        unknowns = [{'id': row[0], 'unknown': row[1], 'resolved': row[2], 'timestamp': row[3], 'scope': row[4]} 
+                   for row in cursor_local.fetchall()]
+        
+        # Get mistakes from BOTH session_mistakes and mistakes_made
+        cursor_local.execute("""
+            SELECT id, mistake, NULL as cost_estimate, created_timestamp, 'session' as scope FROM session_mistakes 
+            WHERE session_id = ? 
+            UNION ALL
+            SELECT id, mistake, cost_estimate, created_timestamp, 'project' as scope FROM mistakes_made 
+            WHERE session_id = ? 
+            ORDER BY created_timestamp DESC
+        """, (session_id, session_id))
+        mistakes = [{'id': row[0], 'mistake': row[1], 'cost': row[2], 'timestamp': row[3], 'scope': row[4]} 
+                   for row in cursor_local.fetchall()]
+        
+        # Get dead-ends from BOTH session_dead_ends and project_dead_ends
+        cursor_local.execute("""
+            SELECT id, approach, why_failed, created_timestamp, 'session' as scope FROM session_dead_ends 
+            WHERE session_id = ? 
+            UNION ALL
+            SELECT id, approach, why_failed, created_timestamp, 'project' as scope FROM project_dead_ends 
+            WHERE session_id = ? 
+            ORDER BY created_timestamp DESC
+        """, (session_id, session_id))
+        dead_ends = [{'id': row[0], 'approach': row[1], 'why_failed': row[2], 'timestamp': row[3], 'scope': row[4]} 
+                    for row in cursor_local.fetchall()]
         
         return {
             'session_id': session_id,
