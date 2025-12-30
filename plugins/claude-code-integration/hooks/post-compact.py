@@ -11,6 +11,10 @@ import sys
 import subprocess
 import os
 
+# Add empirica to path for signaling module
+from pathlib import Path
+sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
+
 def main():
     # Read hook input from stdin (provided by Claude Code)
     hook_input = json.loads(sys.stdin.read())
@@ -86,7 +90,8 @@ def main():
             drift_report = None
             sentinel_action = None
 
-            if pre_snapshot and bootstrap.get('live_state'):
+            # Always try check-drift if we have a pre-snapshot
+            if pre_snapshot:
                 # Use check-drift CLI for proper epistemic drift detection
                 # Signaling level can be set via environment variable
                 signaling_level = os.environ.get('EMPIRICA_SIGNALING_LEVEL', 'default')
@@ -110,6 +115,28 @@ def main():
                         drift_report = json.loads(drift_result.stdout)
                         drift = drift_report.get('drift_score')
                         drift_details = drift_report.get('drift_details', {})
+
+                        # Write drift cache for statusline
+                        try:
+                            from empirica.core.signaling import (
+                                SignalingState, write_drift_cache,
+                                get_drift_level, detect_sentinel_action
+                            )
+
+                            state = SignalingState(
+                                phase='POST_COMPACT',
+                                vectors=drift_report.get('current_vectors') or drift_report.get('current_state', {}).get('vectors'),
+                                drift_score=drift,
+                                drift_details=drift_details,
+                                drift_level=get_drift_level(drift),
+                                sentinel_action=detect_sentinel_action(drift, drift_details),
+                                session_id=empirica_session,
+                                ai_id='claude-code'
+                            )
+                            write_drift_cache(state, os.getcwd())
+                        except Exception as cache_err:
+                            # Cache write failure is non-fatal
+                            pass
 
                         # Check for sentinel gate triggers
                         if drift_report.get('sentinel_triggered'):
