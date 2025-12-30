@@ -409,12 +409,98 @@ def plot_results(results: dict, output_path: str = None):
         plt.show()
 
 
+def run_edge_case_tests() -> dict:
+    """Run edge case tests at decision boundaries."""
+    edge_cases = [
+        # (name, know, uncertainty, signal, is_fake)
+        # Boundary cases (know~0.3, uncertainty~0.7)
+        ("boundary_halt", 0.29, 0.71, 0.30, True),
+        ("boundary_safe", 0.31, 0.69, 0.35, False),
+        ("exact_boundary", 0.30, 0.70, 0.30, True),
+        ("near_boundary", 0.35, 0.65, 0.40, False),
+        ("clear_fake", 0.25, 0.72, 0.25, True),
+        # Ambiguous cases
+        ("ambiguous_1", 0.45, 0.55, 0.50, None),
+        ("ambiguous_2", 0.40, 0.58, 0.45, None),
+        # Conflicting signals
+        ("conflict_high_know", 0.70, 0.60, 0.50, None),
+        ("conflict_medium", 0.55, 0.50, 0.60, None),
+    ]
+
+    results = []
+    for name, know, uncertainty, signal, is_fake in edge_cases:
+        result = assess_hallucination_risk({"know": know, "uncertainty": uncertainty, "signal": signal})
+
+        if is_fake is None:
+            expected = "AMBIGUOUS"
+            correct = None  # Can't judge
+        elif is_fake:
+            expected = "HALT/BRANCH"
+            correct = result in ["HALT", "BRANCH"]
+        else:
+            expected = "SAFE"
+            # REVISE is acceptable for borderline - it's a soft warning
+            correct = result in [None, "PROCEED", "REVISE"]
+
+        results.append({
+            "name": name,
+            "know": know,
+            "uncertainty": uncertainty,
+            "signal": signal,
+            "is_fake": is_fake,
+            "result": result,
+            "expected": expected,
+            "correct": correct,
+        })
+
+    return results
+
+
+def print_edge_cases(results: list):
+    """Print edge case results."""
+    print("\n" + "=" * 70)
+    print("   Edge Case Tests (Decision Boundary)")
+    print("=" * 70)
+    print(f"{'Name':<18} | {'Know':>5} | {'Unc':>5} | {'Result':<8} | {'Expected':<12} | Status")
+    print("-" * 70)
+
+    definite_correct = 0
+    definite_total = 0
+
+    for r in results:
+        result_str = r["result"] or "SAFE"
+
+        if r["correct"] is None:
+            status = "? (ambiguous)"
+        elif r["correct"]:
+            status = "✅"
+            definite_correct += 1
+            definite_total += 1
+        else:
+            # Check if it's a conservative false positive (BRANCH on borderline)
+            if r["result"] == "BRANCH" and not r["is_fake"]:
+                status = "⚠️ conservative"
+            else:
+                status = "❌"
+            definite_total += 1
+
+        print(f"{r['name']:<18} | {r['know']:>5.2f} | {r['uncertainty']:>5.2f} | {result_str:<8} | {r['expected']:<12} | {status}")
+
+    print("-" * 70)
+    if definite_total > 0:
+        print(f"Definite cases: {definite_correct}/{definite_total} ({definite_correct/definite_total*100:.0f}%)")
+    print("Note: BRANCH on borderline = conservative (preferred for safety)")
+    print("=" * 70)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='EVS Test 3: Epistemic Hallucination Trap - Automated Test Runner'
     )
     parser.add_argument('--iterations', '-n', type=int, default=100,
                         help='Number of test iterations (default: 100)')
+    parser.add_argument('--edge', '-e', action='store_true',
+                        help='Run edge case tests at decision boundary')
     parser.add_argument('--graph', '-g', action='store_true',
                         help='Generate matplotlib graphs')
     parser.add_argument('--output', '-o', type=str,
@@ -428,6 +514,15 @@ def main():
 
     if args.seed:
         random.seed(args.seed)
+
+    # Run edge case tests if requested
+    if args.edge:
+        edge_results = run_edge_case_tests()
+        if args.json:
+            print(json.dumps(edge_results, indent=2, default=str))
+        else:
+            print_edge_cases(edge_results)
+        return
 
     print(f"\nRunning EVS Test 3 with {args.iterations} iterations...")
     results = run_test_suite(args.iterations)
