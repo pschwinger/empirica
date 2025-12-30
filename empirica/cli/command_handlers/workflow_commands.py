@@ -111,6 +111,30 @@ def handle_preflight_submit_command(args):
             """, (cascade_id, session_id, "PREFLIGHT assessment", now))
 
             db.conn.commit()
+
+            # BAYESIAN CALIBRATION: Load calibration adjustments based on historical performance
+            # This informs the AI about its known biases from past sessions
+            calibration_adjustments = {}
+            calibration_report = None
+            try:
+                from empirica.core.bayesian_beliefs import BayesianBeliefManager
+
+                # Get AI ID from session
+                cursor = db.conn.cursor()
+                cursor.execute("SELECT ai_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                ai_id = row[0] if row else 'unknown'
+
+                if ai_id != 'unknown':
+                    belief_manager = BayesianBeliefManager(db)
+                    calibration_adjustments = belief_manager.get_calibration_adjustments(ai_id)
+                    calibration_report = belief_manager.get_calibration_report(ai_id)
+
+                    if calibration_adjustments:
+                        logger.debug(f"Loaded calibration adjustments for {len(calibration_adjustments)} vectors")
+            except Exception as e:
+                logger.debug(f"Calibration loading failed (non-fatal): {e}")
+
             db.close()
 
             result = {
@@ -126,7 +150,13 @@ def handle_preflight_submit_command(args):
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
-                }
+                },
+                "calibration": {
+                    "adjustments": calibration_adjustments if calibration_adjustments else None,
+                    "total_evidence": calibration_report.get('total_evidence', 0) if calibration_report else 0,
+                    "summary": calibration_report.get('calibration_summary') if calibration_report else None,
+                    "note": "Adjustments show historical bias (+ = underestimate, - = overestimate)"
+                } if calibration_adjustments or calibration_report else None
             }
         except Exception as e:
             logger.error(f"Failed to save preflight assessment: {e}")
@@ -841,6 +871,41 @@ def handle_postflight_submit_command(args):
             # Creating an additional checkpoint was creating duplicate entries with default values
             # The GitEnhancedReflexLogger.add_checkpoint() call above is sufficient
 
+            # BAYESIAN BELIEF UPDATE: Update AI calibration priors based on PREFLIGHT → POSTFLIGHT deltas
+            # This enables the AI to learn from its own performance over time
+            belief_updates = {}
+            try:
+                if preflight_vectors:
+                    from empirica.core.bayesian_beliefs import BayesianBeliefManager
+
+                    db = SessionDatabase()
+                    belief_manager = BayesianBeliefManager(db)
+
+                    # Get cascade_id for this session
+                    cursor = db.conn.cursor()
+                    cursor.execute("""
+                        SELECT cascade_id FROM cascades
+                        WHERE session_id = ?
+                        ORDER BY started_at DESC LIMIT 1
+                    """, (session_id,))
+                    cascade_row = cursor.fetchone()
+                    cascade_id = cascade_row[0] if cascade_row else str(uuid.uuid4())
+
+                    # Update beliefs with PREFLIGHT → POSTFLIGHT comparison
+                    belief_updates = belief_manager.update_beliefs(
+                        cascade_id=cascade_id,
+                        session_id=session_id,
+                        preflight_vectors=preflight_vectors,
+                        postflight_vectors=vectors
+                    )
+
+                    if belief_updates:
+                        logger.debug(f"Updated Bayesian beliefs for {len(belief_updates)} vectors")
+
+                    db.close()
+            except Exception as e:
+                logger.debug(f"Bayesian belief update failed (non-fatal): {e}")
+
             # EPISTEMIC TRAJECTORY STORAGE: Store learning deltas to Qdrant (if available)
             trajectory_stored = False
             try:
@@ -867,12 +932,14 @@ def handle_postflight_submit_command(args):
                 "deltas": deltas,
                 "calibration_issues_detected": len(calibration_issues),
                 "calibration_issues": calibration_issues if calibration_issues else None,
+                "bayesian_beliefs_updated": len(belief_updates) if belief_updates else 0,
                 "auto_checkpoint_created": True,
                 "persisted": True,
                 "storage_layers": {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True
+                    "json_logs": True,
+                    "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False
                 }
             }
         except Exception as e:
