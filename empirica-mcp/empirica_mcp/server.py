@@ -558,6 +558,137 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
+        # ========== Human Copilot Tools (Route to CLI) ==========
+        # These tools enhance human oversight and collaboration
+
+        types.Tool(
+            name="monitor",
+            description="Real-time monitoring of AI work - shows stats, cost analysis, request history, adapter health. Essential for human oversight.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "cost": {"type": "boolean", "description": "Show cost analysis"},
+                    "history": {"type": "boolean", "description": "Show recent request history"},
+                    "health": {"type": "boolean", "description": "Include adapter health checks"},
+                    "project": {"type": "boolean", "description": "Show cost projections (with cost=true)"},
+                    "verbose": {"type": "boolean", "description": "Show detailed stats"}
+                },
+                "required": []
+            }
+        ),
+
+        types.Tool(
+            name="check_drift",
+            description="Detect epistemic drift - when AI confidence diverges from actual performance. Critical for trust calibration.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID to check for drift"},
+                    "trigger": {"type": "string", "enum": ["manual", "pre_summary", "post_summary"], "description": "When check is triggered"},
+                    "threshold": {"type": "number", "description": "Drift threshold (default: 0.2)"},
+                    "lookback": {"type": "integer", "description": "Number of checkpoints to analyze (default: 5)"},
+                    "cycle": {"type": "integer", "description": "Investigation cycle number (optional filter)"},
+                    "round": {"type": "integer", "description": "CHECK round number (optional filter)"}
+                },
+                "required": ["session_id"]
+            }
+        ),
+
+        types.Tool(
+            name="issue_list",
+            description="List auto-captured issues for human review - bugs, errors, warnings, TODOs. Filter by status, category, severity.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID to list issues for"},
+                    "status": {"type": "string", "enum": ["new", "investigating", "handoff", "resolved", "wontfix"], "description": "Filter by status"},
+                    "category": {"type": "string", "enum": ["bug", "error", "warning", "deprecation", "todo", "performance", "compatibility", "design", "other"], "description": "Filter by category"},
+                    "severity": {"type": "string", "enum": ["blocker", "high", "medium", "low"], "description": "Filter by severity"},
+                    "limit": {"type": "integer", "description": "Max issues to return (default: 100)"}
+                },
+                "required": ["session_id"]
+            }
+        ),
+
+        types.Tool(
+            name="issue_handoff",
+            description="Hand off an issue to another AI or human. Enables structured issue transfer between agents.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"},
+                    "issue_id": {"type": "string", "description": "Issue ID to hand off"},
+                    "assigned_to": {"type": "string", "description": "AI ID or name to assign this issue to"}
+                },
+                "required": ["session_id", "issue_id", "assigned_to"]
+            }
+        ),
+
+        types.Tool(
+            name="workspace_overview",
+            description="Multi-repo epistemic overview - shows project health, knowledge state, uncertainty across workspace.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "sort_by": {"type": "string", "enum": ["activity", "knowledge", "uncertainty", "name"], "description": "Sort projects by"},
+                    "filter": {"type": "string", "enum": ["active", "inactive", "complete"], "description": "Filter projects by status"},
+                    "verbose": {"type": "boolean", "description": "Show detailed info"}
+                },
+                "required": []
+            }
+        ),
+
+        types.Tool(
+            name="efficiency_report",
+            description="Get productivity metrics for session - learning velocity, CASCADE completeness, goal completion rate.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string", "description": "Session ID"}
+                },
+                "required": ["session_id"]
+            }
+        ),
+
+        types.Tool(
+            name="skill_suggest",
+            description="AI capability discovery - suggest relevant skills for a given task based on project context.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "task": {"type": "string", "description": "Task description to suggest skills for"},
+                    "project_id": {"type": "string", "description": "Project ID for context-aware suggestions"},
+                    "verbose": {"type": "boolean", "description": "Show detailed suggestions"}
+                },
+                "required": []
+            }
+        ),
+
+        types.Tool(
+            name="workspace_map",
+            description="Map workspace structure - discover repos, relationships, and cross-repo dependencies.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "verbose": {"type": "boolean", "description": "Show detailed info"}
+                },
+                "required": []
+            }
+        ),
+
+        types.Tool(
+            name="unknown_resolve",
+            description="Resolve a logged unknown - close investigation loops when answers are found.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "unknown_id": {"type": "string", "description": "Unknown UUID to resolve"},
+                    "resolved_by": {"type": "string", "description": "How was this unknown resolved?"}
+                },
+                "required": ["unknown_id", "resolved_by"]
+            }
+        ),
+
         # ========== Checkpoint Tools (Route to CLI) ==========
 
         types.Tool(
@@ -1533,6 +1664,17 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         # Epistemic Monitoring
         "epistemics_list": ["epistemics-list"],
         "epistemics_show": ["epistemics-show"],
+
+        # Human Copilot Tools
+        "monitor": ["monitor"],
+        "check_drift": ["check-drift"],
+        "issue_list": ["issue-list"],
+        "issue_handoff": ["issue-handoff"],
+        "workspace_overview": ["workspace-overview"],
+        "efficiency_report": ["efficiency-report"],
+        "skill_suggest": ["skill-suggest"],
+        "workspace_map": ["workspace-map"],
+        "unknown_resolve": ["unknown-resolve"],
     }
     
     # Commands that take positional arguments (not flags)
@@ -1568,6 +1710,12 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "doc_path": "doc-path",  # MCP uses doc_path, CLI uses doc-path (for refdoc-add)
         "doc_type": "doc-type",  # MCP uses doc_type, CLI uses doc-type (for refdoc-add)
         "why_failed": "why-failed",  # MCP uses why_failed, CLI uses why-failed (for deadend-log)
+        # Human copilot tools
+        "sort_by": "sort-by",  # MCP uses sort_by, CLI uses sort-by (for workspace-overview)
+        "assigned_to": "assigned-to",  # MCP uses assigned_to, CLI uses assigned-to (for issue-handoff)
+        "issue_id": "issue-id",  # MCP uses issue_id, CLI uses issue-id
+        "unknown_id": "unknown-id",  # MCP uses unknown_id, CLI uses unknown-id
+        "resolved_by": "resolved-by",  # MCP uses resolved_by, CLI uses resolved-by
     }
     
     # Arguments to skip per command (not supported by CLI)
@@ -1623,7 +1771,11 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "handoff-create", "handoff-query",
         "project-bootstrap", "finding-log", "unknown-log", "deadend-log", "refdoc-add",
         "memory-compact",
-        "epistemics-list", "epistemics-show"
+        "epistemics-list", "epistemics-show",
+        # Human copilot tools
+        "check-drift", "issue-list", "issue-handoff",
+        "workspace-overview", "efficiency-report", "skill-suggest",
+        "workspace-map", "unknown-resolve"
     }
 
     cli_command = tool_map.get(tool_name, [tool_name])[0]

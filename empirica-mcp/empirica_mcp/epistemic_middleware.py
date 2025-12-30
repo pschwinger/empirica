@@ -142,6 +142,16 @@ class EpistemicMiddleware:
             # Epistemic monitoring
             'epistemics_list',
             'epistemics_show',
+            # Human copilot tools
+            'monitor',
+            'check_drift',
+            'issue_list',
+            'issue_handoff',
+            'workspace_overview',
+            'efficiency_report',
+            'skill_suggest',
+            'workspace_map',
+            'unknown_resolve',
         }
         
         # Skip epistemic for safe tools - they have well-defined semantics
