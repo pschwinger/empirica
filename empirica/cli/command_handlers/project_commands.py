@@ -1153,8 +1153,11 @@ def handle_finding_log_command(args):
         else:
             # Human-readable output (legacy)
             print(f"✅ Finding logged successfully")
-            print(f"   Finding ID: {finding_id}")
-            print(f"   Project: {project_id[:8]}...")
+            if finding_ids:
+                for scope, fid in finding_ids:
+                    print(f"   Finding ID ({scope}): {fid}")
+            if project_id:
+                print(f"   Project: {project_id[:8]}...")
 
         return 0  # Success
 
@@ -1268,22 +1271,45 @@ def handle_unknown_log_command(args):
             if active_goal:
                 goal_id = active_goal['id']
 
-        unknown_id = db.log_unknown(
-            project_id=project_id,
-            session_id=session_id,
-            unknown=unknown,
-            goal_id=goal_id,
-            subtask_id=subtask_id,
-            subject=subject,
-            impact=impact
-        )
+        # DUAL-SCOPE LOGIC: Infer scope and log to appropriate table(s)
+        explicit_scope = config_data.get('scope') if config_data else getattr(args, 'scope', None)
+        scope = infer_scope(session_id, project_id, explicit_scope)
+        
+        unknown_ids = []
+        
+        if scope in ['session', 'both']:
+            # Log to session_unknowns
+            unknown_id_session = db.log_session_unknown(
+                session_id=session_id,
+                unknown=unknown,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            unknown_ids.append(('session', unknown_id_session))
+        
+        if scope in ['project', 'both']:
+            # Log to project_unknowns (legacy table)
+            unknown_id_project = db.log_unknown(
+                project_id=project_id,
+                session_id=session_id,
+                unknown=unknown,
+                goal_id=goal_id,
+                subtask_id=subtask_id,
+                subject=subject,
+                impact=impact
+            )
+            unknown_ids.append(('project', unknown_id_project))
+        
         db.close()
 
         result = {
             "ok": True,
-            "unknown_id": unknown_id,
-            "project_id": project_id,
-            "message": "Unknown logged successfully"
+            "scope": scope,
+            "unknowns": [{"scope": s, "unknown_id": uid} for s, uid in unknown_ids],
+            "project_id": project_id if project_id else None,
+            "message": f"Unknown logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
         if output_format == 'json':
