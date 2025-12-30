@@ -112,35 +112,47 @@ def search(project_id: str, query_text: str, kind: str = "all", limit: int = 5) 
     qvec = get_embedding(query_text)
     results: Dict[str, List[Dict]] = {}
 
-    # Prefer native search if available
+    # Use query_points API (works with both local and server clients)
     try:
-        if hasattr(client, 'search') and callable(getattr(client, 'search')):
-            if kind in ("all", "docs"):
-                rd = client.search(collection_name=_docs_collection(project_id), query_vector=qvec, limit=limit, with_payload=True)
-                results["docs"] = [
-                    {
-                        "score": getattr(r, 'score', 0.0) or 0.0,
-                        "doc_path": (r.payload or {}).get("doc_path"),
-                        "tags": (r.payload or {}).get("tags"),
-                        "concepts": (r.payload or {}).get("concepts"),
-                    }
-                    for r in rd
-                ]
-            if kind in ("all", "memory"):
-                rm = client.search(collection_name=_memory_collection(project_id), query_vector=qvec, limit=limit, with_payload=True)
-                results["memory"] = [
-                    {
-                        "score": getattr(r, 'score', 0.0) or 0.0,
-                        "type": (r.payload or {}).get("type"),
-                    }
-                    for r in rm
-                ]
-            return results
-    except Exception:
-        # Fall back to REST
+        if kind in ("all", "docs"):
+            rd = client.query_points(
+                collection_name=_docs_collection(project_id),
+                query=qvec,
+                limit=limit,
+                with_payload=True
+            )
+            results["docs"] = [
+                {
+                    "score": getattr(r, 'score', 0.0) or 0.0,
+                    "doc_path": (r.payload or {}).get("doc_path"),
+                    "tags": (r.payload or {}).get("tags"),
+                    "concepts": (r.payload or {}).get("concepts"),
+                }
+                for r in rd.points
+            ]
+        if kind in ("all", "memory"):
+            rm = client.query_points(
+                collection_name=_memory_collection(project_id),
+                query=qvec,
+                limit=limit,
+                with_payload=True
+            )
+            results["memory"] = [
+                {
+                    "score": getattr(r, 'score', 0.0) or 0.0,
+                    "type": (r.payload or {}).get("type"),
+                    "text": (r.payload or {}).get("text"),
+                    "session_id": (r.payload or {}).get("session_id"),
+                    "goal_id": (r.payload or {}).get("goal_id"),
+                }
+                for r in rm.points
+            ]
+        return results
+    except Exception as e:
+        # Fall back to REST if query_points fails
         pass
 
-    # REST fallback
+    # REST fallback (for remote Qdrant server)
     if kind in ("all", "docs"):
         rd = _rest_search(_docs_collection(project_id), qvec, limit)
         results["docs"] = [
@@ -227,21 +239,19 @@ def search_epistemics(
         pass
     
     try:
-        if hasattr(client, 'search') and callable(getattr(client, 'search')):
-            results = client.search(
-                collection_name=coll,
-                query_vector=qvec,
-                limit=limit,
-                with_payload=True,
-                query_filter=query_filter
-            )
-            return [
-                {
-                    "score": getattr(r, 'score', 0.0) or 0.0,
-                    **(r.payload or {})
-                }
-                for r in results
-            ]
+        results = client.query_points(
+            collection_name=coll,
+            query=qvec,
+            limit=limit,
+            with_payload=True
+        )
+        return [
+            {
+                "score": getattr(r, 'score', 0.0) or 0.0,
+                **(r.payload or {})
+            }
+            for r in results.points
+        ]
     except Exception:
         # Fall back to REST if needed
         pass
