@@ -261,7 +261,7 @@ def handle_preflight_command(args):
 
         checkpoint_id = logger_instance.add_checkpoint(
             phase="PREFLIGHT",
-            round_num=1,
+            # round auto-increments
             vectors=vectors,
             metadata={
                 "task": prompt,
@@ -295,7 +295,7 @@ def handle_preflight_command(args):
                 ai_id=ai_id,
                 phase='PREFLIGHT',
                 vectors=vectors,
-                round_num=1,
+                # round auto-increments
                 metadata={
                     'recommended_action': recommendation['action'],
                     'cascade_id': cascade_id

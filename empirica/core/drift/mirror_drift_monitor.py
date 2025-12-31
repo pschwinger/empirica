@@ -106,23 +106,20 @@ class MirrorDriftMonitor:
     def _load_recent_checkpoints(self, session_id: str, count: int) -> List[Dict]:
         """
         Load recent checkpoints from Git notes
-        
+
         Args:
             session_id: Session UUID
             count: Number of recent checkpoints to load
-        
+
         Returns:
             List of checkpoint dicts with vectors
         """
         try:
-            from empirica.core.canonical.empirica_git.checkpoint_manager import CheckpointManager
-            
-            manager = CheckpointManager()
-            checkpoints = manager.load_recent_checkpoints(
-                session_id=session_id,
-                count=count
-            )
-            
+            from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+
+            git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+            checkpoints = git_logger.list_checkpoints(limit=count)
+
             return checkpoints
         except Exception as e:
             logger.warning(f"Could not load checkpoints: {e}")

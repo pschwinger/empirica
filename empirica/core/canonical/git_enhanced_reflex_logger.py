@@ -148,11 +148,29 @@ class GitEnhancedReflexLogger:
             logger.debug(f"Git availability check failed: {e}")
             return False
     
+    def _get_next_round(self, phase: str) -> int:
+        """Get next round number for a phase by checking existing reflexes."""
+        try:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            cursor = db.conn.cursor()
+            cursor.execute('''
+                SELECT MAX(round) FROM reflexes
+                WHERE session_id = ? AND phase = ?
+            ''', (self.session_id, phase))
+            row = cursor.fetchone()
+            db.close()
+            max_round = row[0] if row and row[0] is not None else 0
+            return max_round + 1
+        except Exception as e:
+            logger.debug(f"Failed to get next round: {e}")
+            return 1
+
     def add_checkpoint(
         self,
         phase: str,
-        round_num: int,
         vectors: Dict[str, float],
+        round_num: int = None,
         metadata: Optional[Dict[str, Any]] = None,
         epistemic_tags: Optional[Dict[str, Any]] = None,
         noema: Optional[Dict[str, Any]] = None
@@ -177,6 +195,10 @@ class GitEnhancedReflexLogger:
             Git commit SHA if signed, note SHA if unsigned, None if failed
         """
         self.current_phase = phase
+
+        # Auto-increment round if not specified
+        if round_num is None:
+            round_num = self._get_next_round(phase)
         self.current_round = round_num
 
         # Create compressed checkpoint

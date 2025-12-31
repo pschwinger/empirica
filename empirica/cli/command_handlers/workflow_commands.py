@@ -87,10 +87,9 @@ def handle_preflight_submit_command(args):
                 enable_git_notes=True  # Enable git notes for cross-AI features
             )
 
-            # Add checkpoint - this writes to ALL 3 storage layers
+            # Add checkpoint - this writes to ALL 3 storage layers (round auto-increments)
             checkpoint_id = logger_instance.add_checkpoint(
                 phase="PREFLIGHT",
-                round_num=1,
                 vectors=vectors,
                 metadata={
                     "reasoning": reasoning,
@@ -851,10 +850,9 @@ def handle_postflight_submit_command(args):
                 logger.debug(f"Delta calculation failed: {e}")
                 # Delta calculation is optional
 
-            # Add checkpoint - this writes to ALL 3 storage layers atomically
+            # Add checkpoint - this writes to ALL 3 storage layers atomically (round auto-increments)
             checkpoint_id = logger_instance.add_checkpoint(
                 phase="POSTFLIGHT",
-                round_num=1,
                 vectors=vectors,
                 metadata={
                     "reasoning": reasoning,

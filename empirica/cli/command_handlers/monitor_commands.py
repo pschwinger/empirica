@@ -902,9 +902,10 @@ def handle_check_drift_command(args):
             print(f"   Scope Depth: {scope_depth:.2f} ({depth_label})")
         print("=" * 70)
 
-        # Load current epistemic state from latest checkpoint
-        manager = CheckpointManager()
-        checkpoints = manager.load_recent_checkpoints(session_id=session_id, count=1)
+        # Load current epistemic state from latest checkpoint (using git notes, not commit history)
+        from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
+        git_logger = GitEnhancedReflexLogger(session_id=session_id, enable_git_notes=True)
+        checkpoints = git_logger.list_checkpoints(limit=lookback)
 
         if not checkpoints:
             print("\n⚠️  No checkpoints found for session")
