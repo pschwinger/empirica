@@ -268,7 +268,7 @@ __all__ = [
     # Vision commands
     'handle_vision_analyze',
     'handle_vision_log',
-    '_add_vision_parsers',
+    # '_add_vision_parsers',  # Internal - not exported
     
     # Epistemic trajectory commands
     'handle_epistemics_search_command',
