@@ -283,46 +283,65 @@ def search(project_id: str, query_text: str, kind: str = "all", limit: int = 5) 
         return empty_result
 
     results: Dict[str, List[Dict]] = {}
+    client = _get_qdrant_client()
 
-    # Try query_points API (works with both local and server clients)
-    try:
-        client = _get_qdrant_client()
-        if kind in ("all", "docs"):
-            rd = client.query_points(
-                collection_name=_docs_collection(project_id),
-                query=qvec,
-                limit=limit,
-                with_payload=True
-            )
-            results["docs"] = [
-                {
-                    "score": getattr(r, 'score', 0.0) or 0.0,
-                    "doc_path": (r.payload or {}).get("doc_path"),
-                    "tags": (r.payload or {}).get("tags"),
-                    "concepts": (r.payload or {}).get("concepts"),
-                }
-                for r in rd.points
-            ]
-        if kind in ("all", "memory"):
-            rm = client.query_points(
-                collection_name=_memory_collection(project_id),
-                query=qvec,
-                limit=limit,
-                with_payload=True
-            )
-            results["memory"] = [
-                {
-                    "score": getattr(r, 'score', 0.0) or 0.0,
-                    "type": (r.payload or {}).get("type"),
-                    "text": (r.payload or {}).get("text"),
-                    "session_id": (r.payload or {}).get("session_id"),
-                    "goal_id": (r.payload or {}).get("goal_id"),
-                }
-                for r in rm.points
-            ]
+    # Query each collection independently (so one failure doesn't block the other)
+    if kind in ("all", "docs"):
+        try:
+            docs_coll = _docs_collection(project_id)
+            if client.collection_exists(docs_coll):
+                rd = client.query_points(
+                    collection_name=docs_coll,
+                    query=qvec,
+                    limit=limit,
+                    with_payload=True
+                )
+                results["docs"] = [
+                    {
+                        "score": getattr(r, 'score', 0.0) or 0.0,
+                        "doc_path": (r.payload or {}).get("doc_path"),
+                        "tags": (r.payload or {}).get("tags"),
+                        "concepts": (r.payload or {}).get("concepts"),
+                    }
+                    for r in rd.points
+                ]
+            else:
+                results["docs"] = []
+        except Exception as e:
+            logger.debug(f"docs query failed: {e}")
+            results["docs"] = []
+
+    if kind in ("all", "memory"):
+        try:
+            mem_coll = _memory_collection(project_id)
+            if client.collection_exists(mem_coll):
+                rm = client.query_points(
+                    collection_name=mem_coll,
+                    query=qvec,
+                    limit=limit,
+                    with_payload=True
+                )
+                results["memory"] = [
+                    {
+                        "score": getattr(r, 'score', 0.0) or 0.0,
+                        "type": (r.payload or {}).get("type"),
+                        "text": (r.payload or {}).get("text"),
+                        "session_id": (r.payload or {}).get("session_id"),
+                        "goal_id": (r.payload or {}).get("goal_id"),
+                    }
+                    for r in rm.points
+                ]
+            else:
+                results["memory"] = []
+        except Exception as e:
+            logger.debug(f"memory query failed: {e}")
+            results["memory"] = []
+
+    if results:
         return results
-    except Exception as e:
-        logger.debug(f"query_points failed, trying REST: {e}")
+
+    # REST fallback only if client queries produced nothing
+    logger.debug("Trying REST fallback for search")
 
     # REST fallback (for remote Qdrant server)
     try:

@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """
-Empirica PostCompact Hook - Ground Truth Re-Assessment
+Empirica PostCompact Hook - Epistemic CHECK Gate
 
 After memory compaction, the AI has only a summary - not real knowledge.
-This hook injects DYNAMIC context and triggers a PREFLIGHT re-assessment
-to establish genuine epistemic ground truth.
+This hook injects DYNAMIC context and triggers a CHECK validation gate
+to determine whether the AI can proceed or needs to investigate more.
 
 Key insight: The AI's pre-compact vectors are meaningless post-compact.
-The AI must RE-ASSESS what it actually knows given the evidence.
+CHECK (not PREFLIGHT) is the right tool because:
+- PREFLIGHT = session start baseline (already exists, shouldn't overwrite)
+- CHECK = mid-session validation gate (proceed or investigate?)
+
+The original session PREFLIGHT remains the true baseline for learning measurement.
 """
 
 import json
@@ -48,8 +52,8 @@ def main():
     # Load DYNAMIC context - only what's relevant for re-grounding
     dynamic_context = _load_dynamic_context(empirica_session, ai_id, pre_snapshot)
 
-    # Generate the PREFLIGHT re-assessment prompt
-    preflight_prompt = _generate_preflight_prompt(
+    # Generate the CHECK gate prompt (not PREFLIGHT - session already has baseline)
+    check_prompt = _generate_check_prompt(
         pre_vectors=pre_vectors,
         pre_reasoning=pre_reasoning,
         dynamic_context=dynamic_context
@@ -63,11 +67,11 @@ def main():
     output = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": preflight_prompt
+            "additionalContext": check_prompt
         },
         # Additional metadata (not injected, but useful for debugging)
         "empirica_session_id": empirica_session,
-        "action_required": "PREFLIGHT_REASSESS",
+        "action_required": "CHECK_GATE",
         "pre_compact_state": {
             "vectors": pre_vectors,
             "reasoning": pre_reasoning,
@@ -218,12 +222,14 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
         }
 
 
-def _generate_preflight_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_context: dict) -> str:
+def _generate_check_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_context: dict) -> str:
     """
-    Generate a PREFLIGHT prompt that triggers genuine re-assessment.
+    Generate a CHECK gate prompt for post-compact validation.
 
-    This is the key innovation: instead of just loading data, we prompt
-    the AI to actively re-assess what it knows given the evidence.
+    CHECK (not PREFLIGHT) is correct because:
+    - Session already has a PREFLIGHT baseline from start
+    - We need to GATE proceeding, not establish a new baseline
+    - CHECK returns proceed/investigate decision
     """
     goals_text = ""
     if dynamic_context.get("active_goals"):
@@ -264,13 +270,15 @@ def _generate_preflight_prompt(pre_vectors: dict, pre_reasoning: str, dynamic_co
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
 
+    session_id = dynamic_context.get('session_context', {}).get('session_id', 'unknown')
+
     prompt = f"""
-## POST-COMPACT GROUND TRUTH RE-ASSESSMENT
+## POST-COMPACT CHECK GATE
 
 Your context was just compacted. Your previous vectors (know={pre_know}, uncertainty={pre_unc})
 are NO LONGER VALID - they reflected knowledge you had in full context.
 
-**You now have only a summary. You must RE-ASSESS what you actually know.**
+**You now have only a summary. Run CHECK to validate readiness before proceeding.**
 
 ### Evidence from Database (Ground Truth):
 
@@ -286,27 +294,46 @@ are NO LONGER VALID - they reflected knowledge you had in full context.
 **Dead Ends (approaches that failed):**
 {dead_ends_text}
 
-### Required Action: Run PREFLIGHT
+### Step 1: Load Context (Recommended)
 
-Assess your ACTUAL epistemic state given ONLY what you can see above:
+Before CHECK, recover context via bootstrap and/or semantic search:
 
 ```bash
-empirica preflight-submit - << 'EOF'
+# Load project context (depth scales with uncertainty)
+empirica project-bootstrap --session-id {session_id} --output json
+
+# Semantic search for specific topics (if qdrant-client installed)
+empirica project-search --query "<your current task>" --output json
+```
+
+### Step 2: Run CHECK Gate
+
+After loading context, validate readiness to proceed:
+
+```bash
+empirica check-submit - << 'EOF'
 {{
-  "session_id": "{dynamic_context.get('session_context', {}).get('session_id', 'unknown')}",
+  "session_id": "{session_id}",
+  "action_description": "<what you intend to do next>",
   "vectors": {{
-    "know": <0.0-1.0: What do you ACTUALLY know from the evidence above?>,
-    "uncertainty": <0.0-1.0: How uncertain are you given limited context?>,
-    "context": <0.0-1.0: How well do you understand the current state?>,
-    "completion": <0.0-1.0: How complete is your understanding?>
+    "know": <0.0-1.0: What do you ACTUALLY know now?>,
+    "uncertainty": <0.0-1.0: How uncertain are you?>,
+    "context": <0.0-1.0: How well do you understand current state?>,
+    "scope": <0.0-1.0: How broad is the intended action?>
   }},
-  "reasoning": "Post-compact re-assessment: <explain what you know and don't know>"
+  "reasoning": "Post-compact assessment: <explain current epistemic state>"
 }}
 EOF
 ```
 
+### Step 3: Follow CHECK Decision
+
+CHECK returns one of:
+- **"proceed"** → You have sufficient confidence. Continue with work.
+- **"investigate"** → Confidence too low. Load more context, read files, then CHECK again.
+
 **Key principle:** Be HONEST about reduced knowledge. Post-compact know should typically be
-LOWER than pre-compact because you've lost detailed context. Uncertainty should be HIGHER.
+LOWER than pre-compact. Do NOT proceed until CHECK returns "proceed".
 """
     return prompt
 
@@ -350,22 +377,23 @@ def _print_user_message(pre_vectors: dict, dynamic_context: dict, potential_drif
     unknowns_count = len(dynamic_context.get('open_unknowns', []))
 
     print(f"""
-🔄 Empirica: Post-Compact Ground Truth
+🔄 Empirica: Post-Compact CHECK Gate
 
 📊 Pre-Compact State (NOW INVALID):
    know={pre_know}, uncertainty={pre_unc}
 
 ⚠️  These vectors reflected FULL context knowledge.
-   You now have only a summary - RE-ASSESS required.
+   You now have only a summary.
 
 📚 Dynamic Context Loaded:
    Active Goals: {goals_count}
    Recent Findings: {findings_count}
    Open Unknowns: {unknowns_count}
 
-🎯 ACTION REQUIRED: Run PREFLIGHT
-   Assess what you ACTUALLY know from the evidence above.
-   Be honest - post-compact know is typically LOWER.
+🎯 ACTION REQUIRED:
+   1. Load context: empirica project-bootstrap --session-id <ID>
+   2. Run CHECK: empirica check-submit (with honest assessment)
+   3. Follow decision: "proceed" or "investigate"
 """, file=sys.stderr)
 
 
