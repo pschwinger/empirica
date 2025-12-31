@@ -13,6 +13,51 @@ import os
 from pathlib import Path
 from datetime import datetime
 
+
+def find_project_root() -> Path:
+    """
+    Find the Empirica project root by searching for .empirica/ directory with valid database.
+
+    Search order:
+    1. EMPIRICA_WORKSPACE_ROOT environment variable
+    2. Known development paths (prioritized to avoid polluted temp dirs)
+    3. Search upward from current directory
+    4. Fallback to current directory
+    """
+    def has_valid_db(path: Path) -> bool:
+        """Check if path has valid Empirica database"""
+        db_path = path / '.empirica' / 'sessions' / 'sessions.db'
+        return db_path.exists() and db_path.stat().st_size > 0
+
+    # 1. Check environment variable
+    if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
+        workspace_path = Path(workspace_root).expanduser().resolve()
+        if has_valid_db(workspace_path):
+            return workspace_path
+
+    # 2. Try known development paths FIRST (to avoid polluted temp dirs like /tmp/.empirica)
+    known_paths = [
+        Path.home() / 'empirical-ai' / 'empirica',
+        Path.home() / 'empirica',
+        Path('/workspace'),
+    ]
+    for path in known_paths:
+        if has_valid_db(path):
+            return path
+
+    # 3. Search upward from current directory (only if has valid DB)
+    current = Path.cwd()
+    for parent in [current] + list(current.parents):
+        if has_valid_db(parent):
+            return parent
+        # Stop at filesystem root
+        if parent == parent.parent:
+            break
+
+    # 4. Fallback to current directory
+    return Path.cwd()
+
+
 def main():
     # Read hook input from stdin (provided by Claude Code)
     hook_input = json.loads(sys.stdin.read())
@@ -20,10 +65,16 @@ def main():
     session_id = hook_input.get('session_id')
     trigger = hook_input.get('trigger', 'auto')  # 'auto' or 'manual'
 
+    # CRITICAL: Find and change to project root BEFORE importing empirica
+    # This ensures SessionDatabase uses the correct database path
+    project_root = find_project_root()
+    original_cwd = os.getcwd()
+    os.chdir(project_root)
+
     # Auto-detect latest Empirica session (no env var needed)
     empirica_session = None
     try:
-        # Import after subprocess to avoid circular imports
+        # Import after cwd change to use correct database
         sys.path.insert(0, str(Path.home() / 'empirical-ai' / 'empirica'))
         from empirica.utils.session_resolver import get_latest_session_id
 
