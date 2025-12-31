@@ -117,9 +117,7 @@ from .investigation_commands import (
     handle_investigate_merge_branches_command
 )
 from .performance_commands import handle_benchmark_command, handle_performance_command
-from .utility_commands import (
-    handle_goal_analysis_command
-)
+# handle_goal_analysis_command removed - was in noetic_praxic_commands (deprecated)
 from .ask_handler import handle_ask_command
 from .chat_handler import handle_chat_command
 from .dashboard import handle_dashboard_command
