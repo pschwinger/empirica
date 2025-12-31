@@ -1,7 +1,10 @@
 """
-Cascade Commands - CASCADE workflow (PREFLIGHT → CHECK → POSTFLIGHT)
+Noetic-Praxic Commands - NOETIC-PRAXIC workflow (PREFLIGHT → NOETIC → CHECK → PRAXIC → POSTFLIGHT)
 
-Handles core Empirica CASCADE epistemic workflow phases.
+Handles core Empirica epistemic workflow phases using the NOETIC-PRAXIC framework.
+NOETIC: Investigation/exploration (high entropy)
+PRAXIC: Execution/implementation (low entropy)
+CHECK: Epistemic validation gate between phases
 For LLM adapter routing, see modality_commands.py (experimental).
 """
 
@@ -12,7 +15,7 @@ import hashlib
 from datetime import datetime
 from ..cli_utils import print_component_status, handle_cli_error, format_uncertainty_output, parse_json_safely, print_header
 
-# Set up logging for cascade commands
+# Set up logging for noetic-praxic commands
 logger = logging.getLogger(__name__)
 
 

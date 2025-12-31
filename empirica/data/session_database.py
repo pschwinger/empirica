@@ -195,9 +195,7 @@ class SessionDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_start ON sessions(start_time)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cascades_session ON cascades(session_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_cascades_confidence ON cascades(final_confidence)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_divergence_cascade ON divergence_tracking(cascade_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_beliefs_cascade ON bayesian_beliefs(cascade_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tools_cascade ON investigation_tools(cascade_id)")
         # BEADS integration index (check if column exists first)
         cursor.execute("SELECT COUNT(*) FROM pragma_table_info('goals') WHERE name='beads_issue_id'")
         if cursor.fetchone()[0] > 0:
@@ -350,34 +348,6 @@ class SessionDatabase:
             metadata=metadata
         )
     
-    def log_divergence(self, cascade_id: str, turn_number: int, delegate: str, trustee: str,
-                      divergence_score: float, divergence_reason: str,
-                      synthesis_needed: bool, synthesis_data: Optional[Dict] = None):
-        """Track delegate vs trustee divergence"""
-        divergence_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO divergence_tracking (
-                divergence_id, cascade_id, turn_number,
-                delegate_perspective, trustee_perspective,
-                divergence_score, divergence_reason, synthesis_needed,
-                delegate_weight, trustee_weight, tension_acknowledged,
-                final_response, synthesis_strategy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            divergence_id, cascade_id, turn_number,
-            json.dumps(delegate), json.dumps(trustee),
-            divergence_score, divergence_reason, synthesis_needed,
-            synthesis_data.get('delegate_weight') if synthesis_data else None,
-            synthesis_data.get('trustee_weight') if synthesis_data else None,
-            synthesis_data.get('tension_acknowledged') if synthesis_data else None,
-            synthesis_data.get('final_response') if synthesis_data else None,
-            synthesis_data.get('strategy') if synthesis_data else None
-        ))
-        
-        self.conn.commit()
-    
     def log_bayesian_belief(self, cascade_id: str, vector_name: str, mean: float,
                            variance: float, evidence_count: int,
                            prior_mean: float, prior_variance: float):
@@ -398,29 +368,7 @@ class SessionDatabase:
         ))
         
         self.conn.commit()
-    
-    def log_tool_execution(self, cascade_id: str, round_number: int, tool_name: str,
-                          tool_purpose: str, target_vector: str, success: bool,
-                          confidence_gain: float, information: Dict,
-                          duration_ms: int):
-        """Track investigation tool usage"""
-        tool_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO investigation_tools (
-                tool_execution_id, cascade_id, round_number,
-                tool_name, tool_purpose, target_vector,
-                success, confidence_gain, information_gained, duration_ms
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            tool_id, cascade_id, round_number,
-            tool_name, tool_purpose, target_vector,
-            success, confidence_gain, json.dumps(information), duration_ms
-        ))
-        
-        self.conn.commit()
-    
+
     def get_session(self, session_id: str) -> Optional[Dict]:
         """Get session data (delegates to SessionRepository)"""
         return self.sessions.get_session(session_id)
@@ -526,99 +474,7 @@ class SessionDatabase:
             metadata=metadata,
             reasoning=learning_notes
         )
-    
-    def log_investigation_round(
-        self,
-        session_id: str,
-        cascade_id: Optional[str],
-        round_number: int,
-        tools_mentioned: Optional[str] = None,
-        findings: Optional[str] = None,
-        confidence_before: Optional[float] = None,
-        confidence_after: Optional[float] = None,
-        summary: Optional[str] = None
-    ) -> str:
-        """Log investigation round for transparency"""
-        log_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO investigation_logs (
-                log_id, session_id, cascade_id, round_number,
-                tools_mentioned, findings, confidence_before, confidence_after, summary
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            log_id, session_id, cascade_id, round_number,
-            tools_mentioned, findings, confidence_before, confidence_after, summary
-        ))
-        
-        self.conn.commit()
-        
-        # Export to reflex logs for dashboard
-        try:
-            export_to_reflex_logs(
-                session_id=session_id,
-                phase="investigate",
-                assessment_data={
-                    "log_id": log_id,
-                    "cascade_id": cascade_id,
-                    "round_number": round_number,
-                    "tools_mentioned": tools_mentioned,
-                    "findings": findings,
-                    "confidence_before": confidence_before,
-                    "confidence_after": confidence_after,
-                    "summary": summary or f"Investigation round {round_number}"
-                }
-            )
-        except Exception:
-            pass  # Silent fail - reflex export is not critical
-        
-        return log_id
-    
-    def log_act_phase(
-        self,
-        session_id: str,
-        cascade_id: Optional[str],
-        action_type: str,
-        action_rationale: Optional[str] = None,
-        final_confidence: Optional[float] = None,
-        goal_id: Optional[str] = None
-    ) -> str:
-        """Log ACT phase decision for transparency and audit trail"""
-        act_id = str(uuid.uuid4())
-        
-        cursor = self.conn.cursor()
-        cursor.execute("""
-            INSERT INTO act_logs (
-                act_id, session_id, cascade_id, action_type,
-                action_rationale, final_confidence, goal_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            act_id, session_id, cascade_id, action_type,
-            action_rationale, final_confidence, goal_id
-        ))
-        
-        self.conn.commit()
-        
-        # Export to reflex logs for dashboard
-        try:
-            export_to_reflex_logs(
-                session_id=session_id,
-                phase="act",
-                assessment_data={
-                    "act_id": act_id,
-                    "cascade_id": cascade_id,
-                    "action_type": action_type,
-                    "action_rationale": action_rationale,
-                    "final_confidence": final_confidence,
-                    "goal_id": goal_id
-                }
-            )
-        except Exception:
-            pass  # Silent fail - reflex export is not critical
-        
-        return act_id
-    
+
     def get_preflight_assessment(self, session_id: str) -> Optional[Dict]:
         """
         DEPRECATED: Use get_latest_vectors(session_id, phase='PREFLIGHT') instead.

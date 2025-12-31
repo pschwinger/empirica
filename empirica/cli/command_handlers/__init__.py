@@ -6,7 +6,7 @@ Organizes CLI command handlers by semantic function for maintainability.
 
 # Import all command handlers
 from .onboard import handle_onboard_command
-from .cascade_commands import (
+from .noetic_praxic_commands import (
     handle_preflight_command,
     handle_postflight_command,
     handle_workflow_command
