@@ -84,8 +84,8 @@ def generate_variant(core: str, model: str, config: dict, delta: str) -> str:
 
     # Update header
     variant = variant.replace(
-        "# Empirica System Prompt - Canonical Core v1.1.5",
-        f"# Empirica System Prompt - {model.upper()} v1.1.5"
+        "# Empirica System Prompt - Canonical Core v1.2.1",
+        f"# Empirica System Prompt - {model.upper()} v1.2.1"
     )
     variant = variant.replace(
         "**AI-Agnostic Core - All agents extend this**",

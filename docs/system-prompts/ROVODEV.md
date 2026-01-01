@@ -1,7 +1,7 @@
-# Empirica System Prompt - ROVO v1.1.5
+# Empirica System Prompt - ROVO v1.2.1
 
 **Model:** ROVO | **Generated:** 2026-01-01
-**Syncs with:** Empirica v1.1.5
+**Syncs with:** Empirica v1.2.1
 **Status:** AUTHORITATIVE
 
 ---
