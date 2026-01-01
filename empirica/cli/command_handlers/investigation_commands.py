@@ -490,3 +490,111 @@ def handle_investigate_merge_branches_command(args):
 
     except Exception as e:
         handle_cli_error(e, "Merge investigation branches", getattr(args, 'verbose', False))
+
+
+def handle_investigate_multi_command(args):
+    """
+    Multi-persona parallel investigation with epistemic auto-merge.
+
+    Spawns parallel epistemic agents with different persona priors,
+    then aggregates results using merge scoring.
+
+    Usage:
+        empirica investigate-multi --task "Review auth code" --personas security,ux --session-id <ID>
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        from empirica.core.agents import EpistemicAgentConfig, spawn_epistemic_agent
+        from empirica.core.persona import PersonaManager
+
+        session_id = args.session_id
+        task = args.task
+        personas_str = args.personas
+        context = getattr(args, 'context', None)
+        strategy = getattr(args, 'aggregate_strategy', 'epistemic-score')
+        output_format = getattr(args, 'output', 'human')
+
+        # Parse personas
+        persona_ids = [p.strip() for p in personas_str.split(',')]
+
+        # Load personas
+        manager = PersonaManager()
+        loaded_personas = {}
+        for pid in persona_ids:
+            try:
+                loaded_personas[pid] = manager.load_persona(pid)
+            except FileNotFoundError:
+                # Fall back to general persona with modified name
+                loaded_personas[pid] = None  # Will use default
+
+        # Spawn agents for each persona
+        db = SessionDatabase()
+        branches = {}
+
+        for pid in persona_ids:
+            config = EpistemicAgentConfig(
+                session_id=session_id,
+                task=task,
+                persona_id=pid,
+                persona=loaded_personas.get(pid),
+                investigation_path=f"multi-{pid}",
+                parent_context=context
+            )
+            result = spawn_epistemic_agent(config, execute_fn=None)
+            branches[pid] = {
+                "branch_id": result.branch_id,
+                "persona_id": pid,
+                "preflight_vectors": result.preflight_vectors,
+                "prompt": result.output
+            }
+
+        # Build response
+        response = {
+            "ok": True,
+            "session_id": session_id,
+            "task": task,
+            "personas": persona_ids,
+            "branches": branches,
+            "aggregate_strategy": strategy,
+            "next_steps": [
+                f"Execute each agent's prompt (see branches[persona_id].prompt)",
+                f"Report results: empirica agent-report --branch-id <ID> --postflight '<json>'",
+                f"Aggregate: empirica agent-aggregate --session-id {session_id}"
+            ]
+        }
+
+        db.close()
+
+        # Output
+        if output_format == 'json':
+            # Don't include full prompts in JSON output (too verbose)
+            json_response = {**response}
+            for pid in json_response['branches']:
+                json_response['branches'][pid]['prompt'] = f"[{len(branches[pid]['prompt'])} chars - use --output human to see]"
+            print(json.dumps(json_response, indent=2))
+        else:
+            print(f"✅ Multi-Persona Investigation Started")
+            print(f"   Task: {task}")
+            print(f"   Personas: {', '.join(persona_ids)}")
+            print(f"   Strategy: {strategy}")
+            print(f"\n📋 Branches Created:")
+            for pid, branch in branches.items():
+                print(f"\n   [{pid}] Branch: {branch['branch_id'][:8]}...")
+                print(f"   Priors: know={branch['preflight_vectors'].get('know', 0.5):.2f}, uncertainty={branch['preflight_vectors'].get('uncertainty', 0.5):.2f}")
+
+            print(f"\n📝 Next Steps:")
+            print(f"   1. Execute each agent prompt (shown below)")
+            print(f"   2. Report: empirica agent-report --branch-id <ID> --postflight '<json>'")
+            print(f"   3. Aggregate: empirica agent-aggregate --session-id {session_id}")
+
+            # Show prompts
+            for pid, branch in branches.items():
+                print(f"\n{'='*60}")
+                print(f"PROMPT FOR [{pid}] (branch: {branch['branch_id'][:8]}...)")
+                print(f"{'='*60}")
+                print(branch['prompt'][:1500] + "..." if len(branch['prompt']) > 1500 else branch['prompt'])
+
+        return 0
+
+    except Exception as e:
+        handle_cli_error(e, "Multi-persona investigation", getattr(args, 'verbose', False))

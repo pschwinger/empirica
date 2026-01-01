@@ -114,7 +114,8 @@ from .investigation_commands import (
     handle_analyze_command,
     handle_investigate_create_branch_command,
     handle_investigate_checkpoint_branch_command,
-    handle_investigate_merge_branches_command
+    handle_investigate_merge_branches_command,
+    handle_investigate_multi_command
 )
 from .performance_commands import handle_benchmark_command, handle_performance_command
 # handle_goal_analysis_command removed - was in noetic_praxic_commands (deprecated)
@@ -253,6 +254,7 @@ __all__ = [
     'handle_investigate_create_branch_command',
     'handle_investigate_checkpoint_branch_command',
     'handle_investigate_merge_branches_command',
+    'handle_investigate_multi_command',
 
     # Performance commands
     'handle_benchmark_command',

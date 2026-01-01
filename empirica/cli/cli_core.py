@@ -46,7 +46,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Handoffs': ['handoff-create', 'handoff-query'],
                     'Logging': ['finding-log', 'unknown-log', 'unknown-resolve', 'deadend-log', 'refdoc-add', 'mistake-log', 'mistake-query', 'act-log', 'investigate-log'],
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
-                    'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches'],
+                    'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches', 'investigate-multi'],
                     'Monitoring': ['monitor', 'check-drift', 'assess-state', 'trajectory-project', 'efficiency-report'],
                     'Skills': ['skill-suggest', 'skill-fetch'],
                     'Utilities': ['log-token-saving', 'config', 'performance'],
@@ -224,6 +224,7 @@ def main(args=None):
             'investigate-create-branch': handle_investigate_create_branch_command,
             'investigate-checkpoint-branch': handle_investigate_checkpoint_branch_command,
             'investigate-merge-branches': handle_investigate_merge_branches_command,
+            'investigate-multi': handle_investigate_multi_command,
             
             # Action commands
             'act-log': handle_act_log_command,
