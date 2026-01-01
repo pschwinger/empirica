@@ -488,7 +488,7 @@ class EpistemicHandoffReportGenerator:
             })
         
         # Extract from key findings (heuristic)
-        for finding in key_findings[:3]:  # Top 3 findings
+        for finding in (key_findings or [])[:3]:  # Top 3 findings
             if any(keyword in finding.lower() for keyword in ['learned', 'discovered', 'found', 'validated']):
                 gaps.append({
                     'gap': 'Investigation finding',
