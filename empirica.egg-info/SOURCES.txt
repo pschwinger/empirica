@@ -17,8 +17,7 @@ docs/architecture/README.md
 docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md
 docs/architecture/epistemic_vs_git_diff.svg
 docs/architecture/storage_architecture_flow.svg
-docs/system-prompts/CANONICAL_SYSTEM_PROMPT.md
-docs/system-prompts/CANONICAL_SYSTEM_PROMPT_V6.md
+docs/system-prompts/CANONICAL_CORE.md
 docs/system-prompts/CLAUDE.md
 docs/system-prompts/COPILOT_INSTRUCTIONS.md
 docs/system-prompts/CUSTOMIZATION_GUIDE.md
@@ -29,6 +28,7 @@ docs/system-prompts/QWEN.md
 docs/system-prompts/README.md
 docs/system-prompts/ROVODEV.md
 docs/system-prompts/instructions.md
+docs/system-prompts/model_deltas/claude.md
 empirica/__init__.py
 empirica-mcp/test_epistemic.py
 empirica-mcp/empirica_mcp/epistemic_middleware.py
