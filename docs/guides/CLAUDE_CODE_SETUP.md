@@ -117,9 +117,106 @@ EOF
 
 ---
 
-## Step 3: Add Memory Compact Hooks (Optional but Recommended)
+## Step 3: Add Statusline (Recommended)
 
-These hooks preserve your epistemic state when Claude Code compacts memory.
+The statusline shows real-time epistemic status in your Claude Code terminal.
+
+Add to `~/.claude/settings.json`:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 $(pip show empirica | grep Location | cut -d' ' -f2)/empirica/../scripts/statusline_empirica.py",
+    "refresh_ms": 5000
+  }
+}
+```
+
+Or if you installed from source:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 /path/to/empirica/scripts/statusline_empirica.py",
+    "refresh_ms": 5000
+  }
+}
+```
+
+**Display modes** (set via `EMPIRICA_STATUS_MODE` env var):
+- `basic`: Just confidence + phase
+- `default`: Full status with vectors (recommended)
+- `learning`: Focus on vector changes
+- `full`: Everything with raw values
+
+**Status indicators:**
+- `⚡82%` = confidence score
+- `NOETIC/PRAXIC` = cognitive phase
+- `K:85% U:15% C:90%` = know/uncertainty/context vectors
+- `✓ stable` / `⚠ drifting` = drift status
+
+---
+
+## Step 4: Install Memory Compact Plugin (Recommended)
+
+The plugin preserves epistemic state across memory compacts automatically.
+
+### Option A: Full Plugin (Recommended)
+
+1. **Copy plugin to Claude plugins directory:**
+```bash
+# From Empirica source
+cp -r /path/to/empirica/plugins/claude-code-integration ~/.claude/plugins/local/empirica-integration
+
+# Or if installed via pip, find the path:
+pip show empirica | grep Location
+# Then copy from that location
+```
+
+2. **Register local marketplace** (create `~/.claude/plugins/known_marketplaces.json`):
+```json
+{
+  "local": {
+    "source": {
+      "source": "directory",
+      "path": "~/.claude/plugins/local"
+    },
+    "installLocation": "~/.claude/plugins/local"
+  }
+}
+```
+
+3. **Add to installed plugins** (`~/.claude/plugins/installed_plugins.json`):
+```json
+{
+  "version": 2,
+  "plugins": {
+    "empirica-integration@local": [
+      {
+        "scope": "user",
+        "installPath": "~/.claude/plugins/local/empirica-integration",
+        "version": "1.0.0",
+        "isLocal": true
+      }
+    ]
+  }
+}
+```
+
+4. **Enable in settings** (`~/.claude/settings.json`):
+```json
+{
+  "enabledPlugins": {
+    "empirica-integration@local": true
+  }
+}
+```
+
+5. **Restart Claude Code**
+
+### Option B: Simple Shell Hooks (Lightweight Alternative)
+
+If you prefer minimal setup without the full plugin:
 
 ```bash
 mkdir -p ~/.claude/hooks
@@ -147,7 +244,7 @@ chmod +x ~/.claude/hooks/post-compact.sh
 
 ---
 
-## Step 4: Configure MCP Server (Optional)
+## Step 5: Configure MCP Server (Optional)
 
 If you also use Claude Desktop and want MCP tools:
 
@@ -167,13 +264,17 @@ Edit `~/.claude/claude_desktop_config.json`:
 
 ---
 
-## Step 5: Verify Setup
+## Step 6: Verify Setup
 
 ```bash
 # Test CLI
 empirica session-create --ai-id test-setup --output json
 
 # Should return JSON with session_id
+
+# Verify statusline (if configured)
+python3 /path/to/empirica/scripts/statusline_empirica.py
+# Should show: [empirica] ⚡82% │ NOETIC │ PREFLIGHT │ K:85% U:15% C:90% │ ✓ stable
 ```
 
 In Claude Code, ask:
@@ -195,6 +296,16 @@ source ~/.bashrc
 ### Claude doesn't know about Empirica
 - Check `~/.claude/CLAUDE.md` exists and has content
 - Restart Claude Code to reload system prompt
+
+### Statusline not showing
+- Check the path to `statusline_empirica.py` is correct
+- Verify: `python3 /path/to/empirica/scripts/statusline_empirica.py`
+- Check `~/.claude/settings.json` has valid JSON
+
+### Plugin hooks not running
+- Verify plugin is enabled: check `~/.claude/settings.json` → `enabledPlugins`
+- Check hook logs: `.empirica/ref-docs/pre_summary_*.json`
+- Ensure `EMPIRICA_AI_ID` env var matches your session's ai_id
 
 ### MCP server not working
 ```bash
