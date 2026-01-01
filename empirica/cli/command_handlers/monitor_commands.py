@@ -1422,5 +1422,132 @@ def handle_assess_state_command(args):
                 print(f"   Session:   {session_id}")
             print()
 
+        # TURTLE MODE: Recursive grounding check (Noetic Handshake)
+        if getattr(args, 'turtle', False):
+            _display_turtle_stack(vectors, session_id, prompt)
+
     except Exception as e:
         handle_cli_error(e, "Assess State", getattr(args, 'verbose', False))
+
+
+def _display_turtle_stack(vectors: dict, session_id: str = None, prompt: str = None):
+    """
+    Display recursive grounding stack trace (the Noetic Handshake).
+
+    Verifies observer stability before observing by checking grounding layers:
+    - Layer 0: User Intent (can we parse the request?)
+    - Layer 1: Noetic Grasp (do we understand the concept?)
+    - Layer 2: Praxic Path (can we execute?)
+    - Layer 3: Epistemic Safety (is uncertainty below threshold?)
+    """
+    print("\n" + "=" * 70)
+    print("🐢 TURTLE STACK REPORT (Recursive Grounding Check)")
+    print("=" * 70)
+
+    # Moon phase indicators based on confidence levels
+    def get_moon_phase(score: float) -> tuple:
+        """Return (emoji, status) based on score."""
+        if score >= 0.85:
+            return "🌕", "CRYSTALLINE"
+        elif score >= 0.70:
+            return "🌔", "SOLID"
+        elif score >= 0.50:
+            return "🌓", "EMERGENT"
+        elif score >= 0.30:
+            return "🌒", "FORMING"
+        else:
+            return "🌑", "DARK"
+
+    # Calculate layer scores from vectors
+    layers = []
+    safe_to_proceed = True
+
+    # Layer 0: User Intent (based on context + signal)
+    context = vectors.get('context', 0.5)
+    signal = vectors.get('signal', 0.5)
+    layer0_score = (context + signal) / 2
+    moon0, status0 = get_moon_phase(layer0_score)
+    layers.append({
+        'layer': 0,
+        'name': 'USER INTENT',
+        'score': layer0_score,
+        'moon': moon0,
+        'status': status0,
+        'detail': f"Context={context:.2f}, Signal={signal:.2f}"
+    })
+
+    # Layer 1: Noetic Grasp (based on know + clarity + coherence)
+    know = vectors.get('know', 0.5)
+    clarity = vectors.get('clarity', 0.5)
+    coherence = vectors.get('coherence', 0.5)
+    layer1_score = (know + clarity + coherence) / 3
+    moon1, status1 = get_moon_phase(layer1_score)
+    layers.append({
+        'layer': 1,
+        'name': 'NOETIC GRASP',
+        'score': layer1_score,
+        'moon': moon1,
+        'status': status1,
+        'detail': f"Know={know:.2f}, Clarity={clarity:.2f}, Coherence={coherence:.2f}"
+    })
+
+    # Layer 2: Praxic Path (based on do + state + change)
+    do = vectors.get('do', 0.5)
+    state = vectors.get('state', 0.5)
+    change = vectors.get('change', 0.5)
+    layer2_score = (do + state + change) / 3
+    moon2, status2 = get_moon_phase(layer2_score)
+    layers.append({
+        'layer': 2,
+        'name': 'PRAXIC PATH',
+        'score': layer2_score,
+        'moon': moon2,
+        'status': status2,
+        'detail': f"Do={do:.2f}, State={state:.2f}, Change={change:.2f}"
+    })
+
+    # Layer 3: Epistemic Safety (based on uncertainty + engagement + impact)
+    uncertainty = vectors.get('uncertainty', 0.5)
+    engagement = vectors.get('engagement', 0.5)
+    impact = vectors.get('impact', 0.5)
+    # For safety, LOW uncertainty is GOOD, so we invert it
+    safety_score = ((1 - uncertainty) + engagement + impact) / 3
+    moon3, status3 = get_moon_phase(safety_score)
+    layers.append({
+        'layer': 3,
+        'name': 'EPISTEMIC SAFETY',
+        'score': safety_score,
+        'moon': moon3,
+        'status': status3,
+        'detail': f"Uncertainty={uncertainty:.2f} (inverted), Engagement={engagement:.2f}"
+    })
+
+    # Display each layer
+    for layer in layers:
+        print(f"\n  🐢 [LAYER {layer['layer']}: {layer['name']}] -> {layer['moon']} {layer['status']}")
+        print(f"     Score: {layer['score']:.2f} | {layer['detail']}")
+
+        # Check for warnings
+        if layer['score'] < 0.50:
+            print(f"     ⚠️  Warning: {layer['name']} is below grounding threshold")
+            safe_to_proceed = False
+        elif layer['score'] < 0.70:
+            print(f"     ⚡ Caution: {layer['name']} may need investigation")
+
+    # Overall status
+    print("\n" + "-" * 70)
+    overall_score = sum(l['score'] for l in layers) / len(layers)
+    overall_moon, overall_status = get_moon_phase(overall_score)
+
+    if safe_to_proceed and overall_score >= 0.70:
+        print(f"STATUS: {overall_moon} [{overall_status}] - SAFE TO PROCEED")
+        print("        Observer is stable. Grounding verified.")
+    elif safe_to_proceed and overall_score >= 0.50:
+        print(f"STATUS: {overall_moon} [{overall_status}] - PROCEED WITH CAUTION")
+        print("        Observer is forming. Consider CHECK before praxic action.")
+    else:
+        print(f"STATUS: {overall_moon} [{overall_status}] - HALT RECOMMENDED")
+        print("        Observer is unstable. Run PREFLIGHT or investigate unknowns.")
+
+    print("=" * 70)
+    print()

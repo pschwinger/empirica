@@ -52,6 +52,8 @@ def add_monitor_parsers(subparsers):
     assess_state_parser.add_argument('--prompt', help='Self-assessment context/evidence (optional)')
     assess_state_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     assess_state_parser.add_argument('--verbose', action='store_true', help='Show detailed output')
+    assess_state_parser.add_argument('--turtle', action='store_true',
+        help='Recursive grounding check: verify observer stability before observing (Noetic Handshake)')
 
     # REMOVED: monitor-export, monitor-reset, monitor-cost
     # Use: monitor --export FILE, monitor --reset, monitor --cost
