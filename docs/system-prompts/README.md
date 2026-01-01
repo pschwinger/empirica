@@ -1,4 +1,4 @@
-# System Prompts - Architecture v1.2.1
+# System Prompts - Architecture v1.2.2
 
 **Multi-AI system prompt management for Empirica**
 
@@ -121,9 +121,9 @@ empirica deadend-log --approach "..." --why-failed "..."
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1.2.1 | 2026-01-01 | Canonical core + model deltas architecture |
+| v1.2.2 | 2026-01-01 | Canonical core + model deltas architecture |
 | v4.0 | 2025-12 | Single canonical prompt (deprecated) |
 
 ---
 
-**Syncs with:** Empirica v1.2.1
+**Syncs with:** Empirica v1.2.2
