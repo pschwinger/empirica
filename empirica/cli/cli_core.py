@@ -89,12 +89,14 @@ from .parsers import (
     add_edit_verification_parsers,
     add_issue_capture_parsers,
     add_architecture_parsers,
+    add_query_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
     handle_assess_compare_command,
     handle_assess_directory_command,
 )
+from .command_handlers.query_commands import handle_query_command
 
 
 def _get_version():
@@ -147,6 +149,7 @@ def create_argument_parser():
     add_edit_verification_parsers(subparsers)
     add_issue_capture_parsers(subparsers)
     add_architecture_parsers(subparsers)
+    add_query_parsers(subparsers)
 
     return parser
 
@@ -321,6 +324,9 @@ def main(args=None):
             'assess-component': handle_assess_component_command,
             'assess-compare': handle_assess_compare_command,
             'assess-directory': handle_assess_directory_command,
+
+            # Unified query command
+            'query': handle_query_command,
         }
         
         if parsed_args.command in command_handlers:
