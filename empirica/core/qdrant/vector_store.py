@@ -62,6 +62,16 @@ def _get_embedding_safe(text: str) -> Optional[List[float]]:
         return None
 
 
+def _get_vector_size() -> int:
+    """Get vector size from embeddings provider. Defaults to 1536 on error."""
+    try:
+        from .embeddings import get_vector_size
+        return get_vector_size()
+    except Exception as e:
+        logger.debug(f"Could not get vector size: {e}, defaulting to 1536")
+        return 1536
+
+
 def _get_qdrant_client():
     """Get Qdrant client with lazy imports."""
     QdrantClient, _, _, _ = _get_qdrant_imports()
@@ -98,9 +108,11 @@ def init_collections(project_id: str) -> bool:
     try:
         _, Distance, VectorParams, _ = _get_qdrant_imports()
         client = _get_qdrant_client()
+        vector_size = _get_vector_size()
         for name in (_docs_collection(project_id), _memory_collection(project_id), _epistemics_collection(project_id)):
             if not client.collection_exists(name):
-                client.create_collection(name, vectors_config=VectorParams(size=1536, distance=Distance.COSINE))
+                client.create_collection(name, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
+                logger.info(f"Created collection {name} with vector size {vector_size}")
         return True
     except Exception as e:
         logger.debug(f"Failed to init Qdrant collections: {e}")
@@ -139,7 +151,8 @@ def embed_single_memory_item(
 
         # Ensure collection exists
         if not client.collection_exists(coll):
-            client.create_collection(coll, vectors_config=VectorParams(size=1536, distance=Distance.COSINE))
+            vector_size = _get_vector_size()
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
 
         vector = _get_embedding_safe(text)
         if vector is None:
@@ -471,7 +484,9 @@ def init_global_collection() -> bool:
         client = _get_qdrant_client()
         coll = _global_learnings_collection()
         if not client.collection_exists(coll):
-            client.create_collection(coll, vectors_config=VectorParams(size=1536, distance=Distance.COSINE))
+            vector_size = _get_vector_size()
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
+            logger.info(f"Created global_learnings collection with vector size {vector_size}")
         return True
     except Exception as e:
         logger.debug(f"Failed to init global collection: {e}")
@@ -505,7 +520,8 @@ def embed_to_global(
 
         # Ensure collection exists
         if not client.collection_exists(coll):
-            client.create_collection(coll, vectors_config=VectorParams(size=1536, distance=Distance.COSINE))
+            vector_size = _get_vector_size()
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
 
         vector = _get_embedding_safe(text)
         if vector is None:
@@ -732,7 +748,8 @@ def embed_dead_end_with_branch_context(
 
         # Ensure collection exists
         if not client.collection_exists(coll):
-            client.create_collection(coll, vectors_config=VectorParams(size=1536, distance=Distance.COSINE))
+            vector_size = _get_vector_size()
+            client.create_collection(coll, vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE))
 
         # Rich text for embedding - captures what was tried and why it failed
         text = f"Dead end approach: {approach}\nWhy failed: {why_failed}"
@@ -860,3 +877,91 @@ def search_global_dead_ends(
         item_types=["dead_end"],
         limit=limit
     )
+
+
+# ============================================================================
+# COLLECTION MIGRATION - Recreate with correct dimensions
+# ============================================================================
+
+def recreate_collection(collection_name: str) -> bool:
+    """
+    Delete and recreate a collection with the current embeddings provider's dimensions.
+    Use when switching embedding providers (e.g., local hash -> Ollama).
+
+    WARNING: This deletes all data in the collection!
+
+    Returns True if successful.
+    """
+    if not _check_qdrant_available():
+        return False
+
+    try:
+        _, Distance, VectorParams, _ = _get_qdrant_imports()
+        client = _get_qdrant_client()
+        vector_size = _get_vector_size()
+
+        # Delete if exists
+        if client.collection_exists(collection_name):
+            client.delete_collection(collection_name)
+            logger.info(f"Deleted collection {collection_name}")
+
+        # Create with new dimensions
+        client.create_collection(
+            collection_name,
+            vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
+        )
+        logger.info(f"Created collection {collection_name} with {vector_size} dimensions")
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to recreate collection {collection_name}: {e}")
+        return False
+
+
+def recreate_project_collections(project_id: str) -> dict:
+    """
+    Recreate all collections for a project with current embeddings dimensions.
+
+    Returns dict with success status for each collection.
+    """
+    results = {}
+    for coll_fn in [_docs_collection, _memory_collection, _epistemics_collection]:
+        name = coll_fn(project_id)
+        results[name] = recreate_collection(name)
+    return results
+
+
+def recreate_global_collections() -> dict:
+    """
+    Recreate global collections (global_learnings, personas) with current dimensions.
+
+    Returns dict with success status for each collection.
+    """
+    results = {}
+    for name in ["global_learnings", "personas"]:
+        results[name] = recreate_collection(name)
+    return results
+
+
+def get_collection_info() -> List[dict]:
+    """
+    Get info about all Qdrant collections including dimensions and point counts.
+    Useful for diagnosing dimension mismatches.
+    """
+    if not _check_qdrant_available():
+        return []
+
+    try:
+        client = _get_qdrant_client()
+        collections = client.get_collections()
+        info = []
+        for c in collections.collections:
+            coll_info = client.get_collection(c.name)
+            info.append({
+                "name": c.name,
+                "dimensions": coll_info.config.params.vectors.size,
+                "points": coll_info.points_count,
+            })
+        return info
+    except Exception as e:
+        logger.warning(f"Failed to get collection info: {e}")
+        return []
