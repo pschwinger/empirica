@@ -260,15 +260,16 @@ reputation = reputation_seed + (Σ import_successes / Σ imports) × 0.5
 
 ## Evolution Roadmap
 
-### Tier 3: Completed (2026-01-02)
+### Tier 3: In Progress (2026-01-02)
 
 | Item | Status | Implementation |
 |------|--------|----------------|
-| Persona storage in Qdrant | Done | PersonaRegistry.register_agent() |
-| Bayesian beliefs logging | Done | Rovo - CHECK phase beliefs |
-| CHECK phase hooks | Done | Rovo - Python hook system |
-| Sentinel calibration | Done | Rovo - Confidence tracking |
-| Multi-persona orchestration | Done | investigate-multi |
+| Persona storage in Qdrant | ⚠️ Partial | PersonaRegistry exists, but collection not initialized. Pre-defined personas in `.empirica/personas/*.json` not embedded. |
+| Bayesian beliefs logging | ✅ Done | BayesianBeliefManager.update_belief() - CHECK/POSTFLIGHT |
+| CHECK phase hooks | ✅ Done | Python hook system |
+| Sentinel calibration | ✅ Done | Confidence tracking via calibration |
+| Multi-persona orchestration | ✅ Done | investigate-multi |
+| Winner→Extract→Embed flow | ❌ Not wired | `emerged_personas.py` exists but not connected to agent workflow |
 
 ### Tier 4: Sentinel Autonomy (Next)
 
