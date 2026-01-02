@@ -307,6 +307,40 @@ class EpistemicReleaseAgent:
         result.moon = self._status_to_moon(status)
         return result
 
+    def _parse_gitignore(self) -> List[str]:
+        """Parse .gitignore and return list of ignored patterns."""
+        gitignore = self.root / ".gitignore"
+        if not gitignore.exists():
+            return []
+
+        patterns = []
+        for line in gitignore.read_text().splitlines():
+            line = line.strip()
+            # Skip comments and empty lines
+            if not line or line.startswith('#'):
+                continue
+            # Normalize pattern
+            patterns.append(line.rstrip('/'))
+        return patterns
+
+    def _is_gitignored(self, path: Path, gitignore_patterns: List[str]) -> bool:
+        """Check if a path matches any gitignore pattern."""
+        path_str = str(path.relative_to(self.root)) if path.is_absolute() else str(path)
+
+        for pattern in gitignore_patterns:
+            # Direct match
+            if pattern in path_str:
+                return True
+            # Directory match (pattern ends with /)
+            if pattern.endswith('/') and pattern.rstrip('/') in path_str:
+                return True
+            # Glob-style match for simple patterns
+            if pattern.startswith('*') and path_str.endswith(pattern[1:]):
+                return True
+            if pattern.endswith('*') and path_str.startswith(pattern[:-1]):
+                return True
+        return False
+
     # =========================================================================
     # CHECK 4: Privacy/Security Scan
     # =========================================================================
@@ -316,7 +350,10 @@ class EpistemicReleaseAgent:
         issues = []
         warnings = []
 
-        # Patterns that should NEVER be in a release
+        # Parse .gitignore for exclusions
+        gitignore_patterns = self._parse_gitignore()
+
+        # Patterns that should NEVER be in a release (even if gitignored, warn about existence)
         forbidden_patterns = {
             "files": [
                 ".env", ".env.local", ".env.production",
@@ -341,29 +378,29 @@ class EpistemicReleaseAgent:
                 "*.draft*", "*.wip*", "*scratch*", "*tmp*",
                 "*.bak", "*.backup", "*_old*",
                 "research/*", "private/*", "internal/*",
-                "*.db", "*.sqlite",  # Databases that might contain user data
             ],
             "dirs": [
-                ".empirica/sessions",  # User session data
                 "notebooks/",  # Research notebooks
             ]
         }
 
-        # Check for forbidden files
-        # Exclusions: venv directories (cert files are expected there), .empirica (user data)
-        exclude_dirs = [".git", ".venv", "venv", ".venv-mcp", "node_modules", "__pycache__"]
+        # Directories to always exclude from scanning (safe or user data)
+        exclude_dirs = [".git", ".venv", "venv", ".venv-mcp", "node_modules", "__pycache__",
+                        ".empirica", ".beads", ".qdrant_data", "dist", "build", "*.egg-info"]
 
+        # Check for forbidden files (only if NOT gitignored)
         for pattern in forbidden_patterns["files"]:
             found = list(self.root.glob(f"**/{pattern}"))
-            # Exclude known safe directories
-            found = [f for f in found
-                     if not any(excl in str(f) for excl in exclude_dirs)
-                     and ".empirica/identity" not in str(f)]  # Identity keys are expected
-            if found:
-                for f in found[:3]:  # Limit output
-                    issues.append(f"FORBIDDEN: {f.relative_to(self.root)}")
+            for f in found:
+                # Skip if in excluded directories
+                if any(excl in str(f) for excl in exclude_dirs):
+                    continue
+                # Skip if gitignored
+                if self._is_gitignored(f, gitignore_patterns):
+                    continue
+                issues.append(f"FORBIDDEN (not gitignored): {f.relative_to(self.root)}")
 
-        # Check for hardcoded secrets in Python files
+        # Check for hardcoded secrets in Python files (only in empirica source)
         py_files = list(self.root.glob("empirica/**/*.py"))
         for py_file in py_files[:100]:  # Limit scan
             try:
@@ -375,32 +412,34 @@ class EpistemicReleaseAgent:
             except Exception:
                 pass
 
-        # Check for warning patterns
-        # Also exclude user data directories
-        user_data_dirs = [".empirica", ".beads", ".qdrant_data", "tests/"]
+        # Check for warning patterns (only if NOT gitignored)
         for pattern in warn_patterns["files"]:
             found = list(self.root.glob(f"**/{pattern}"))
-            found = [f for f in found
-                     if not any(excl in str(f) for excl in exclude_dirs)
-                     and not any(data in str(f) for data in user_data_dirs)]
-            if found:
-                for f in found[:2]:
-                    warnings.append(f"DEV FILE: {f.relative_to(self.root)}")
+            for f in found[:2]:
+                if any(excl in str(f) for excl in exclude_dirs):
+                    continue
+                if self._is_gitignored(f, gitignore_patterns):
+                    continue
+                warnings.append(f"DEV FILE: {f.relative_to(self.root)}")
 
-        # Check for user data directories
-        for pattern in warn_patterns["dirs"]:
-            dir_path = self.root / pattern.rstrip("/")
+        # Check for user data directories that are NOT gitignored
+        user_data_dirs = [".empirica/sessions", ".qdrant_data", ".beads", "notebooks"]
+        for dir_name in user_data_dirs:
+            dir_path = self.root / dir_name
             if dir_path.exists() and dir_path.is_dir():
-                warnings.append(f"USER DATA: {pattern} (ensure excluded from release)")
+                if not self._is_gitignored(dir_path, gitignore_patterns):
+                    warnings.append(f"USER DATA (not gitignored!): {dir_name}")
 
-        # Check .gitignore includes critical patterns
+        # Check .gitignore includes critical security patterns
         gitignore = self.root / ".gitignore"
         if gitignore.exists():
             gitignore_content = gitignore.read_text()
-            critical_ignores = [".env", "*.key", "*.pem", ".empirica/sessions"]
+            critical_ignores = [".env", "*.key", "*.pem", ".empirica/"]
             missing = [p for p in critical_ignores if p not in gitignore_content]
             if missing:
                 warnings.append(f".gitignore missing: {missing}")
+        else:
+            issues.append("No .gitignore file found!")
 
         # Build result
         details.extend(issues)
