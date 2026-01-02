@@ -48,7 +48,7 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Issue Capture': ['issue-list', 'issue-show', 'issue-handoff', 'issue-resolve', 'issue-export', 'issue-stats'],
                     'Investigation': ['investigate', 'investigate-create-branch', 'investigate-checkpoint-branch', 'investigate-merge-branches', 'investigate-multi'],
                     'Monitoring': ['monitor', 'check-drift', 'assess-state', 'trajectory-project', 'efficiency-report'],
-                    'Skills': ['skill-suggest', 'skill-fetch'],
+                    'Skills': ['skill-suggest', 'skill-fetch', 'skill-extract'],
                     'Utilities': ['log-token-saving', 'config', 'performance'],
                     'Vision': ['vision'],
                     'Epistemics': ['epistemics-list', 'epistemics-show'],
@@ -238,6 +238,7 @@ def main(args=None):
             # Skill commands
             'skill-suggest': handle_skill_suggest_command,
             'skill-fetch': handle_skill_fetch_command,
+            'skill-extract': handle_skill_extract_command,
             
             # Utility commands
             'log-token-saving': handle_log_token_saving,

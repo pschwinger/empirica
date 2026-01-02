@@ -102,6 +102,7 @@ from .doc_commands import (
 from .skill_commands import (
     handle_skill_suggest_command,
     handle_skill_fetch_command,
+    handle_skill_extract_command,
 )
 from .monitor_commands import (
     handle_monitor_command, handle_monitor_export_command,
@@ -237,7 +238,8 @@ __all__ = [
     'handle_doc_plan_suggest_command',
     'handle_skill_suggest_command',
     'handle_skill_fetch_command',
-    
+    'handle_skill_extract_command',
+
     # Monitor commands
     'handle_monitor_command',
     'handle_monitor_export_command',
