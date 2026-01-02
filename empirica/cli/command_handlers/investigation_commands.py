@@ -444,6 +444,7 @@ def handle_investigate_merge_branches_command(args):
 
         session_id = args.session_id
         investigation_round = int(getattr(args, 'round', 1) or 1)
+        tag_losers = getattr(args, 'tag_losers', False)
 
         db = SessionDatabase()
 
@@ -453,14 +454,75 @@ def handle_investigate_merge_branches_command(args):
             investigation_round=investigation_round
         )
 
-        db.close()
-
         if "error" in merge_result:
+            db.close()
             result = {
                 "ok": False,
                 "error": merge_result["error"]
             }
         else:
+            # Tag losing branches as dead ends if --tag-losers flag
+            dead_ends_logged = 0
+            dead_ends_embedded = 0
+            if tag_losers and merge_result.get("other_branches"):
+                winning_name = merge_result["winning_branch_name"]
+                winning_score = merge_result["winning_score"]
+                winning_branch_id = merge_result["winning_branch_id"]
+
+                # Get project_id for Qdrant embedding
+                project_id = None
+                try:
+                    cursor = db.conn.cursor()
+                    cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                    row = cursor.fetchone()
+                    if row:
+                        project_id = row[0]
+                except Exception:
+                    pass
+
+                for loser in merge_result["other_branches"]:
+                    loser_name = loser.get("branch_name", "unknown")
+                    loser_score = loser.get("score", 0)
+                    loser_branch_id = loser.get("branch_id")
+                    score_diff = winning_score - loser_score
+                    approach = f"Investigation branch: {loser_name}"
+                    why_failed = (f"Lost epistemic merge to {winning_name} (score diff: {score_diff:.4f}). "
+                                  f"Branch score: {loser_score:.4f} vs winner: {winning_score:.4f}")
+
+                    # Log as dead end to database
+                    dead_end_id = db.log_project_dead_end(
+                        project_id=None,  # Will be resolved from session
+                        session_id=session_id,
+                        approach=approach,
+                        why_failed=why_failed,
+                        goal_id=None,
+                        subtask_id=None
+                    )
+                    dead_ends_logged += 1
+
+                    # Also embed to Qdrant for similarity search
+                    if project_id:
+                        try:
+                            from empirica.core.qdrant.vector_store import embed_dead_end_with_branch_context
+                            embedded = embed_dead_end_with_branch_context(
+                                project_id=project_id,
+                                dead_end_id=str(dead_end_id) if dead_end_id else f"{session_id}_{loser_branch_id}",
+                                approach=approach,
+                                why_failed=why_failed,
+                                session_id=session_id,
+                                branch_id=loser_branch_id,
+                                winning_branch_id=winning_branch_id,
+                                score_diff=score_diff,
+                                preflight_vectors=loser.get("preflight_vectors"),
+                                postflight_vectors=loser.get("postflight_vectors")
+                            )
+                            if embedded:
+                                dead_ends_embedded += 1
+                        except ImportError:
+                            pass  # Qdrant not available
+
+            db.close()
+
             result = {
                 "ok": True,
                 "winning_branch_id": merge_result["winning_branch_id"],
@@ -469,7 +531,9 @@ def handle_investigate_merge_branches_command(args):
                 "merge_decision_id": merge_result["merge_decision_id"],
                 "other_branches": merge_result["other_branches"],
                 "rationale": merge_result["rationale"],
-                "message": f"Auto-merged {merge_result['winning_branch_name']} (score: {merge_result['winning_score']:.4f})"
+                "message": f"Auto-merged {merge_result['winning_branch_name']} (score: {merge_result['winning_score']:.4f})",
+                "dead_ends_logged": dead_ends_logged if tag_losers else None,
+                "dead_ends_embedded": dead_ends_embedded if tag_losers else None
             }
 
         # Format output
@@ -477,14 +541,17 @@ def handle_investigate_merge_branches_command(args):
             print(json.dumps(result, indent=2))
         else:
             if result.get("ok"):
-                print(f"✅ Epistemic Auto-Merge Complete")
+                print(f"Epistemic Auto-Merge Complete")
                 print(f"   Winner: {merge_result['winning_branch_name']}")
                 print(f"   Merge Score: {merge_result['winning_score']:.4f}")
                 print(f"   Decision ID: {merge_result['merge_decision_id'][:8]}...")
                 print(f"   Evaluated {len(merge_result['other_branches']) + 1} paths")
                 print(f"   Rationale: {merge_result['rationale']}")
+                if tag_losers and dead_ends_logged > 0:
+                    embedded_info = f" ({dead_ends_embedded} embedded to Qdrant)" if dead_ends_embedded > 0 else ""
+                    print(f"   Dead ends logged: {dead_ends_logged}{embedded_info}")
             else:
-                print(f"❌ Merge failed: {result.get('error')}")
+                print(f"Merge failed: {result.get('error')}")
 
         return result
 

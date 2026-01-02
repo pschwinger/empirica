@@ -134,6 +134,12 @@ from .epistemics_commands import (
     handle_epistemics_stats_command,
     handle_epistemics_list_command
 )
+from .sentinel_commands import (
+    handle_sentinel_orchestrate_command,
+    handle_sentinel_load_profile_command,
+    handle_sentinel_status_command,
+    handle_sentinel_check_command,
+)
 
 
 # Export all handlers
@@ -283,7 +289,13 @@ __all__ = [
     'handle_epistemics_search_command',
     'handle_epistemics_stats_command',
     'handle_epistemics_list_command',
-    
+
+    # Sentinel orchestration commands
+    'handle_sentinel_orchestrate_command',
+    'handle_sentinel_load_profile_command',
+    'handle_sentinel_status_command',
+    'handle_sentinel_check_command',
+
     # Session-end command
     # 'handle_session_end_command',  # removed - use handoff-create
 ]

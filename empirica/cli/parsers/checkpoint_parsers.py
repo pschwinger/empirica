@@ -256,6 +256,7 @@ def add_checkpoint_parsers(subparsers):
     project_bootstrap_parser.add_argument('--depth', choices=['minimal', 'moderate', 'full', 'auto'], default='auto', help='Context depth: minimal (~500 tokens), moderate (~1500), full (~3000-5000), auto (drift-based)')
     project_bootstrap_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_bootstrap_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+    project_bootstrap_parser.add_argument('--global', dest='include_global', action='store_true', help='Include global cross-project learnings (requires --task-description)')
 
     # Workspace overview command
     workspace_overview_parser = subparsers.add_parser(
@@ -296,6 +297,7 @@ def add_checkpoint_parsers(subparsers):
     project_search_parser.add_argument('--limit', type=int, default=5, help='Number of results to return (default: 5)')
     project_search_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_search_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+    project_search_parser.add_argument('--global', dest='global_search', action='store_true', help='Include global cross-project learnings in search')
 
     # Project embed (build vectors) command
     project_embed_parser = subparsers.add_parser(
@@ -305,6 +307,8 @@ def add_checkpoint_parsers(subparsers):
     project_embed_parser.add_argument('--project-id', required=True, help='Project UUID')
     project_embed_parser.add_argument('--output', choices=['human', 'json'], default='human', help='Output format')
     project_embed_parser.add_argument('--verbose', action='store_true', help='Show detailed operation info')
+    project_embed_parser.add_argument('--global', dest='global_sync', action='store_true', help='Sync high-impact items to global learnings collection')
+    project_embed_parser.add_argument('--min-impact', type=float, default=0.7, help='Minimum impact for global sync (default: 0.7)')
 
     # Documentation completeness check
     doc_check_parser = subparsers.add_parser(

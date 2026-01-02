@@ -405,6 +405,22 @@ def handle_project_bootstrap_command(args):
                 db=db
             )
 
+        # Optional: Query global learnings for cross-project context
+        global_learnings = None
+        include_global = getattr(args, 'include_global', False)
+        if include_global and task_description:
+            try:
+                from empirica.core.qdrant.vector_store import search_global
+                global_results = search_global(task_description, limit=5)
+                if global_results:
+                    global_learnings = {
+                        'query': task_description,
+                        'results': global_results,
+                        'count': len(global_results)
+                    }
+            except Exception as e:
+                logger.debug(f"Global learnings query failed (non-fatal): {e}")
+
         db.close()
 
         if "error" in breadcrumbs:
@@ -445,6 +461,8 @@ def handle_project_bootstrap_command(args):
                 result['workflow_automation'] = workflow_suggestions
             if mco_config:
                 result['mco_config'] = mco_config
+            if global_learnings:
+                result['global_learnings'] = global_learnings
             print(json.dumps(result, indent=2))
         else:
             # Print MCO config first if post-compact (SessionStart hook)

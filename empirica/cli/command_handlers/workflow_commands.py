@@ -490,12 +490,45 @@ def handle_check_submit_command(args):
             reasoning = args.reasoning
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
-        round_num = getattr(args, 'round', 1)  # Default to 1 if not provided, don't depend on cycle
-        
+
+        # AUTO-INCREMENT ROUND: Get next round from CHECK history
+        try:
+            from empirica.data.session_database import SessionDatabase
+            db = SessionDatabase()
+            cursor = db.conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) FROM reflexes
+                WHERE session_id = ? AND phase = 'CHECK'
+            """, (session_id,))
+            check_count = cursor.fetchone()[0]
+            round_num = check_count + 1  # Next round
+            db.close()
+        except Exception:
+            round_num = getattr(args, 'round', 1)  # Fallback to arg or 1
+
         # Validate inputs
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")
-        
+
+        # AUTO-COMPUTE DECISION from vectors if not provided
+        # Readiness gate (from CLAUDE.md): know >= 0.70 AND uncertainty <= 0.35
+        # Apply bias corrections: uncertainty +0.10, know -0.05
+        know = vectors.get('know', 0.5)
+        uncertainty = vectors.get('uncertainty', 0.5)
+        corrected_know = know - 0.05  # AI overestimates knowing
+        corrected_uncertainty = uncertainty + 0.10  # AI underestimates doubt
+
+        computed_decision = None
+        if corrected_know >= 0.70 and corrected_uncertainty <= 0.35:
+            computed_decision = "proceed"
+        else:
+            computed_decision = "investigate"
+
+        # Use computed decision if none provided
+        if not decision:
+            decision = computed_decision
+            logger.info(f"CHECK auto-computed decision: {decision} (know={know:.2f}→{corrected_know:.2f}, uncertainty={uncertainty:.2f}→{corrected_uncertainty:.2f})")
+
         # Use GitEnhancedReflexLogger for proper 3-layer storage (SQLite + Git Notes + JSON)
         try:
             logger_instance = GitEnhancedReflexLogger(
@@ -586,6 +619,7 @@ def handle_check_submit_command(args):
             # SENTINEL HOOK: Evaluate checkpoint for routing decisions
             # CHECK phase is especially important for Sentinel - it gates noetic→praxic transition
             sentinel_decision = None
+            sentinel_override = False
             if SentinelHooks.is_enabled():
                 sentinel_decision = SentinelHooks.post_checkpoint_hook(
                     session_id=session_id,
@@ -602,6 +636,22 @@ def handle_check_submit_command(args):
                         "checkpoint_id": checkpoint_id
                     }
                 )
+
+                # SENTINEL OVERRIDE: Feed Sentinel decision back to override AI decision
+                if sentinel_decision:
+                    sentinel_map = {
+                        SentinelDecision.PROCEED: "proceed",
+                        SentinelDecision.INVESTIGATE: "investigate",
+                        SentinelDecision.BRANCH: "investigate",  # Branch implies more investigation needed
+                        SentinelDecision.HALT: "investigate",  # Halt = stop and reassess
+                        SentinelDecision.REVISE: "investigate",  # Revise = need more work
+                    }
+                    if sentinel_decision in sentinel_map:
+                        new_decision = sentinel_map[sentinel_decision]
+                        if new_decision != decision:
+                            logger.info(f"Sentinel override: {decision} → {new_decision} (sentinel={sentinel_decision.value})")
+                            decision = new_decision
+                            sentinel_override = True
 
             # AUTO-CHECKPOINT: Create git checkpoint if uncertainty > 0.5 (risky decision)
             # This preserves context if AI needs to investigate further
@@ -638,6 +688,7 @@ def handle_check_submit_command(args):
                 "session_id": session_id,
                 "checkpoint_id": checkpoint_id,
                 "decision": decision,
+                "round": round_num,
                 "cycle": cycle,
                 "vectors_count": len(vectors),
                 "reasoning": reasoning,
@@ -648,10 +699,18 @@ def handle_check_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
                 },
+                "metacog": {
+                    "computed_decision": computed_decision,
+                    "raw_vectors": {"know": know, "uncertainty": uncertainty},
+                    "corrected_vectors": {"know": corrected_know, "uncertainty": corrected_uncertainty},
+                    "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (after bias correction)",
+                    "gate_passed": computed_decision == "proceed"
+                },
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
                     "decision": sentinel_decision.value if sentinel_decision else None,
-                    "note": "Sentinel can override AI decision (PROCEED→INVESTIGATE, etc.)"
+                    "override_applied": sentinel_override,
+                    "note": "Sentinel feeds back to override AI decision"
                 } if SentinelHooks.is_enabled() else None
             }
 

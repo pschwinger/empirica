@@ -23,6 +23,8 @@ def add_agent_parsers(subparsers):
     spawn_parser.add_argument('--session-id', required=True, help='Parent session ID')
     spawn_parser.add_argument('--task', required=True, help='Task for the agent')
     spawn_parser.add_argument('--persona', default='general', help='Persona ID to use')
+    spawn_parser.add_argument('--turtle', action='store_true',
+        help='Auto-select best emerged persona for task (overrides --persona)')
     spawn_parser.add_argument('--context', help='Additional context from parent')
     spawn_parser.add_argument('--output', choices=['text', 'json'], default='text')
     spawn_parser.set_defaults(func=handle_agent_spawn_command)

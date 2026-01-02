@@ -57,6 +57,8 @@ from .issue_capture_parsers import add_issue_capture_parsers
 from .architecture_parsers import add_architecture_parsers
 from .query_parsers import add_query_parsers
 from .agent_parsers import add_agent_parsers
+from .sentinel_parsers import add_sentinel_parsers
+from .persona_parsers import add_persona_parsers
 
 __all__ = [
     'format_help_text',
@@ -78,4 +80,6 @@ __all__ = [
     'add_architecture_parsers',
     'add_query_parsers',
     'add_agent_parsers',
+    'add_sentinel_parsers',
+    'add_persona_parsers',
 ]

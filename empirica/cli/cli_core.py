@@ -54,7 +54,9 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Epistemics': ['epistemics-list', 'epistemics-show'],
                     'User Interface': ['chat'],
                     'Architecture': ['assess-component', 'assess-compare', 'assess-directory'],
-                    'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import', 'agent-discover']
+                    'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import', 'agent-discover'],
+                    'Sentinel': ['sentinel-orchestrate', 'sentinel-load-profile', 'sentinel-status', 'sentinel-check'],
+                    'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -92,6 +94,8 @@ from .parsers import (
     add_architecture_parsers,
     add_query_parsers,
     add_agent_parsers,
+    add_sentinel_parsers,
+    add_persona_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -106,6 +110,18 @@ from .command_handlers.agent_commands import (
     handle_agent_export_command,
     handle_agent_import_command,
     handle_agent_discover_command,
+)
+from .command_handlers.sentinel_commands import (
+    handle_sentinel_orchestrate_command,
+    handle_sentinel_load_profile_command,
+    handle_sentinel_status_command,
+    handle_sentinel_check_command,
+)
+from .command_handlers.persona_commands import (
+    handle_persona_list_command,
+    handle_persona_show_command,
+    handle_persona_promote_command,
+    handle_persona_find_command,
 )
 
 
@@ -161,6 +177,8 @@ def create_argument_parser():
     add_architecture_parsers(subparsers)
     add_query_parsers(subparsers)
     add_agent_parsers(subparsers)
+    add_sentinel_parsers(subparsers)
+    add_persona_parsers(subparsers)
 
     return parser
 
@@ -349,6 +367,18 @@ def main(args=None):
             'agent-export': handle_agent_export_command,
             'agent-import': handle_agent_import_command,
             'agent-discover': handle_agent_discover_command,
+
+            # Sentinel orchestration commands
+            'sentinel-orchestrate': handle_sentinel_orchestrate_command,
+            'sentinel-load-profile': handle_sentinel_load_profile_command,
+            'sentinel-status': handle_sentinel_status_command,
+            'sentinel-check': handle_sentinel_check_command,
+
+            # Persona commands
+            'persona-list': handle_persona_list_command,
+            'persona-show': handle_persona_show_command,
+            'persona-promote': handle_persona_promote_command,
+            'persona-find': handle_persona_find_command,
         }
         
         if parsed_args.command in command_handlers:

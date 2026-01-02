@@ -26,6 +26,7 @@ def handle_agent_spawn_command(args) -> dict:
 
     Usage:
         empirica agent-spawn --session-id <ID> --task "Review code" --persona security_expert
+        empirica agent-spawn --session-id <ID> --task "Review code" --turtle  # auto-select persona
 
     Returns prompt with branch_id for tracking.
     """
@@ -33,6 +34,7 @@ def handle_agent_spawn_command(args) -> dict:
     session_id = getattr(args, 'session_id', None)
     task = getattr(args, 'task', None)
     persona_id = getattr(args, 'persona', 'general')
+    use_turtle = getattr(args, 'turtle', False)
     parent_context = getattr(args, 'context', None)
     output_format = getattr(args, 'output', 'text')
 
@@ -41,6 +43,39 @@ def handle_agent_spawn_command(args) -> dict:
 
     if not task:
         return {"ok": False, "error": "task required"}
+
+    # Turtle mode: auto-select best emerged persona for task
+    # Uses sentinel matching with grounding if available
+    turtle_match = None
+    if use_turtle:
+        try:
+            from empirica.core.emerged_personas import sentinel_match_persona
+            # Try to get current grounding from session's last checkpoint
+            grounding = None
+            try:
+                db = SessionDatabase()
+                cursor = db.conn.cursor()
+                cursor.execute("""
+                    SELECT vectors_json FROM reflexes
+                    WHERE session_id = ? AND phase IN ('PREFLIGHT', 'POSTFLIGHT')
+                    ORDER BY timestamp DESC LIMIT 1
+                """, (session_id,))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    grounding = json.loads(row[0])
+                db.close()
+            except Exception:
+                pass
+
+            turtle_match = sentinel_match_persona(
+                task=task,
+                grounding_vectors=grounding,
+                min_reputation=0.5
+            )
+            if turtle_match:
+                persona_id = turtle_match.persona_id
+        except Exception:
+            pass  # Fall back to default persona
 
     config = EpistemicAgentConfig(
         session_id=session_id,
@@ -57,14 +92,19 @@ def handle_agent_spawn_command(args) -> dict:
         "persona_id": result.persona_id,
         "preflight_vectors": result.preflight_vectors,
         "prompt": result.output,
-        "usage": f"Execute prompt with your agent, then: empirica agent-report --branch-id {result.branch_id} -"
+        "usage": f"Execute prompt with your agent, then: empirica agent-report --branch-id {result.branch_id} -",
+        "turtle_mode": use_turtle,
+        "turtle_match": turtle_match.name if turtle_match else None,
     }
 
     if output_format == 'json':
         print(json.dumps(response, indent=2))
     else:
         print(f"Branch ID: {result.branch_id}")
-        print(f"Persona: {result.persona_id}")
+        if turtle_match:
+            print(f"Persona: {result.persona_id} (turtle-matched: {turtle_match.name})")
+        else:
+            print(f"Persona: {result.persona_id}")
         print(f"\n--- AGENT PROMPT ---\n")
         print(result.output)
         print(f"\n--- END PROMPT ---\n")
