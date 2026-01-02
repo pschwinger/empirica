@@ -18,9 +18,9 @@ Version: 1.1.0
 __version__ = "1.2.1"
 __author__ = "Empirica Project"
 
-# Core imports
+# Core imports (ReflexLogger removed - use GitEnhancedReflexLogger instead)
 try:
-    from empirica.core.canonical import ReflexLogger
+    from empirica.core.canonical import GitEnhancedReflexLogger
 except ImportError as e:
     print(f"Warning: Core imports failed: {e}")
     pass
