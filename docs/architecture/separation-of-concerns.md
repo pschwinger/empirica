@@ -209,6 +209,23 @@ PREFLIGHT → [noetic/praxic as needed] → CHECK → [noetic/praxic as needed] 
 - ⚠️ `global_learnings` - Collection not initialized
 - ⚠️ `personas` - Collection not initialized
 
+**Persona Flow (Planned but not wired):**
+```
+investigation_branches (SQLite)
+         │
+         │ Sentinel picks winners (is_winner=TRUE)
+         ▼
+extract_persona_from_loop_tracker()     ← emerged_personas.py
+         │
+         ├─► .empirica/personas/*.yaml  ← EmergedPersonaStore (file-based)
+         │
+         └─► Qdrant personas collection ← persona_registry.py (NOT WIRED)
+                    │
+                    │ Future task similarity search
+                    ▼
+           Sentinel suggests priors based on similar past successes
+```
+
 ---
 
 ## Epistemic Subagent Spawning
