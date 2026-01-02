@@ -129,6 +129,50 @@ def handle_agent_report_command(args) -> dict:
         findings = postflight_data.get('findings', [])
         unknowns = postflight_data.get('unknowns', [])
 
+        # Embed to Qdrant for semantic search (graceful degradation if unavailable)
+        embedded_count = 0
+        try:
+            from empirica.core.qdrant.vector_store import embed_single_memory_item, upsert_epistemics
+            import uuid
+            import time
+
+            # Get project_id from branch's session
+            branch_data = db.branches.get_branch(branch_id)
+            session_id = branch_data.get('session_id') if branch_data else None
+            session = db.get_session(session_id) if session_id else None
+            project_id = session.get('project_id') if session else None
+
+            if project_id:
+                # Embed each finding
+                for finding in findings:
+                    item_id = str(uuid.uuid4())
+                    if embed_single_memory_item(
+                        project_id=project_id,
+                        item_id=item_id,
+                        text=finding,
+                        item_type="agent_finding",
+                        session_id=session.get('session_id'),
+                        impact=merge_score or 0.5
+                    ):
+                        embedded_count += 1
+
+                # Embed epistemic trajectory (preflight → postflight)
+                trajectory_text = f"Agent {branch_id[:8]}: {postflight_data.get('summary', 'epistemic investigation')}"
+                upsert_epistemics(project_id, [{
+                    "id": int(uuid.uuid4().int % (2**31 - 1)),
+                    "text": trajectory_text,
+                    "metadata": {
+                        "branch_id": branch_id,
+                        "postflight_vectors": postflight_data['vectors'],
+                        "merge_score": merge_score,
+                        "findings_count": len(findings),
+                        "timestamp": time.time()
+                    }
+                }])
+        except Exception as e:
+            # Qdrant embedding is optional - don't fail the command
+            pass
+
         response = {
             "ok": True,
             "branch_id": branch_id,
@@ -137,7 +181,8 @@ def handle_agent_report_command(args) -> dict:
             "findings_count": len(findings),
             "unknowns_count": len(unknowns),
             "findings": findings,
-            "unknowns": unknowns
+            "unknowns": unknowns,
+            "embedded_to_qdrant": embedded_count
         }
 
         if output_format == 'json':
@@ -220,6 +265,166 @@ def handle_agent_aggregate_command(args) -> dict:
             print(f"\nRationale: {merge_result.get('decision_rationale')}")
 
         return response
+
+    finally:
+        db.close()
+
+
+def handle_agent_export_command(args) -> dict:
+    """
+    Export an epistemic agent as a shareable JSON package.
+
+    The export contains:
+    - Persona profile (vectors, thresholds, focus domains)
+    - Accumulated findings from the branch
+    - Calibration data (learning deltas, merge scores)
+    - Provenance (project, session, branch info)
+
+    Usage:
+        empirica agent-export --branch-id <ID> --output-file agent.json
+    """
+    import time
+
+    branch_id = getattr(args, 'branch_id', None)
+    output_file = getattr(args, 'output_file', None)
+    output_format = getattr(args, 'output', 'json')
+
+    if not branch_id:
+        return {"ok": False, "error": "branch_id required"}
+
+    db = SessionDatabase()
+    try:
+        # Get branch data
+        branch = db.branches.get_branch(branch_id)
+        if not branch:
+            return {"ok": False, "error": f"Branch {branch_id} not found"}
+
+        # Get session and project info
+        session = db.get_session(branch['session_id'])
+        project_id = session.get('project_id') if session else None
+
+        # Calculate learning delta
+        preflight = branch.get('preflight_vectors', {})
+        postflight = branch.get('postflight_vectors', {})
+        learning_delta = {}
+        for key in ['know', 'uncertainty', 'context', 'clarity', 'completion', 'impact']:
+            learning_delta[key] = postflight.get(key, 0.5) - preflight.get(key, 0.5)
+
+        # Build exportable agent package
+        agent_package = {
+            "format_version": "1.0",
+            "export_timestamp": time.time(),
+            "agent_type": "epistemic",
+
+            # Identity
+            "agent_id": f"agent-{branch_id[:8]}",
+            "branch_id": branch_id,
+            "persona_id": branch.get('branch_name', 'general').replace('agent-', ''),
+
+            # Epistemic profile
+            "epistemic_profile": {
+                "preflight_vectors": preflight,
+                "postflight_vectors": postflight,
+                "learning_delta": learning_delta,
+                "merge_score": branch.get('merge_score')
+            },
+
+            # Provenance
+            "provenance": {
+                "project_id": project_id,
+                "session_id": branch['session_id'],
+                "investigation_path": branch.get('investigation_path'),
+                "status": branch.get('status')
+            },
+
+            # For the sharing network
+            "shareable": True,
+            "reputation_seed": branch.get('merge_score') or 0.5
+        }
+
+        # Output
+        if output_file:
+            with open(output_file, 'w') as f:
+                json.dump(agent_package, f, indent=2)
+            print(f"✅ Agent exported to {output_file}")
+            print(f"   Agent ID: {agent_package['agent_id']}")
+            print(f"   Merge Score: {branch.get('merge_score', 'N/A')}")
+        else:
+            print(json.dumps(agent_package, indent=2))
+
+        return 0
+
+    finally:
+        db.close()
+
+
+def handle_agent_import_command(args) -> dict:
+    """
+    Import an epistemic agent from a JSON package.
+
+    Creates a new investigation branch with the imported agent's
+    epistemic profile as preflight vectors.
+
+    Usage:
+        empirica agent-import --session-id <ID> --input-file agent.json
+    """
+    import time
+
+    session_id = getattr(args, 'session_id', None)
+    input_file = getattr(args, 'input_file', None)
+    output_format = getattr(args, 'output', 'json')
+
+    if not session_id:
+        return {"ok": False, "error": "session_id required"}
+
+    if not input_file:
+        return {"ok": False, "error": "input_file required"}
+
+    # Load agent package
+    try:
+        with open(input_file, 'r') as f:
+            agent_package = json.load(f)
+    except Exception as e:
+        return {"ok": False, "error": f"Failed to load agent file: {e}"}
+
+    # Validate format
+    if agent_package.get('format_version') != '1.0':
+        return {"ok": False, "error": "Unsupported agent format version"}
+
+    db = SessionDatabase()
+    try:
+        # Use the agent's postflight as our preflight (inheriting learned state)
+        inherited_vectors = agent_package.get('epistemic_profile', {}).get('postflight_vectors', {})
+        if not inherited_vectors:
+            inherited_vectors = agent_package.get('epistemic_profile', {}).get('preflight_vectors', {})
+
+        # Create new branch with inherited vectors
+        branch_id = db.branches.create_branch(
+            session_id=session_id,
+            branch_name=f"imported-{agent_package.get('agent_id', 'agent')}",
+            investigation_path=f"imported-from-{agent_package.get('provenance', {}).get('project_id', 'unknown')[:8]}",
+            git_branch_name="",
+            preflight_vectors=inherited_vectors
+        )
+
+        response = {
+            "ok": True,
+            "imported_agent_id": agent_package.get('agent_id'),
+            "new_branch_id": branch_id,
+            "inherited_vectors": inherited_vectors,
+            "source_merge_score": agent_package.get('epistemic_profile', {}).get('merge_score'),
+            "provenance": agent_package.get('provenance')
+        }
+
+        if output_format == 'json':
+            print(json.dumps(response, indent=2))
+        else:
+            print(f"✅ Agent imported successfully")
+            print(f"   Imported: {agent_package.get('agent_id')}")
+            print(f"   New Branch: {branch_id[:8]}...")
+            print(f"   Source Score: {agent_package.get('epistemic_profile', {}).get('merge_score', 'N/A')}")
+
+        return 0
 
     finally:
         db.close()

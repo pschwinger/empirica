@@ -6,6 +6,8 @@ from empirica.cli.command_handlers.agent_commands import (
     handle_agent_spawn_command,
     handle_agent_report_command,
     handle_agent_aggregate_command,
+    handle_agent_export_command,
+    handle_agent_import_command,
 )
 
 
@@ -43,3 +45,23 @@ def add_agent_parsers(subparsers):
     aggregate_parser.add_argument('--round', type=int, default=1, help='Investigation round')
     aggregate_parser.add_argument('--output', choices=['text', 'json'], default='text')
     aggregate_parser.set_defaults(func=handle_agent_aggregate_command)
+
+    # agent-export (for sharing network)
+    export_parser = subparsers.add_parser(
+        'agent-export',
+        help='Export epistemic agent as shareable JSON package'
+    )
+    export_parser.add_argument('--branch-id', required=True, help='Branch ID to export')
+    export_parser.add_argument('--output-file', help='Output file path (prints to stdout if not specified)')
+    export_parser.add_argument('--output', choices=['text', 'json'], default='json')
+    export_parser.set_defaults(func=handle_agent_export_command)
+
+    # agent-import (for sharing network)
+    import_parser = subparsers.add_parser(
+        'agent-import',
+        help='Import epistemic agent from JSON package'
+    )
+    import_parser.add_argument('--session-id', required=True, help='Session to import into')
+    import_parser.add_argument('--input-file', required=True, help='Agent JSON file to import')
+    import_parser.add_argument('--output', choices=['text', 'json'], default='text')
+    import_parser.set_defaults(func=handle_agent_import_command)
