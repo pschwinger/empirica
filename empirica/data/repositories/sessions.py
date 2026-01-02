@@ -3,7 +3,7 @@ import sqlite3
 import uuid
 import json
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from .base import BaseRepository
 
 
@@ -37,7 +37,7 @@ class SessionRepository(BaseRepository):
                 session_id, ai_id, user_id, start_time, components_loaded, subject, bootstrap_level
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
-            session_id, ai_id, user_id, datetime.utcnow().isoformat(),
+            session_id, ai_id, user_id, datetime.now(timezone.utc).isoformat(),
             components_loaded, subject, bootstrap_level
         ))
         return session_id
