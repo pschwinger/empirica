@@ -421,6 +421,18 @@ def handle_project_bootstrap_command(args):
             except Exception as e:
                 logger.debug(f"Global learnings query failed (non-fatal): {e}")
 
+        # Re-install auto-capture hooks for resumed/existing sessions
+        if session_id:
+            try:
+                from empirica.core.issue_capture import initialize_auto_capture, install_auto_capture_hooks, get_auto_capture
+                existing = get_auto_capture()
+                if not existing:
+                    auto_capture = initialize_auto_capture(session_id, enable=True)
+                    install_auto_capture_hooks(auto_capture)
+                    logger.debug(f"Auto-capture hooks reinstalled for session {session_id[:8]}")
+            except Exception as e:
+                logger.debug(f"Auto-capture hook reinstall failed (non-fatal): {e}")
+
         # Load project skills from project_skills/*.yaml
         project_skills = None
         try:
