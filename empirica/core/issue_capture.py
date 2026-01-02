@@ -465,16 +465,16 @@ class AutoIssueCaptureService:
             conn = self._get_connection()
             cursor = conn.cursor()
 
+            # Note: Don't filter by session_id - issues can be handed off from any session
             cursor.execute("""
                 UPDATE auto_captured_issues
                 SET status = ?, assigned_to_ai = ?, updated_at = ?
-                WHERE id = ? AND session_id = ?
+                WHERE id = ?
             """, (
                 IssueStatus.HANDOFF.value,
                 assigned_to_ai,
                 datetime.now(timezone.utc).isoformat(),
-                issue_id,
-                self.session_id
+                issue_id
             ))
             
             conn.commit()
@@ -501,16 +501,16 @@ class AutoIssueCaptureService:
             conn = self._get_connection()
             cursor = conn.cursor()
 
+            # Note: Don't filter by session_id - issues can be resolved from any session
             cursor.execute("""
                 UPDATE auto_captured_issues
                 SET status = ?, resolution = ?, updated_at = ?
-                WHERE id = ? AND session_id = ?
+                WHERE id = ?
             """, (
                 IssueStatus.RESOLVED.value,
                 resolution,
                 datetime.now(timezone.utc).isoformat(),
-                issue_id,
-                self.session_id
+                issue_id
             ))
             
             conn.commit()
