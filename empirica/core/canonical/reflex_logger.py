@@ -33,6 +33,14 @@ from empirica.core.schemas.epistemic_assessment import EpistemicAssessmentSchema
 
 logger = logging.getLogger(__name__)
 
+# Deprecation warning
+import warnings
+warnings.warn(
+    "reflex_logger.ReflexLogger is deprecated. Use GitEnhancedReflexLogger instead for 3-layer storage.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
 class ReflexLogger:
     """
     Temporal logger for Reflex Frames - JSON logging only.
