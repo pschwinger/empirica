@@ -421,6 +421,32 @@ def handle_project_bootstrap_command(args):
             except Exception as e:
                 logger.debug(f"Global learnings query failed (non-fatal): {e}")
 
+        # Load project skills from project_skills/*.yaml
+        project_skills = None
+        try:
+            import yaml
+            import os
+            skills_dir = os.path.join(os.getcwd(), 'project_skills')
+            if os.path.exists(skills_dir):
+                skills_list = []
+                for filename in os.listdir(skills_dir):
+                    if filename.endswith(('.yaml', '.yml')):
+                        filepath = os.path.join(skills_dir, filename)
+                        try:
+                            with open(filepath, 'r', encoding='utf-8') as f:
+                                skill = yaml.safe_load(f)
+                                if skill:
+                                    skills_list.append(skill)
+                        except Exception as skill_err:
+                            logger.debug(f"Failed to load skill {filename}: {skill_err}")
+                if skills_list:
+                    project_skills = {
+                        'count': len(skills_list),
+                        'skills': skills_list
+                    }
+        except Exception as e:
+            logger.debug(f"Project skills loading failed (non-fatal): {e}")
+
         db.close()
 
         if "error" in breadcrumbs:
@@ -463,6 +489,8 @@ def handle_project_bootstrap_command(args):
                 result['mco_config'] = mco_config
             if global_learnings:
                 result['global_learnings'] = global_learnings
+            if project_skills:
+                result['project_skills'] = project_skills
             print(json.dumps(result, indent=2))
         else:
             # Print MCO config first if post-compact (SessionStart hook)
