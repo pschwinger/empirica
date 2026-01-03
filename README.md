@@ -18,14 +18,25 @@
 - **📈 Trajectory Projection** - Project epistemic learning curves with `trajectory-project`
 - **🐢 Turtle Principle** - Recursive grounding: every claim must trace to verifiable source
 
-## ⚡ Quick Setup (Copy-Paste)
+## ⚡ Claude Code Quick Start
 
-### Step 1: Install
+### What You Do vs What Claude Does
+
+| You Do (Once) | Claude Does (Automatic) |
+|---------------|------------------------|
+| `pip install empirica` | Runs `project-bootstrap` to load prior learnings |
+| Add snippet to `~/.claude/CLAUDE.md` | Logs findings as it works |
+| Work normally | Runs CHECK gates before risky actions |
+| | Saves what it learned at session end |
+
+### Setup (2 minutes)
+
+**Step 1: Install**
 ```bash
-pip install empirica empirica-mcp
+pip install empirica
 ```
 
-### Step 2: Add System Prompt
+**Step 2: Add to ~/.claude/CLAUDE.md**
 Copy this to `~/.claude/CLAUDE.md` (Claude Code) or your AI's system prompt:
 
 ```markdown
@@ -83,6 +94,32 @@ Add to `claude_desktop_config.json`:
 ```bash
 docker pull nubaeon/empirica:1.2.3
 ```
+
+### How It Works Day-to-Day
+
+**You don't need to type Empirica commands.** Just talk to Claude normally:
+
+| You Say (Natural Language) | Claude Does (Behind the Scenes) |
+|---------------------------|--------------------------------|
+| "Continue working on the auth refactor" | Runs `project-bootstrap` → loads what it learned last session |
+| "I'm not sure about this approach" | Runs `check-submit` → assesses if it knows enough to proceed |
+| "Good work, let's wrap up" | Runs `postflight-submit` → saves learnings for next time |
+
+**What is `project-bootstrap`?**
+
+When Claude starts a session, `project-bootstrap` loads ~800 tokens of structured context:
+```
+📊 Epistemic State: know=0.85, uncertainty=0.15
+🎯 Active Goals: Refactor auth module (in_progress)
+💡 Recent Findings: "Auth uses JWT with 15min expiry"
+❓ Open Unknowns: "Token rotation mechanism unclear"
+```
+
+This replaces 200k tokens of conversation history with just the important bits.
+
+**Will Claude ignore the commands?**
+
+Sometimes, especially mid-task. But after a memory compact (when context summarizes), Claude naturally looks for context—that's when bootstrap shines. The CLAUDE.md instructions make this reliable.
 
 ## What is Empirica?
 
