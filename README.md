@@ -121,6 +121,24 @@ This replaces 200k tokens of conversation history with just the important bits.
 
 Sometimes, especially mid-task. But after a memory compact (when context summarizes), Claude naturally looks for context—that's when bootstrap shines. The CLAUDE.md instructions make this reliable.
 
+### Live Metacognitive Signal
+
+With Claude Code hooks enabled, you see Claude's epistemic state in real-time:
+
+```
+[empirica] ⚡79% │ ⚡ PRAXIC │ POSTFLIGHT │ K:80% U:20% C:90% │ Δ K:+0.30 U:-0.30 C:+0.30 │ ✓ stable
+```
+
+**What this tells you:**
+- **⚡79%** - Overall epistemic confidence
+- **PRAXIC** - Claude is in action mode (vs NOETIC = investigation mode)
+- **POSTFLIGHT** - Just completed a task and logged learnings
+- **K:80% U:20%** - 80% knowledge, 20% uncertainty (healthy state)
+- **Δ K:+0.30** - Gained 30% knowledge this session (learning delta)
+- **✓ stable** - No epistemic drift detected
+
+**Why this matters:** You can see when Claude is uncertain before it acts, when it's learning, and when it might be drifting from reality. No more guessing if Claude actually knows what it's doing.
+
 ## What is Empirica?
 
 **Empirica is an epistemic self-awareness framework for AI agents** that enables genuine self-assessment, systematic learning tracking, and effective multi-agent collaboration.
