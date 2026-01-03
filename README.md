@@ -2,13 +2,13 @@
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.2.2-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.2)
+[![Version](https://img.shields.io/badge/version-1.2.3-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.3)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/docker-nubaeon%2Fempirica-blue)](https://hub.docker.com/r/nubaeon/empirica)
 
-## What's New in 1.2.2
+## What's New in 1.2.3
 
 - **🐢 Turtle Principle** - Recursive grounding documented in all model deltas
 - **🔧 MCP Server with 57 Tools** - Full Model Context Protocol integration with epistemic middleware
@@ -79,7 +79,7 @@ Add to `claude_desktop_config.json`:
 
 ### Docker
 ```bash
-docker pull nubaeon/empirica:1.2.2
+docker pull nubaeon/empirica:1.2.3
 ```
 
 ## What is Empirica?
@@ -133,20 +133,20 @@ pip install empirica[all]
 
 ```bash
 # Pull the latest image
-docker pull nubaeon/empirica:1.2.2
+docker pull nubaeon/empirica:1.2.3
 
 # Run a command
-docker run -it nubaeon/empirica:1.2.2 empirica --help
+docker run -it nubaeon/empirica:1.2.3 empirica --help
 
 # Interactive session with persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.2 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.3 /bin/bash
 ```
 
 #### From Source
 
 ```bash
 # Latest stable release
-pip install git+https://github.com/Nubaeon/empirica.git@v1.2.2
+pip install git+https://github.com/Nubaeon/empirica.git@v1.2.3
 
 # Development branch
 pip install git+https://github.com/Nubaeon/empirica.git@develop
