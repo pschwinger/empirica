@@ -1,14 +1,21 @@
 """
 Empirica Web Chat - Epistemic Agent Pipeline
 
-Architecture:
+Architecture (runs 100% locally):
 - Scout Agent: Fast initial assessment (what does user need?)
 - Search Agent: Memory retrieval (eidetic facts + episodic narratives)
+- Ollama: Fast responses (praxis - action/doing)
+- Claude CLI: Deep investigation (noesis - thinking) - uses MAX OAuth
 - FactScorer: Confidence validation (is the response grounded?)
-- Ollama: Fast response generation
-- Claude CLI: Deep investigation (escalation path)
 
-No API keys needed - uses your local auth + Empirica memory.
+No API keys needed - uses your local MAX subscription OAuth.
+
+Deployment:
+1. Run locally: python app.py
+2. Expose via ngrok: ngrok http 8080
+3. Add widget to website with ngrok URL
+
+Zero cloud costs!
 """
 
 import asyncio
