@@ -74,12 +74,45 @@ class MigrationRunner:
 
 def column_exists(cursor: sqlite3.Cursor, table: str, column: str) -> bool:
     """Check if a column exists in a table"""
-    cursor.execute(f"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='{column}'")
+    VALID_TABLES = {
+        'sessions', 'reflexes', 'cascades', 'findings', 'unknowns', 
+        'dead_ends', 'reference_docs', 'mistakes', 'goals', 'subtasks',
+        'checkpoints', 'handoffs', 'schema_migrations', 'epistemic_snapshots',
+        'bayesian_beliefs', 'projects', 'project_findings', 'project_unknowns',
+        'mistakes_made'
+    }
+    
+    if table not in VALID_TABLES:
+        raise ValueError(f"Invalid table name: {table}")
+    
+    cursor.execute(
+        "SELECT COUNT(*) FROM pragma_table_info(?) WHERE name=?",
+        (table, column)
+    )
     return cursor.fetchone()[0] > 0
 
 
 def add_column_if_missing(cursor: sqlite3.Cursor, table: str, column: str, column_type: str, default: str = ""):
     """Add a column to a table if it doesn't already exist"""
+    VALID_TABLES = {
+        'sessions', 'reflexes', 'cascades', 'findings', 'unknowns',
+        'dead_ends', 'reference_docs', 'mistakes', 'goals', 'subtasks',
+        'checkpoints', 'handoffs', 'schema_migrations', 'epistemic_snapshots',
+        'bayesian_beliefs', 'projects', 'project_findings', 'project_unknowns',
+        'mistakes_made'
+    }
+    VALID_COLUMN_TYPES = {
+        'TEXT', 'INTEGER', 'REAL', 'BLOB', 'NULL',
+        'TIMESTAMP', 'BOOLEAN', 'JSON'
+    }
+    
+    if table not in VALID_TABLES:
+        raise ValueError(f"Invalid table name: {table}")
+    
+    column_type_upper = column_type.upper().split('(')[0]
+    if column_type_upper not in VALID_COLUMN_TYPES:
+        raise ValueError(f"Invalid column type: {column_type}")
+    
     if not column_exists(cursor, table, column):
         default_clause = f" DEFAULT {default}" if default else ""
         cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}{default_clause}")

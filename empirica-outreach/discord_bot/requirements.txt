@@ -1,0 +1,16 @@
+# Empirica Discord Bot Dependencies
+
+# Discord library (actively maintained, most documentation)
+discord.py>=2.3.0
+
+# Anthropic API for Claude responses
+anthropic>=0.40.0
+
+# Empirica (install from parent project or PyPI)
+# pip install empirica
+
+# Optional: async HTTP for rate limiting
+aiohttp>=3.9.0
+
+# Optional: environment variable management
+python-dotenv>=1.0.0

@@ -18,6 +18,7 @@ import uuid
 import os
 import json
 import subprocess
+import shlex
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -187,10 +188,13 @@ class SessionManager:
     
     def _run_bash(self, session: dict, command: str) -> dict:
         """Run safe bash command"""
-        # Whitelist of safe commands
         safe_commands = ["ls", "pwd", "cat", "head", "tail", "wc", "grep", "find"]
         
-        cmd_parts = command.split()
+        try:
+            cmd_parts = shlex.split(command)
+        except ValueError as e:
+            return {"error": f"Invalid command syntax: {e}"}
+        
         if not cmd_parts or cmd_parts[0] not in safe_commands:
             return {
                 "error": "Command not allowed",
@@ -199,8 +203,8 @@ class SessionManager:
         
         try:
             result = subprocess.run(
-                command,
-                shell=True,
+                cmd_parts,
+                shell=False,
                 cwd=session["cwd"],
                 capture_output=True,
                 text=True,
