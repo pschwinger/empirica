@@ -23,3 +23,24 @@ def add_release_parsers(subparsers):
         default='human',
         help='Output format'
     )
+
+    # Docs assessment
+    docs_parser = subparsers.add_parser(
+        'docs-assess',
+        help='Epistemic documentation assessment - measures docs coverage against actual features'
+    )
+    docs_parser.add_argument(
+        '--project-root',
+        help='Root directory of the project (default: current directory)'
+    )
+    docs_parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Show detailed undocumented items'
+    )
+    docs_parser.add_argument(
+        '--output',
+        choices=['human', 'json'],
+        default='human',
+        help='Output format'
+    )

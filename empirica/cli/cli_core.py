@@ -125,6 +125,7 @@ from .command_handlers.persona_commands import (
     handle_persona_find_command,
 )
 from .command_handlers.release_commands import handle_release_ready_command
+from .command_handlers.docs_commands import handle_docs_assess
 
 
 def _get_version():
@@ -385,6 +386,7 @@ def main(args=None):
 
             # Release commands
             'release-ready': handle_release_ready_command,
+            'docs-assess': handle_docs_assess,
         }
         
         if parsed_args.command in command_handlers:

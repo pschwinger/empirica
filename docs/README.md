@@ -1,6 +1,6 @@
 # Empirica Documentation
 
-**Current Version:** 1.2.1
+**Current Version:** 1.2.2
 **Status:** Production Ready
 
 ---
@@ -133,4 +133,4 @@ Edit freely! These explain concepts, philosophy, and design decisions.
 
 **System Status:** Production Ready ✅
 **Documentation Coverage:** Active maintenance
-**Version:** 1.2.1
+**Version:** 1.2.2

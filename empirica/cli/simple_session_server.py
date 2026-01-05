@@ -18,6 +18,7 @@ import uuid
 import os
 import json
 import subprocess
+import shlex
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -98,7 +99,13 @@ class SessionManager:
     def _list_files(self, session: dict, path: str) -> dict:
         """List files in directory"""
         try:
-            full_path = Path(session["cwd"]) / path
+            workspace = Path(session["workspace"]).resolve()
+            full_path = (Path(session["cwd"]) / path).resolve()
+            
+            # Path traversal protection
+            if not str(full_path).startswith(str(workspace)):
+                return {"error": f"Access denied: path outside workspace"}
+            
             if not full_path.exists():
                 return {"error": f"Path not found: {path}"}
             
@@ -127,7 +134,13 @@ class SessionManager:
     def _read_file(self, session: dict, path: str) -> dict:
         """Read file content"""
         try:
-            full_path = Path(session["cwd"]) / path
+            workspace = Path(session["workspace"]).resolve()
+            full_path = (Path(session["cwd"]) / path).resolve()
+            
+            # Path traversal protection
+            if not str(full_path).startswith(str(workspace)):
+                return {"error": f"Access denied: path outside workspace"}
+            
             if not full_path.exists():
                 return {"error": f"File not found: {path}"}
             
@@ -158,8 +171,15 @@ class SessionManager:
             }
         
         try:
-            from_full = Path(session["cwd"]) / from_path
-            to_full = Path(session["cwd"]) / to_path
+            workspace = Path(session["workspace"]).resolve()
+            from_full = (Path(session["cwd"]) / from_path).resolve()
+            to_full = (Path(session["cwd"]) / to_path).resolve()
+            
+            # Path traversal protection
+            if not str(from_full).startswith(str(workspace)):
+                return {"error": f"Access denied: source outside workspace"}
+            if not str(to_full).startswith(str(workspace)):
+                return {"error": f"Access denied: destination outside workspace"}
             
             if not from_full.exists():
                 return {"error": f"Source not found: {from_path}"}
@@ -187,10 +207,13 @@ class SessionManager:
     
     def _run_bash(self, session: dict, command: str) -> dict:
         """Run safe bash command"""
-        # Whitelist of safe commands
         safe_commands = ["ls", "pwd", "cat", "head", "tail", "wc", "grep", "find"]
         
-        cmd_parts = command.split()
+        try:
+            cmd_parts = shlex.split(command)
+        except ValueError as e:
+            return {"error": f"Invalid command syntax: {e}"}
+        
         if not cmd_parts or cmd_parts[0] not in safe_commands:
             return {
                 "error": "Command not allowed",
@@ -199,8 +222,8 @@ class SessionManager:
         
         try:
             result = subprocess.run(
-                command,
-                shell=True,
+                cmd_parts,
+                shell=False,
                 cwd=session["cwd"],
                 capture_output=True,
                 text=True,

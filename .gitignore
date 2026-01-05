@@ -104,5 +104,9 @@ docs/reference/epistemic/
 # Session data files (never commit)
 session_*.json
 
+# Security resolution plans (contain vulnerability details)
+SECURITY_RESOLUTION_PLAN.md
+*RESOLUTION_PLAN*.md
+
 # Auto-generated investigation branches (don't commit)
 # These are created by empirica investigate-create-branch
