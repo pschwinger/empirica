@@ -5,6 +5,50 @@ All notable changes to Empirica will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-01-06
+
+### Added
+- **project-switch Command** - New command for AI agents to switch between projects with clear context banner and automatic bootstrap loading.
+  ```bash
+  empirica project-switch <project-name-or-id>
+  ```
+  Features:
+  - Resolves projects by name (case-insensitive) or UUID
+  - Shows "you are here" context banner with project details
+  - Automatically runs project-bootstrap for context loading
+  - Displays project status (sessions, flow state, health)
+  - Shows next steps (session-create, goals-ready)
+  - JSON output support for programmatic use
+
+### Fixed
+
+1. **check-submit Vector Format Handling** - Added robust vector normalization to handle multiple input formats:
+   - Flat dictionary: `{engagement: 0.85, know: 0.75, ...}`
+   - Structured dictionary: `{foundation: {know, do, context}, comprehension: {...}, execution: {...}}`
+   - Wrapped dictionary: `{vectors: {...}}`
+   - JSON string inputs (AI-first mode)
+   
+   Fixes "Vectors must be a dictionary" errors when using structured CASCADE format.
+   
+2. **agent-spawn Persona Schema Validation** - Fixed validation errors for persona records:
+   - PersonaManager.load_persona() now normalizes public_key to valid Ed25519 format (64 hex chars)
+   - Auto-fills missing focus_domains with `['general']` for backward compatibility
+   - Default persona in epistemic_agent.py now includes focus_domains
+   
+   Fixes "public_key 'scout_key_placeholder' invalid" and "focus_domains is required property" errors.
+   
+3. **Findings/Unknowns/Dead-ends Duplication** - Fixed duplicate breadcrumbs in project-bootstrap output:
+   - Changed `UNION ALL` to `UNION` in 8 queries across breadcrumbs.py (get_project_findings, get_project_unknowns, get_project_dead_ends)
+   - When scope='both', findings were written to both session_findings and project_findings tables
+   - UNION automatically deduplicates while preserving dual-scope architecture
+
+### Changed
+- docs/PROJECT_SWITCHING_FOR_AIS.md: Updated status from "CRITICAL" to "IMPLEMENTED" with completed checklist items
+
+### Tests
+- Added 4 new tests for project-switch command (all passing)
+- Total: 281 tests passing
+
 ## [1.2.3] - 2026-01-02
 
 ### Added
