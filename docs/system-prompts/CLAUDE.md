@@ -1,7 +1,7 @@
-# Empirica System Prompt - Canonical Core v1.2.3
+# Empirica System Prompt - Canonical Core v1.2.4
 
 **Model:** CLAUDE | **Generated:** 2026-01-06
-**Syncs with:** Empirica v1.2.3
+**Syncs with:** Empirica v1.2.4
 **Status:** AUTHORITATIVE
 
 ---

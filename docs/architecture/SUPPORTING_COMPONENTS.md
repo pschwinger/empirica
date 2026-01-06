@@ -191,7 +191,7 @@ ops.signed_commit(
 
 # Create signed tag
 ops.signed_tag(
-    tag_name="v1.2.3",
+    tag_name="v1.2.4",
     message="Release with OAuth2",
     sign=True
 )
