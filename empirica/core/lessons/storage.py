@@ -671,77 +671,69 @@ class LessonStorageManager:
         if not unique_keywords:
             return []
 
-        # Search for lessons with matching keywords
-        cursor = self._conn.cursor()
         affected_lessons = []
 
-        # Build dynamic SQL for keyword matching
-        keyword_conditions = []
-        params = []
-        for kw in unique_keywords[:20]:  # Limit to top 20 keywords
-            keyword_conditions.append(
-                "(LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(tags) LIKE ?)"
-            )
-            pattern = f"%{kw}%"
-            params.extend([pattern, pattern, pattern])
+        # Read all lessons from YAML cold storage (source of truth)
+        for yaml_file in self._cold_path.glob('*.yaml'):
+            try:
+                with open(yaml_file, 'r') as f:
+                    data = yaml.safe_load(f)
 
-        if not keyword_conditions:
-            return []
+                if not data:
+                    continue
 
-        # Query lessons that match keywords
-        # CENTRAL TOLERANCE: Scope to domain if provided
-        domain_filter = ""
-        if domain:
-            domain_filter = " AND LOWER(domain) = ?"
-            params.append(domain.lower())
+                lesson_domain = data.get('domain', '')
 
-        query = f"""
-            SELECT id, name, description, source_confidence, tags, domain
-            FROM lessons
-            WHERE ({' OR '.join(keyword_conditions)}){domain_filter}
-        """
+                # CENTRAL TOLERANCE: Skip if domain filter doesn't match
+                if domain and lesson_domain.lower() != domain.lower():
+                    continue
 
-        cursor.execute(query, params)
+                name = data.get('name', '')
+                description = data.get('description', '')
+                tags = ' '.join(data.get('tags', []))
+                epistemic = data.get('epistemic', {})
+                current_conf = epistemic.get('source_confidence', 1.0)
 
-        for row in cursor.fetchall():
-            lesson_id, name, description, current_conf, tags, lesson_domain = row
+                # Count keyword matches for this lesson
+                lesson_text = f"{name} {description} {tags}".lower()
+                match_count = sum(1 for kw in unique_keywords if kw in lesson_text)
 
-            # Count keyword matches for this lesson
-            lesson_text = f"{name} {description} {tags or ''}".lower()
-            match_count = sum(1 for kw in unique_keywords if kw in lesson_text)
+                # Only decay if enough keywords match
+                if match_count >= keywords_threshold:
+                    # Calculate new confidence (with floor)
+                    new_conf = max(min_confidence, current_conf - decay_amount)
 
-            # Only decay if enough keywords match
-            if match_count >= keywords_threshold:
-                # Calculate new confidence (with floor)
-                new_conf = max(min_confidence, current_conf - decay_amount)
+                    if new_conf < current_conf:
+                        # Update the confidence in YAML
+                        data['epistemic']['source_confidence'] = new_conf
+                        data['updated_timestamp'] = time.time()
 
-                if new_conf < current_conf:
-                    # Update the confidence
-                    cursor.execute("""
-                        UPDATE lessons
-                        SET source_confidence = ?,
-                            updated_timestamp = ?
-                        WHERE id = ?
-                    """, (new_conf, time.time(), lesson_id))
+                        # Write back to YAML (atomic write)
+                        temp_path = yaml_file.with_suffix('.yaml.tmp')
+                        with open(temp_path, 'w') as f:
+                            yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
+                        temp_path.replace(yaml_file)
 
-                    affected_lessons.append({
-                        'lesson_id': lesson_id,
-                        'name': name,
-                        'previous_confidence': current_conf,
-                        'new_confidence': new_conf,
-                        'decay_amount': current_conf - new_conf,
-                        'matched_keywords': match_count,
-                        'reason': 'finding_supersedes'
-                    })
+                        lesson_id = yaml_file.stem
+                        affected_lessons.append({
+                            'lesson_id': lesson_id,
+                            'name': name,
+                            'previous_confidence': current_conf,
+                            'new_confidence': new_conf,
+                            'decay_amount': current_conf - new_conf,
+                            'matched_keywords': match_count,
+                            'reason': 'finding_supersedes'
+                        })
 
-                    logger.info(
-                        f"IMMUNE: Decayed lesson '{name}' confidence "
-                        f"{current_conf:.2f} → {new_conf:.2f} "
-                        f"({match_count} keyword matches)"
-                    )
+                        logger.info(
+                            f"IMMUNE: Decayed lesson '{name}' confidence "
+                            f"{current_conf:.2f} → {new_conf:.2f} "
+                            f"({match_count} keyword matches)"
+                        )
 
-        if affected_lessons:
-            self._conn.commit()
+            except Exception as e:
+                logger.warning(f"IMMUNE: Failed to process {yaml_file}: {e}")
+                continue
 
         return affected_lessons
 
