@@ -426,9 +426,21 @@ def handle_docs_assess(args) -> int:
         project_root = Path(args.project_root) if args.project_root else None
         verbose = getattr(args, 'verbose', False)
         output_format = getattr(args, 'output', 'human')
+        summary_only = getattr(args, 'summary_only', False)
 
         agent = EpistemicDocsAgent(project_root=project_root, verbose=verbose)
         result = agent.run_assessment()
+
+        # Lightweight summary for bootstrap context (~50 tokens)
+        if summary_only:
+            summary = _generate_summary(result, agent.categories)
+            if output_format == 'json':
+                print(json.dumps(summary))
+            else:
+                print(f"Docs: {summary['coverage']}% {summary['moon']} | "
+                      f"K:{summary['know']:.0%} U:{summary['uncertainty']:.0%} | "
+                      f"Gaps: {', '.join(summary['top_gaps'][:2]) or 'none'}")
+            return 0
 
         if output_format == 'json':
             print(json.dumps(result, indent=2))
@@ -439,6 +451,28 @@ def handle_docs_assess(args) -> int:
 
     except Exception as e:
         return handle_cli_error(e, "docs-assess")
+
+
+def _generate_summary(result: dict, categories: list) -> dict:
+    """Generate lightweight summary (~50 tokens) for bootstrap context."""
+    overall = result["overall"]
+    epistemic = result["epistemic_assessment"]
+
+    # Find top gaps (categories with coverage < 70%)
+    top_gaps = [c.name for c in categories if c.coverage < 0.70][:3]
+
+    # Count total docs
+    docs_dir = Path.cwd() / "docs"
+    doc_count = len(list(docs_dir.rglob("*.md"))) if docs_dir.exists() else 0
+
+    return {
+        "coverage": overall["coverage"],
+        "moon": overall["moon"],
+        "know": epistemic["know"],
+        "uncertainty": epistemic["uncertainty"],
+        "top_gaps": top_gaps,
+        "doc_count": doc_count
+    }
 
 
 def _print_human_output(result: dict, categories: list[FeatureCoverage], verbose: bool):

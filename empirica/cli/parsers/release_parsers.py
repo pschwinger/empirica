@@ -39,6 +39,11 @@ def add_release_parsers(subparsers):
         help='Show detailed undocumented items'
     )
     docs_parser.add_argument(
+        '--summary-only',
+        action='store_true',
+        help='Lightweight summary (~50 tokens) for bootstrap context'
+    )
+    docs_parser.add_argument(
         '--output',
         choices=['human', 'json'],
         default='human',

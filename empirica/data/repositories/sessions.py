@@ -203,19 +203,24 @@ class SessionRepository(BaseRepository):
                     cascade_tasks[cascade_id] = cascade_row[0]
 
         # Get investigation tools used (if detailed)
+        # Note: noetic_tools table was designed but never wired up
         tools_used = []
         if detail_level in ['detailed', 'full']:
-            cursor = self._execute("""
-                SELECT tool_name, COUNT(*) as count
-                FROM noetic_tools
-                WHERE cascade_id IN (
-                    SELECT cascade_id FROM cascades WHERE session_id = ?
-                )
-                GROUP BY tool_name
-                ORDER BY count DESC
-                LIMIT 10
-            """, (session_id,))
-            tools_used = [{"tool": row[0], "count": row[1]} for row in cursor.fetchall()]
+            try:
+                cursor = self._execute("""
+                    SELECT tool_name, COUNT(*) as count
+                    FROM noetic_tools
+                    WHERE cascade_id IN (
+                        SELECT cascade_id FROM cascades WHERE session_id = ?
+                    )
+                    GROUP BY tool_name
+                    ORDER BY count DESC
+                    LIMIT 10
+                """, (session_id,))
+                tools_used = [{"tool": row[0], "count": row[1]} for row in cursor.fetchall()]
+            except Exception:
+                # Table doesn't exist yet - feature not implemented
+                tools_used = []
 
         # Calculate epistemic delta
         delta = None
