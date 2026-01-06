@@ -97,14 +97,15 @@ empirica unknown-resolve --unknown-id <UUID> --resolved-by "..."
 
 ## SELF-SERVE KNOWLEDGE
 
-When uncertainty is high or knowledge gaps exist, query docs directly:
+**Before asking user or guessing, query docs first:**
 ```bash
 empirica docs-explain --topic "vectors"        # Topic lookup
 empirica docs-explain --question "How do...?"  # Question answering
 empirica docs-assess --summary-only            # Quick coverage check (~50 tokens)
 ```
 
-**Use at:** Session start, pre-CHECK, or when uncertainty > 0.5
+**Triggers:** uncertainty > 0.5 | knowledge gap | pre-CHECK | session start
+**Pattern:** Don't know → docs-explain → still unclear → ask user
 
 ---
 
