@@ -128,7 +128,7 @@ from .command_handlers.persona_commands import (
     handle_persona_find_command,
 )
 from .command_handlers.release_commands import handle_release_ready_command
-from .command_handlers.docs_commands import handle_docs_assess
+from .command_handlers.docs_commands import handle_docs_assess, handle_docs_explain
 
 
 def _get_version():
@@ -391,6 +391,7 @@ def main(args=None):
             # Release commands
             'release-ready': handle_release_ready_command,
             'docs-assess': handle_docs_assess,
+            'docs-explain': handle_docs_explain,
 
             # Lesson commands (Epistemic Procedural Knowledge)
             'lesson-create': handle_lesson_create_command,

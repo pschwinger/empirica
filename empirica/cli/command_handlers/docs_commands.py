@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 """
-Epistemic Documentation Assessment Agent - docs-assess command
+Epistemic Documentation Commands - docs-assess and docs-explain
 
-Applies epistemic principles to documentation coverage:
-1. CLI Coverage - Which commands are documented?
-2. Core Module Coverage - Which modules have docs?
-3. Feature Discovery - What features exist vs documented?
-4. Staleness Detection - Are docs up to date with code?
+docs-assess: Analyzes documentation coverage and suggests NotebookLM content
+docs-explain: Retrieves focused information about Empirica topics
 
 Philosophy:
 - "Know what you know" - Measure actual documentation coverage
 - "Know what you don't know" - Reveal undocumented features
 - "Honest uncertainty" - Report coverage gaps with precision
+- "Focused retrieval" - Get exactly what you need to know
 
 Usage:
     empirica docs-assess                     # Full documentation assessment
     empirica docs-assess --output json       # JSON output for automation
-    empirica docs-assess --verbose           # Show all details
+    empirica docs-explain --topic "vectors"  # Explain epistemic vectors
+    empirica docs-explain --question "How do I start a session?"
 """
 
 import ast
@@ -291,7 +290,8 @@ class EpistemicDocsAgent:
                 "assessment": assessment
             },
             "categories": [c.to_dict() for c in self.categories],
-            "recommendations": self._generate_recommendations()
+            "recommendations": self._generate_recommendations(),
+            "notebooklm_suggestions": self._generate_notebooklm_suggestions()
         }
 
     def _score_to_moon(self, score: float) -> str:
@@ -318,6 +318,106 @@ class EpistemicDocsAgent:
                 )
 
         return recommendations[:5]  # Top 5 recommendations
+
+    def _generate_notebooklm_suggestions(self) -> dict[str, Any]:
+        """Generate NotebookLM content suggestions based on doc structure."""
+        docs_dir = self.root / "docs"
+        suggestions = {
+            "slide_decks": [],
+            "infographics": [],
+            "audio_overviews": [],
+            "study_guides": []
+        }
+
+        if not docs_dir.exists():
+            return suggestions
+
+        # Group docs by directory/topic
+        doc_groups = {}
+        for md_file in docs_dir.rglob("*.md"):
+            if "_archive" in str(md_file):
+                continue
+            rel_path = md_file.relative_to(docs_dir)
+            parent = str(rel_path.parent) if rel_path.parent != Path(".") else "root"
+            if parent not in doc_groups:
+                doc_groups[parent] = []
+            doc_groups[parent].append(str(rel_path))
+
+        # Slide deck suggestions - grouped tutorials/guides
+        if "guides" in doc_groups:
+            suggestions["slide_decks"].append({
+                "topic": "Getting Started with Empirica",
+                "sources": doc_groups["guides"][:5],
+                "audience": "user",
+                "format": "tutorial"
+            })
+
+        if "root" in doc_groups:
+            intro_docs = [d for d in doc_groups.get("root", [])
+                         if any(x in d.lower() for x in ["start", "install", "quickstart", "explained"])]
+            if intro_docs:
+                suggestions["slide_decks"].append({
+                    "topic": "Empirica Overview",
+                    "sources": intro_docs,
+                    "audience": "user",
+                    "format": "overview"
+                })
+
+        # Architecture docs -> infographics
+        if "architecture" in doc_groups:
+            suggestions["infographics"].append({
+                "topic": "System Architecture",
+                "sources": doc_groups["architecture"][:6],
+                "audience": "developer",
+                "recommended": True
+            })
+            suggestions["slide_decks"].append({
+                "topic": "Empirica Architecture Deep Dive",
+                "sources": doc_groups["architecture"],
+                "audience": "developer",
+                "format": "technical"
+            })
+
+        # Reference/API docs -> study guides
+        if "reference" in doc_groups or "reference/api" in doc_groups:
+            api_docs = doc_groups.get("reference/api", []) + doc_groups.get("reference", [])
+            suggestions["study_guides"].append({
+                "topic": "CLI & API Reference",
+                "sources": api_docs[:8],
+                "audience": "developer"
+            })
+
+        # Conceptual docs -> audio overviews
+        epistemic_docs = []
+        for group, files in doc_groups.items():
+            epistemic_docs.extend([f for f in files if "epistemic" in f.lower() or "vector" in f.lower()])
+        if epistemic_docs:
+            suggestions["audio_overviews"].append({
+                "topic": "Understanding Epistemic Vectors",
+                "sources": epistemic_docs[:3],
+                "audience": "user",
+                "format": "deep_dive"
+            })
+
+        # Integration docs
+        if "integrations" in doc_groups:
+            suggestions["slide_decks"].append({
+                "topic": "Integrations & Extensions",
+                "sources": doc_groups["integrations"],
+                "audience": "developer",
+                "format": "how-to"
+            })
+
+        # System prompts -> specialized audio
+        if "system-prompts" in doc_groups:
+            suggestions["audio_overviews"].append({
+                "topic": "Multi-Model Support",
+                "sources": doc_groups["system-prompts"][:4],
+                "audience": "developer",
+                "format": "brief"
+            })
+
+        return suggestions
 
 
 def handle_docs_assess(args) -> int:
@@ -377,5 +477,328 @@ def _print_human_output(result: dict, categories: list[FeatureCoverage], verbose
         print("\n💡 Recommendations:")
         for rec in result["recommendations"]:
             print(f"   • {rec}")
+
+    # NotebookLM suggestions
+    nlm = result.get("notebooklm_suggestions", {})
+    if any(nlm.get(k) for k in ["slide_decks", "infographics", "audio_overviews", "study_guides"]):
+        print("\n📽️  NotebookLM Content Suggestions:")
+        print("-" * 50)
+
+        if nlm.get("slide_decks"):
+            print("\n   🎴 Slide Decks:")
+            for deck in nlm["slide_decks"]:
+                aud = f"[{deck.get('audience', 'all')}]"
+                fmt = deck.get('format', '')
+                print(f"      • {deck['topic']} {aud} ({fmt})")
+                if verbose:
+                    for src in deck.get("sources", [])[:3]:
+                        print(f"         └─ {src}")
+
+        if nlm.get("infographics"):
+            print("\n   📊 Infographics:")
+            for info in nlm["infographics"]:
+                rec = "⭐" if info.get("recommended") else ""
+                print(f"      • {info['topic']} [{info.get('audience', 'all')}] {rec}")
+
+        if nlm.get("audio_overviews"):
+            print("\n   🎧 Audio Overviews:")
+            for audio in nlm["audio_overviews"]:
+                fmt = audio.get('format', 'deep_dive')
+                print(f"      • {audio['topic']} [{audio.get('audience', 'all')}] ({fmt})")
+
+        if nlm.get("study_guides"):
+            print("\n   📖 Study Guides:")
+            for guide in nlm["study_guides"]:
+                print(f"      • {guide['topic']} [{guide.get('audience', 'all')}]")
+
+    print("\n" + "=" * 60)
+
+
+# =============================================================================
+# DOCS-EXPLAIN: Focused Information Retrieval
+# =============================================================================
+
+class DocsExplainAgent:
+    """
+    Epistemic Documentation Explain Agent.
+
+    Retrieves focused information about Empirica topics for users and AIs.
+    Inverts docs-assess: instead of analyzing coverage, it retrieves answers.
+    """
+
+    # Topic -> keywords mapping for better matching
+    TOPIC_ALIASES = {
+        "vectors": ["epistemic", "vectors", "know", "uncertainty", "engagement", "preflight", "postflight"],
+        "session": ["session", "create", "start", "cascade", "workflow"],
+        "goals": ["goals", "objectives", "subtasks", "tracking", "progress"],
+        "check": ["check", "gate", "sentinel", "proceed", "investigate"],
+        "findings": ["findings", "unknowns", "dead ends", "breadcrumbs", "learning"],
+        "lessons": ["lessons", "procedural", "atomics", "replay", "knowledge graph"],
+        "memory": ["memory", "qdrant", "semantic", "eidetic", "episodic"],
+        "handoff": ["handoff", "continuity", "context", "switch", "ai-to-ai"],
+        "investigation": ["investigation", "branch", "multi-branch", "turtle", "explore"],
+        "persona": ["persona", "emerged", "profile", "identity"],
+        "calibration": ["calibration", "bayesian", "bias", "accuracy"],
+    }
+
+    def __init__(self, project_root: Path | None = None):
+        self.root = project_root or Path.cwd()
+        self.docs_dir = self.root / "docs"
+        self._docs_cache: dict[str, str] = {}
+
+    def _load_docs(self) -> dict[str, str]:
+        """Load all docs into memory with their content."""
+        if self._docs_cache:
+            return self._docs_cache
+
+        if not self.docs_dir.exists():
+            return {}
+
+        for md_file in self.docs_dir.rglob("*.md"):
+            if "_archive" in str(md_file):
+                continue
+            try:
+                rel_path = str(md_file.relative_to(self.docs_dir))
+                self._docs_cache[rel_path] = md_file.read_text()
+            except Exception:
+                pass
+
+        return self._docs_cache
+
+    def _expand_topic(self, topic: str) -> list[str]:
+        """Expand topic to related keywords."""
+        topic_lower = topic.lower()
+        keywords = [topic_lower]
+
+        # Add aliases if topic matches
+        for alias_key, alias_keywords in self.TOPIC_ALIASES.items():
+            if topic_lower in alias_key or alias_key in topic_lower:
+                keywords.extend(alias_keywords)
+            elif any(kw in topic_lower for kw in alias_keywords):
+                keywords.extend(alias_keywords)
+
+        return list(set(keywords))
+
+    def _score_doc(self, content: str, keywords: list[str]) -> float:
+        """Score a document based on keyword relevance."""
+        content_lower = content.lower()
+        score = 0.0
+
+        for kw in keywords:
+            # Count occurrences
+            count = content_lower.count(kw)
+            if count > 0:
+                # Diminishing returns for high counts
+                score += min(count, 10) * 0.1
+
+            # Bonus for keyword in headers
+            if f"# {kw}" in content_lower or f"## {kw}" in content_lower:
+                score += 0.5
+
+        return score
+
+    def _extract_relevant_sections(self, content: str, keywords: list[str], max_sections: int = 3) -> list[str]:
+        """Extract the most relevant sections from a document."""
+        sections = []
+
+        # Split by headers
+        lines = content.split('\n')
+        current_section = []
+        current_header = ""
+
+        for line in lines:
+            if line.startswith('#'):
+                if current_section and current_header:
+                    sections.append((current_header, '\n'.join(current_section)))
+                current_header = line
+                current_section = []
+            else:
+                current_section.append(line)
+
+        # Don't forget last section
+        if current_section and current_header:
+            sections.append((current_header, '\n'.join(current_section)))
+
+        # Score sections by keyword relevance
+        scored_sections = []
+        for header, body in sections:
+            combined = f"{header}\n{body}"
+            score = self._score_doc(combined, keywords)
+            if score > 0:
+                scored_sections.append((score, header, body[:500]))  # Truncate long sections
+
+        # Sort by score and return top sections
+        scored_sections.sort(reverse=True)
+        return [(h, b) for _, h, b in scored_sections[:max_sections]]
+
+    def explain(self, topic: str = None, question: str = None, audience: str = "all") -> dict[str, Any]:
+        """
+        Get focused explanation of an Empirica topic.
+
+        Args:
+            topic: Topic to explain (e.g., "vectors", "sessions")
+            question: Question to answer (e.g., "How do I start a session?")
+            audience: Target audience ("user", "developer", "ai", "all")
+
+        Returns:
+            dict with explanation, sources, and suggestions
+        """
+        docs = self._load_docs()
+
+        if not docs:
+            return {
+                "ok": False,
+                "error": "No documentation found",
+                "explanation": None
+            }
+
+        # Build search keywords
+        search_text = topic or question or ""
+        keywords = self._expand_topic(search_text)
+
+        # Score all docs
+        scored_docs = []
+        for path, content in docs.items():
+            score = self._score_doc(content, keywords)
+            if score > 0.1:  # Minimum relevance threshold
+                scored_docs.append((score, path, content))
+
+        scored_docs.sort(reverse=True)
+
+        if not scored_docs:
+            return {
+                "ok": True,
+                "query": search_text,
+                "explanation": f"No documentation found for '{search_text}'. Try: vectors, sessions, goals, check, findings, lessons, memory, handoff",
+                "sources": [],
+                "related_topics": list(self.TOPIC_ALIASES.keys()),
+                "notebooklm_suggestion": None
+            }
+
+        # Get top docs and extract relevant sections
+        top_docs = scored_docs[:5]
+        all_sections = []
+        sources = []
+
+        for score, path, content in top_docs:
+            sections = self._extract_relevant_sections(content, keywords)
+            for header, body in sections:
+                all_sections.append(f"**{path}** {header}\n{body.strip()}")
+            sources.append({
+                "path": path,
+                "relevance": round(score, 2)
+            })
+
+        # Build explanation
+        if question:
+            explanation_header = f"**Answering:** {question}\n\n"
+        else:
+            explanation_header = f"**Topic:** {topic}\n\n"
+
+        explanation = explanation_header + "\n\n---\n\n".join(all_sections[:5])
+
+        # Suggest NotebookLM content for deeper dive
+        notebooklm_suggestion = None
+        if len(sources) >= 2:
+            notebooklm_suggestion = {
+                "type": "audio_overview" if len(sources) <= 3 else "slide_deck",
+                "topic": topic or question,
+                "sources": [s["path"] for s in sources[:5]],
+                "format": "deep_dive" if "how" in search_text.lower() else "brief"
+            }
+
+        # Find related topics
+        related = []
+        for alias_key in self.TOPIC_ALIASES.keys():
+            if alias_key not in search_text.lower():
+                # Check if any source mentions this topic
+                for _, path, content in top_docs[:3]:
+                    if any(kw in content.lower() for kw in self.TOPIC_ALIASES[alias_key][:2]):
+                        related.append(alias_key)
+                        break
+
+        return {
+            "ok": True,
+            "query": search_text,
+            "audience": audience,
+            "explanation": explanation,
+            "sources": sources,
+            "related_topics": related[:5],
+            "notebooklm_suggestion": notebooklm_suggestion
+        }
+
+
+def handle_docs_explain(args) -> int:
+    """Handle the docs-explain command."""
+    try:
+        project_root = Path(args.project_root) if hasattr(args, 'project_root') and args.project_root else None
+        output_format = getattr(args, 'output', 'human')
+        topic = getattr(args, 'topic', None)
+        question = getattr(args, 'question', None)
+        audience = getattr(args, 'audience', 'all')
+
+        if not topic and not question:
+            print("Error: Please provide --topic or --question")
+            return 1
+
+        agent = DocsExplainAgent(project_root=project_root)
+        result = agent.explain(topic=topic, question=question, audience=audience)
+
+        if output_format == 'json':
+            print(json.dumps(result, indent=2))
+        else:
+            _print_explain_human_output(result)
+
+        return 0
+
+    except Exception as e:
+        return handle_cli_error(e, "docs-explain")
+
+
+def _print_explain_human_output(result: dict):
+    """Print human-readable docs-explain output."""
+    print("\n" + "=" * 60)
+    print("📖 EMPIRICA DOCS EXPLAIN")
+    print("=" * 60)
+
+    if not result.get("ok"):
+        print(f"\n❌ {result.get('error', 'Unknown error')}")
+        return
+
+    print(f"\n🔍 Query: {result.get('query', 'N/A')}")
+
+    if result.get("audience") != "all":
+        print(f"👤 Audience: {result['audience']}")
+
+    print("\n" + "-" * 60)
+
+    # Main explanation
+    explanation = result.get("explanation", "No explanation available")
+    # Truncate for terminal display
+    if len(explanation) > 2000:
+        explanation = explanation[:2000] + "\n\n... (truncated, use --output json for full content)"
+    print(explanation)
+
+    print("\n" + "-" * 60)
+
+    # Sources
+    sources = result.get("sources", [])
+    if sources:
+        print("\n📚 Sources:")
+        for src in sources[:5]:
+            print(f"   • {src['path']} (relevance: {src['relevance']})")
+
+    # Related topics
+    related = result.get("related_topics", [])
+    if related:
+        print(f"\n🔗 Related: {', '.join(related)}")
+
+    # NotebookLM suggestion
+    nlm = result.get("notebooklm_suggestion")
+    if nlm:
+        print(f"\n📽️  For deeper learning, generate NotebookLM {nlm['type']}:")
+        print(f"   Topic: {nlm['topic']}")
+        print(f"   Format: {nlm['format']}")
+        print(f"   Sources: {', '.join(nlm['sources'][:3])}")
 
     print("\n" + "=" * 60)

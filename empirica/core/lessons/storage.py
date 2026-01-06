@@ -465,17 +465,18 @@ class LessonStorageManager:
         elif query and self._qdrant:
             vector = self._generate_embedding(query)
             try:
-                hits = self._qdrant.search(
+                # Use query_points API (Qdrant 1.7+)
+                response = self._qdrant.query_points(
                     collection_name=self._qdrant_collection,
-                    query_vector=vector,
+                    query=vector,
                     limit=limit
                 )
-                for hit in hits:
+                for point in response.points:
                     results.append({
-                        'id': hit.payload.get('lesson_id'),
-                        'name': hit.payload.get('name'),
-                        'description': hit.payload.get('description'),
-                        'score': hit.score
+                        'id': point.payload.get('lesson_id'),
+                        'name': point.payload.get('name'),
+                        'description': point.payload.get('description'),
+                        'score': point.score
                     })
             except Exception as e:
                 logger.warning(f"Qdrant search failed: {e}")
