@@ -186,6 +186,23 @@ class PersonaManager:
         with open(filepath, 'r') as f:
             profile_dict = json.load(f)
 
+        # Normalize for backward compatibility / emergent persona records
+        # - Some older/emergent personas may have placeholder public_key values
+        # - Some may omit epistemic_config.focus_domains
+        try:
+            signing = profile_dict.get('signing_identity') or {}
+            pk = signing.get('public_key')
+            if not isinstance(pk, str) or len(pk) != 64:
+                signing['public_key'] = '0' * 64
+            profile_dict['signing_identity'] = signing
+
+            epi = profile_dict.get('epistemic_config') or {}
+            if 'focus_domains' not in epi or not isinstance(epi.get('focus_domains'), list) or len(epi.get('focus_domains')) == 0:
+                epi['focus_domains'] = ['general']
+            profile_dict['epistemic_config'] = epi
+        except Exception:
+            pass
+
         # Validate
         validate_persona_profile(profile_dict)
 

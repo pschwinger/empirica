@@ -509,6 +509,30 @@ def handle_check_submit_command(args):
         except Exception:
             round_num = getattr(args, 'round', 1)  # Fallback to arg or 1
 
+        # Normalize vectors into a flat dict of 13 canonical keys.
+        # Accepts:
+        # - flat dict: {engagement, know, do, ... uncertainty}
+        # - structured dict: {engagement, foundation:{know,do,context}, comprehension:{clarity,...}, execution:{state,...}, uncertainty}
+        # - wrapped dict: {vectors: {...}}
+        # - JSON string (AI-first inputs)
+        if isinstance(vectors, str):
+            vectors = parse_json_safely(vectors)
+
+        if isinstance(vectors, dict) and 'vectors' in vectors and isinstance(vectors.get('vectors'), dict):
+            vectors = vectors['vectors']
+
+        if isinstance(vectors, dict) and any(k in vectors for k in ('foundation', 'comprehension', 'execution')):
+            flat = {}
+            # keep engagement/uncertainty if present
+            for k in ('engagement', 'uncertainty'):
+                if k in vectors:
+                    flat[k] = vectors[k]
+            # flatten groups
+            flat.update((vectors.get('foundation') or {}))
+            flat.update((vectors.get('comprehension') or {}))
+            flat.update((vectors.get('execution') or {}))
+            vectors = flat
+
         # Validate inputs
         if not isinstance(vectors, dict):
             raise ValueError("Vectors must be a dictionary")

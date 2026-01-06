@@ -104,10 +104,12 @@ def load_persona(config: EpistemicAgentConfig) -> PersonaProfile:
     try:
         return manager.load_persona(config.persona_id)
     except FileNotFoundError:
-        # Return default persona with balanced priors
+        # Return default persona with balanced priors.
+        # Must satisfy persona schema requirements used by agent-spawn.
         from empirica.core.persona import (
             EpistemicConfig, SigningIdentityConfig, PersonaProfile
         )
+
         return PersonaProfile(
             persona_id="general",
             name="General Agent",
@@ -115,7 +117,9 @@ def load_persona(config: EpistemicAgentConfig) -> PersonaProfile:
             signing_identity=SigningIdentityConfig(
                 user_id="system",
                 identity_name="general_agent",
-                public_key="0" * 64  # Placeholder
+                # Must be 64 hex chars; using a stable placeholder that matches schema.
+                # (Real identities are used for signing in production personas.)
+                public_key="0" * 64
             ),
             epistemic_config=EpistemicConfig(
                 priors={
@@ -124,7 +128,9 @@ def load_persona(config: EpistemicAgentConfig) -> PersonaProfile:
                     "signal": 0.50, "density": 0.50, "state": 0.50,
                     "change": 0.30, "completion": 0.10, "impact": 0.50,
                     "uncertainty": 0.50
-                }
+                },
+                # Required by schema; used by Sentinel / persona matching.
+                focus_domains=["general"]
             )
         )
 
