@@ -613,6 +613,7 @@ class LessonStorageManager:
     def decay_related_lessons(
         self,
         finding_text: str,
+        domain: Optional[str] = None,
         decay_amount: float = 0.05,
         min_confidence: float = 0.3,
         keywords_threshold: int = 2
@@ -624,8 +625,13 @@ class LessonStorageManager:
         the related lessons' confidence should decay. This implements the
         "immune system" pattern for knowledge health.
 
+        CENTRAL TOLERANCE: If domain is provided, only decay lessons in that
+        domain. This prevents "autoimmune" attacks where findings about one
+        topic incorrectly decay lessons about unrelated topics.
+
         Args:
             finding_text: The finding content
+            domain: Optional domain to scope decay (central tolerance)
             decay_amount: How much to decay confidence (default 0.05)
             min_confidence: Minimum confidence floor (default 0.3)
             keywords_threshold: Minimum keyword matches to trigger decay
@@ -683,16 +689,22 @@ class LessonStorageManager:
             return []
 
         # Query lessons that match keywords
+        # CENTRAL TOLERANCE: Scope to domain if provided
+        domain_filter = ""
+        if domain:
+            domain_filter = " AND LOWER(domain) = ?"
+            params.append(domain.lower())
+
         query = f"""
-            SELECT id, name, description, source_confidence, tags
+            SELECT id, name, description, source_confidence, tags, domain
             FROM lessons
-            WHERE {' OR '.join(keyword_conditions)}
+            WHERE ({' OR '.join(keyword_conditions)}){domain_filter}
         """
 
         cursor.execute(query, params)
 
         for row in cursor.fetchall():
-            lesson_id, name, description, current_conf, tags = row
+            lesson_id, name, description, current_conf, tags, lesson_domain = row
 
             # Count keyword matches for this lesson
             lesson_text = f"{name} {description} {tags or ''}".lower()
@@ -732,6 +744,282 @@ class LessonStorageManager:
             self._conn.commit()
 
         return affected_lessons
+
+    # ==================== KNOWLEDGE GRAPH: LESSON RELATIONSHIPS ====================
+
+    def add_edge(
+        self,
+        source_id: str,
+        target_id: str,
+        relation_type: str,
+        weight: float = 1.0,
+        metadata: Optional[Dict] = None
+    ) -> Optional[str]:
+        """
+        Create an edge between two lessons in the knowledge graph.
+
+        Relation types:
+        - 'enables': source must be done before target can be effective
+        - 'prerequisite': source is required before target
+        - 'related': lessons cover similar/overlapping topics
+        - 'supersedes': source replaces/updates target
+        - 'improves': source enhances effectiveness of target
+
+        Args:
+            source_id: Source lesson ID
+            target_id: Target lesson ID
+            relation_type: Type of relationship
+            weight: Strength of relationship (0.0-1.0)
+            metadata: Optional additional data
+
+        Returns:
+            Edge ID if created, None if failed
+        """
+        import json
+        import hashlib
+
+        # Generate deterministic edge ID
+        edge_id = hashlib.md5(f"{source_id}:{relation_type}:{target_id}".encode()).hexdigest()[:16]
+
+        cursor = self._conn.cursor()
+
+        # Check if edge already exists (use unique constraint columns)
+        cursor.execute("""
+            SELECT id FROM knowledge_graph
+            WHERE source_type = 'lesson' AND source_id = ?
+            AND relation_type = ?
+            AND target_type = 'lesson' AND target_id = ?
+        """, (source_id, relation_type, target_id))
+        existing = cursor.fetchone()
+        if existing:
+            # Update weight if edge exists
+            cursor.execute("""
+                UPDATE knowledge_graph
+                SET weight = ?, metadata = ?
+                WHERE id = ?
+            """, (weight, json.dumps(metadata) if metadata else None, existing[0]))
+            self._conn.commit()
+            logger.debug(f"Updated edge {existing[0]}: {relation_type}")
+            return existing[0]
+
+        # Create new edge
+        cursor.execute("""
+            INSERT INTO knowledge_graph
+            (id, source_type, source_id, relation_type, target_type, target_id, weight, created_timestamp, metadata)
+            VALUES (?, 'lesson', ?, ?, 'lesson', ?, ?, ?, ?)
+        """, (
+            edge_id,
+            source_id,
+            relation_type,
+            target_id,
+            weight,
+            time.time(),
+            json.dumps(metadata) if metadata else None
+        ))
+
+        self._conn.commit()
+        logger.info(f"Created edge {edge_id}: {source_id} --{relation_type}--> {target_id}")
+        return edge_id
+
+    def get_lesson_map(self, domain: Optional[str] = None) -> Dict:
+        """
+        Get orthogonal view of lessons organized by relationships.
+
+        Returns a structured map showing:
+        - Entry points (lessons with no prerequisites)
+        - Dependency chains
+        - Related clusters
+
+        Args:
+            domain: Optional domain filter
+
+        Returns:
+            Dict with lesson map structure
+        """
+        cursor = self._conn.cursor()
+
+        # Get all lessons (optionally filtered by domain)
+        if domain:
+            cursor.execute("""
+                SELECT id, name, source_confidence, domain
+                FROM lessons WHERE LOWER(domain) = ?
+            """, (domain.lower(),))
+        else:
+            cursor.execute("SELECT id, name, source_confidence, domain FROM lessons")
+
+        lessons = {row[0]: {
+            'id': row[0],
+            'name': row[1],
+            'confidence': row[2],
+            'domain': row[3],
+            'enables': [],
+            'enabled_by': [],
+            'prerequisites': [],
+            'prerequisite_for': [],
+            'related': [],
+            'supersedes': [],
+            'superseded_by': [],
+            'improves': [],
+            'improved_by': []
+        } for row in cursor.fetchall()}
+
+        if not lessons:
+            return {'lessons': {}, 'entry_points': [], 'clusters': []}
+
+        # Get all edges for these lessons
+        lesson_ids = list(lessons.keys())
+        placeholders = ','.join('?' * len(lesson_ids))
+
+        cursor.execute(f"""
+            SELECT source_id, relation_type, target_id, weight
+            FROM knowledge_graph
+            WHERE source_id IN ({placeholders}) OR target_id IN ({placeholders})
+        """, lesson_ids + lesson_ids)
+
+        # Build relationship maps
+        for source_id, relation_type, target_id, weight in cursor.fetchall():
+            if source_id in lessons and target_id in lessons:
+                if relation_type == 'enables':
+                    lessons[source_id]['enables'].append({'id': target_id, 'weight': weight})
+                    lessons[target_id]['enabled_by'].append({'id': source_id, 'weight': weight})
+                elif relation_type == 'prerequisite':
+                    lessons[source_id]['prerequisite_for'].append({'id': target_id, 'weight': weight})
+                    lessons[target_id]['prerequisites'].append({'id': source_id, 'weight': weight})
+                elif relation_type == 'related':
+                    lessons[source_id]['related'].append({'id': target_id, 'weight': weight})
+                    lessons[target_id]['related'].append({'id': source_id, 'weight': weight})
+                elif relation_type == 'supersedes':
+                    lessons[source_id]['supersedes'].append({'id': target_id, 'weight': weight})
+                    lessons[target_id]['superseded_by'].append({'id': source_id, 'weight': weight})
+                elif relation_type == 'improves':
+                    lessons[source_id]['improves'].append({'id': target_id, 'weight': weight})
+                    lessons[target_id]['improved_by'].append({'id': source_id, 'weight': weight})
+
+        # Find entry points (lessons with no prerequisites or enabled_by)
+        entry_points = [
+            lid for lid, data in lessons.items()
+            if not data['prerequisites'] and not data['enabled_by']
+        ]
+
+        # Build dependency chains from entry points
+        def get_chain(lesson_id, visited=None):
+            if visited is None:
+                visited = set()
+            if lesson_id in visited:
+                return []
+            visited.add(lesson_id)
+            lesson = lessons.get(lesson_id)
+            if not lesson:
+                return []
+            chain = [lesson_id]
+            for enabled in lesson['enables'] + lesson['prerequisite_for']:
+                chain.extend(get_chain(enabled['id'], visited))
+            return chain
+
+        chains = [get_chain(ep) for ep in entry_points]
+
+        return {
+            'lessons': lessons,
+            'entry_points': entry_points,
+            'chains': chains,
+            'edge_count': sum(
+                len(l['enables']) + len(l['prerequisites']) +
+                len(l['related']) + len(l['supersedes']) + len(l['improves'])
+                for l in lessons.values()
+            ) // 2  # Divide by 2 to avoid double counting
+        }
+
+    def print_lesson_map(self, domain: Optional[str] = None) -> str:
+        """
+        Print a visual ASCII representation of the lesson map.
+
+        Args:
+            domain: Optional domain filter
+
+        Returns:
+            ASCII art representation
+        """
+        lesson_map = self.get_lesson_map(domain)
+        lessons = lesson_map['lessons']
+        entry_points = lesson_map['entry_points']
+
+        if not lessons:
+            return "No lessons found."
+
+        lines = []
+        lines.append(f"=== LESSON MAP {'(' + domain + ')' if domain else ''} ===")
+        lines.append(f"Lessons: {len(lessons)} | Edges: {lesson_map['edge_count']}")
+        lines.append("")
+
+        # Print from entry points
+        printed = set()
+
+        def format_lesson(lesson):
+            conf_icon = "●" if lesson['confidence'] >= 0.85 else "◐" if lesson['confidence'] >= 0.70 else "○"
+            return f"{conf_icon} {lesson['name']} [{lesson['confidence']:.2f}]"
+
+        def print_tree(lesson_id, prefix="", is_last=True, rel_label=None):
+            if lesson_id in printed:
+                return
+            printed.add(lesson_id)
+
+            lesson = lessons.get(lesson_id)
+            if not lesson:
+                return
+
+            # Print the current lesson
+            connector = "└── " if is_last else "├── "
+            if rel_label:
+                lines.append(f"{prefix}{connector}[{rel_label}] {format_lesson(lesson)}")
+            else:
+                lines.append(f"{prefix}{format_lesson(lesson)}")
+
+            # Get children (lessons this one enables or is prerequisite for)
+            children = []
+            for e in lesson.get('enables', []):
+                children.append((e['id'], 'enables'))
+            for p in lesson.get('prerequisite_for', []):
+                children.append((p['id'], 'prereq'))
+            for i in lesson.get('improves', []):
+                children.append((i['id'], 'improves'))
+
+            # Filter out already printed
+            children = [(cid, rel) for cid, rel in children if cid not in printed]
+
+            # Print children
+            child_prefix = prefix + ("    " if is_last else "│   ")
+            for i, (child_id, rel) in enumerate(children):
+                child_is_last = i == len(children) - 1
+                print_tree(child_id, child_prefix, child_is_last, rel)
+
+        lines.append("WORKFLOW STRUCTURE:")
+        for i, ep in enumerate(entry_points):
+            is_last_ep = i == len(entry_points) - 1
+            print_tree(ep, "", is_last_ep)
+        lines.append("")
+
+        # Print orphans (no relationships)
+        orphans = [lid for lid in lessons if lid not in printed]
+        if orphans:
+            lines.append("STANDALONE LESSONS:")
+            for lid in orphans:
+                lesson = lessons[lid]
+                lines.append(f"  {format_lesson(lesson)}")
+
+        # Print related connections (bidirectional)
+        lines.append("")
+        lines.append("RELATED CONNECTIONS:")
+        related_printed = set()
+        for lid, lesson in lessons.items():
+            for rel in lesson.get('related', []):
+                pair = tuple(sorted([lid, rel['id']]))
+                if pair not in related_printed:
+                    related_printed.add(pair)
+                    l1 = lessons[lid]['name'].replace('NotebookLM: ', '')
+                    l2 = lessons[rel['id']]['name'].replace('NotebookLM: ', '')
+                    lines.append(f"  {l1} <--related--> {l2}")
+
+        return "\n".join(lines)
 
     # ==================== STATS ====================
 

@@ -1284,6 +1284,26 @@ def handle_finding_log_command(args):
                 # Non-fatal - log but continue
                 logger.warning(f"Eidetic ingestion failed: {eidetic_err}")
 
+        # IMMUNE SYSTEM: Decay related lessons when findings are logged
+        # This implements the pattern where new learnings naturally supersede old lessons
+        # CENTRAL TOLERANCE: Scope decay to finding's domain to prevent autoimmune attacks
+        decayed_lessons = []
+        try:
+            from empirica.core.lessons.storage import LessonStorageManager
+            lesson_storage = LessonStorageManager()
+            decayed_lessons = lesson_storage.decay_related_lessons(
+                finding_text=finding,
+                domain=subject,  # Central tolerance: only decay lessons in same domain
+                decay_amount=0.05,  # 5% decay per related finding
+                min_confidence=0.3,  # Floor at 30%
+                keywords_threshold=2  # Require at least 2 keyword matches
+            )
+            if decayed_lessons:
+                logger.info(f"IMMUNE: Decayed {len(decayed_lessons)} related lessons in domain '{subject}'")
+        except Exception as decay_err:
+            # Non-fatal - log but continue
+            logger.debug(f"Lesson decay check failed: {decay_err}")
+
         result = {
             "ok": True,
             "scope": scope,
@@ -1291,6 +1311,7 @@ def handle_finding_log_command(args):
             "project_id": project_id if project_id else None,
             "embedded": embedded,
             "eidetic": eidetic_result,  # "created" | "confirmed" | None
+            "immune_decay": decayed_lessons if decayed_lessons else None,  # Lessons affected by this finding
             "message": f"Finding logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
@@ -1307,6 +1328,10 @@ def handle_finding_log_command(args):
                 print(f"   Project: {project_id[:8]}...")
             if embedded:
                 print(f"   🔍 Auto-embedded for semantic search")
+            if decayed_lessons:
+                print(f"   🛡️ IMMUNE: Decayed {len(decayed_lessons)} related lesson(s)")
+                for dl in decayed_lessons:
+                    print(f"      - {dl['name']}: {dl['previous_confidence']:.2f} → {dl['new_confidence']:.2f}")
 
         return 0  # Success
 
