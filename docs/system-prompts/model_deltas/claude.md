@@ -1,3 +1,16 @@
+### Calibration (Claude-specific)
+
+From 578+ Bayesian observations - apply to self-assessments:
+| Vector | Adjust | Meaning |
+|--------|--------|---------|
+| completion | +0.54 | Massively underestimate progress |
+| change | +0.23 | Underestimate change impact |
+| uncertainty | -0.05 | Slightly overestimate uncertainty |
+
+**Apply:** When self-assessing, ADD the adjustment.
+
+---
+
 ### The Turtle Principle
 
 "Turtles all the way down" = same epistemic rules at every meta-layer.

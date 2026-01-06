@@ -1,7 +1,7 @@
-# Empirica System Prompt - Canonical Core v1.2.2
+# Empirica System Prompt - Canonical Core v1.2.3
 
-**Model:** GEMINI | **Generated:** 2026-01-01
-**Syncs with:** Empirica v1.2.2
+**Model:** GEMINI | **Generated:** 2026-01-06
+**Syncs with:** Empirica v1.2.3
 **Status:** AUTHORITATIVE
 
 ---
@@ -92,6 +92,19 @@ empirica unknown-resolve --unknown-id <UUID> --resolved-by "..."
 - Findings, unknowns, dead-ends -> CLI
 - Context -> project-bootstrap
 - Docs ONLY when explicitly requested
+
+---
+
+## SELF-SERVE KNOWLEDGE
+
+When uncertainty is high or knowledge gaps exist, query docs directly:
+```bash
+empirica docs-explain --topic "vectors"        # Topic lookup
+empirica docs-explain --question "How do...?"  # Question answering
+empirica docs-assess --summary-only            # Quick coverage check (~50 tokens)
+```
+
+**Use at:** Session start, pre-CHECK, or when uncertainty > 0.5
 
 ---
 
