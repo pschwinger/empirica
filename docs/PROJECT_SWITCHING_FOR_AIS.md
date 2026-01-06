@@ -1,8 +1,8 @@
 # Project Switching for AI Agents - Critical UX Guide
 
-**Date:** 2025-12-23  
-**Status:** CRITICAL - Must be understood by all AI agents  
-**Problem:** AIs don't have clear signals when they've switched projects
+**Date:** 2025-12-23 (Updated: 2026-01-06)  
+**Status:** IMPLEMENTED - project-switch command now available  
+**Problem:** AIs don't have clear signals when they've switched projects (SOLVED)
 
 ---
 
@@ -214,13 +214,13 @@ Now all `finding-log`, `unknown-log`, `goals-create`, etc. write to **this proje
 
 ## Implementation Checklist
 
-- [ ] Add `_print_project_context()` utility function
-- [ ] Call it at start of all command handlers
-- [ ] Enhance bootstrap output with "you are here" banner
-- [ ] Add project-switch command
-- [ ] Add session-create project change warning
-- [ ] Document in system prompt
-- [ ] Test with empirica-web (current case)
+- [x] Add `_print_project_context()` utility function (via project-switch banner)
+- [ ] Call it at start of all command handlers (partial - in project-switch)
+- [x] Enhance bootstrap output with "you are here" banner (integrated in project-switch)
+- [x] Add project-switch command (IMPLEMENTED v1.2.4)
+- [ ] Add session-create project change warning (future enhancement)
+- [ ] Document in system prompt (in progress)
+- [x] Test with empirica-web (tested and working)
 
 ---
 
