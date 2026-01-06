@@ -8,17 +8,19 @@ from empirica.data.session_database import SessionDatabase
 
 def test_project_switch_resolves_by_name():
     """Test that project-switch can resolve project by name"""
+    import uuid
     db = SessionDatabase()
     
-    # Create test project
+    # Create test project with unique name
+    unique_name = f"test-switch-{uuid.uuid4().hex[:8]}"
     project_id = db.projects.create_project(
-        name="test-switch-project",
+        name=unique_name,
         description="Test project for switch command",
         repos=["https://github.com/test/repo.git"]
     )
     
     # Test resolution by name
-    resolved_id = db.projects.resolve_project_id("test-switch-project")
+    resolved_id = db.projects.resolve_project_id(unique_name)
     assert resolved_id == project_id
     
     # Test resolution by ID
@@ -59,18 +61,20 @@ def test_project_switch_handles_not_found():
 
 def test_project_switch_case_insensitive():
     """Test that project name resolution is case-insensitive"""
+    import uuid
     db = SessionDatabase()
     
-    # Create test project
+    # Create test project with unique name
+    unique_name = f"TestCase{uuid.uuid4().hex[:8]}"
     project_id = db.projects.create_project(
-        name="TestCaseProject",
+        name=unique_name,
         description="Test case sensitivity",
         repos=[]
     )
     
     # Resolve with different cases
-    assert db.projects.resolve_project_id("TestCaseProject") == project_id
-    assert db.projects.resolve_project_id("testcaseproject") == project_id
-    assert db.projects.resolve_project_id("TESTCASEPROJECT") == project_id
+    assert db.projects.resolve_project_id(unique_name) == project_id
+    assert db.projects.resolve_project_id(unique_name.lower()) == project_id
+    assert db.projects.resolve_project_id(unique_name.upper()) == project_id
     
     db.close()
