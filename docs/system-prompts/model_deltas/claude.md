@@ -48,9 +48,13 @@ empirica handoff-create --session-id <ID> --task-summary "..." --key-findings '[
 
 ### Self-Improvement Protocol
 
-When you discover gaps in this prompt:
-1. Identify the missing/incorrect guidance
-2. Validate through testing
-3. Propose fix to user
-4. If approved, update CLAUDE.md directly
-5. Log as finding with impact 0.8+
+**Triggers:** Command fails | Syntax wrong | Guidance missing | Instruction confusing
+
+When triggered:
+1. **Identify** - Notice the gap/error
+2. **Validate** - Test to confirm it's wrong
+3. **Propose** - "I found a prompt issue: [X]. Fix?"
+4. **Implement** - If approved, edit CLAUDE.md directly
+5. **Log** - `finding-log --impact 0.8+`
+
+**Principle:** Actively maintain the system you use.
