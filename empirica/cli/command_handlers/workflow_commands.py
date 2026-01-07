@@ -1098,8 +1098,6 @@ def handle_postflight_submit_command(args):
                 # Trajectory storage is optional (requires Qdrant)
                 logger.debug(f"Epistemic trajectory storage skipped: {e}")
 
-<<<<<<< HEAD
-=======
             # EPISODIC MEMORY: Create session narrative from POSTFLIGHT data (Qdrant)
             episodic_stored = False
             try:
@@ -1205,7 +1203,6 @@ def handle_postflight_submit_command(args):
                 # Memory sync is optional (requires Qdrant)
                 logger.debug(f"Memory sync skipped: {e}")
 
->>>>>>> 95ec2daf (fix: Onboard command + episodic memory storage bugs)
             # EPISTEMIC SNAPSHOT: Create replay-capable snapshot with delta chain
             # This enables session replay by storing explicit deltas + previous_snapshot_id links
             snapshot_created = False

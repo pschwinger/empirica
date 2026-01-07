@@ -391,25 +391,9 @@ def main(args=None):
             # Release commands
             'release-ready': handle_release_ready_command,
             'docs-assess': handle_docs_assess,
-<<<<<<< HEAD
-=======
-            'docs-explain': handle_docs_explain,
-
-            # Lesson commands (Epistemic Procedural Knowledge)
-            'lesson-create': handle_lesson_create_command,
-            'lesson-load': handle_lesson_load_command,
-            'lesson-list': handle_lesson_list_command,
-            'lesson-search': handle_lesson_search_command,
-            'lesson-recommend': handle_lesson_recommend_command,
-            'lesson-path': handle_lesson_path_command,
-            'lesson-replay-start': handle_lesson_replay_start_command,
-            'lesson-replay-end': handle_lesson_replay_end_command,
-            'lesson-stats': handle_lesson_stats_command,
-            'lesson-embed': handle_lesson_embed_command,
 
             # Onboarding command
             'onboard': handle_onboard_command,
->>>>>>> 95ec2daf (fix: Onboard command + episodic memory storage bugs)
         }
         
         if parsed_args.command in command_handlers:
