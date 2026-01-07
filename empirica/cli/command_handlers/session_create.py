@@ -98,28 +98,40 @@ def handle_session_create_command(args):
         # Re-open database for project linking
         db = SessionDatabase()
         
-        # Try to auto-detect project from git remote URL (if not explicitly provided)
+        # Try to auto-detect project (if not explicitly provided)
         if not project_id:
+            # Method 1: Read from local .empirica/project.yaml (highest priority)
             try:
-                # Get git remote URL
-                result = subprocess.run(
-                    ['git', 'remote', 'get-url', 'origin'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0:
-                    git_url = result.stdout.strip()
-                    # Find project by matching repo URL
-                    cursor = db.conn.cursor()
-                    cursor.execute("""
-                        SELECT id FROM projects WHERE repos LIKE ?
-                    """, (f'%{git_url}%',))
-                    row = cursor.fetchone()
-                    if row:
-                        project_id = row['id']
+                import yaml
+                project_yaml = os.path.join(os.getcwd(), '.empirica', 'project.yaml')
+                if os.path.exists(project_yaml):
+                    with open(project_yaml, 'r') as f:
+                        project_config = yaml.safe_load(f)
+                        if project_config and project_config.get('project_id'):
+                            project_id = project_config['project_id']
             except Exception:
                 pass
+
+            # Method 2: Match git remote URL against projects table (fallback)
+            if not project_id:
+                try:
+                    result = subprocess.run(
+                        ['git', 'remote', 'get-url', 'origin'],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        git_url = result.stdout.strip()
+                        cursor = db.conn.cursor()
+                        cursor.execute("""
+                            SELECT id FROM projects WHERE repos LIKE ?
+                        """, (f'%{git_url}%',))
+                        row = cursor.fetchone()
+                        if row:
+                            project_id = row['id']
+                except Exception:
+                    pass
 
         # Link session to project if found
         if project_id:
