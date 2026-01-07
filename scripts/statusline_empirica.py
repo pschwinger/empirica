@@ -131,12 +131,13 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
 
 
 def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
-    """Get latest vectors and phase from reflexes table."""
+    """Get latest vectors, phase, and gate decision from reflexes table."""
     cursor = db.conn.cursor()
     cursor.execute("""
         SELECT phase, engagement, know, do, context,
                clarity, coherence, signal, density,
-               state, change, completion, impact, uncertainty
+               state, change, completion, impact, uncertainty,
+               reflex_data
         FROM reflexes
         WHERE session_id = ?
         ORDER BY timestamp DESC
@@ -145,7 +146,7 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
     row = cursor.fetchone()
 
     if not row:
-        return None, {}
+        return None, {}, None
 
     phase = row[0]
     vectors = {
@@ -167,7 +168,17 @@ def get_latest_vectors(db: SessionDatabase, session_id: str) -> tuple:
     # Filter out None values
     vectors = {k: v for k, v in vectors.items() if v is not None}
 
-    return phase, vectors
+    # Extract gate decision from reflex_data (CHECK phase)
+    gate_decision = None
+    if row[14]:  # reflex_data column
+        try:
+            import json
+            reflex_data = json.loads(row[14])
+            gate_decision = reflex_data.get('decision')
+        except:
+            pass
+
+    return phase, vectors, gate_decision
 
 
 def get_vector_deltas(db: SessionDatabase, session_id: str) -> dict:
@@ -304,7 +315,8 @@ def format_statusline(
     deltas: dict = None,
     mode: str = 'default',
     drift_detected: bool = False,
-    drift_severity: str = None
+    drift_severity: str = None,
+    gate_decision: str = None
 ) -> str:
     """Format the statusline based on mode."""
 
@@ -329,9 +341,16 @@ def format_statusline(
         cog_str = format_cognitive_phase(cognitive_phase)
         parts.append(cog_str)
 
-        # CASCADE gate (compliance checkpoint) - kept for oversight
+        # CASCADE gate (compliance checkpoint) with metacog decision
         if phase:
-            parts.append(f"{Colors.BLUE}{phase}{Colors.RESET}")
+            phase_str = f"{Colors.BLUE}{phase}{Colors.RESET}"
+            # Show gate decision after CHECK phase
+            if gate_decision and phase == 'CHECK':
+                if gate_decision == 'proceed':
+                    phase_str += f" {Colors.GREEN}→PROCEED{Colors.RESET}"
+                elif gate_decision == 'investigate':
+                    phase_str += f" {Colors.YELLOW}→INVESTIGATE{Colors.RESET}"
+            parts.append(phase_str)
 
         if vectors:
             # Use percentage format for key vectors
@@ -421,7 +440,7 @@ def main():
         session_id = session['session_id']
 
         # Get vectors from DB (real-time)
-        phase, vectors = get_latest_vectors(db, session_id)
+        phase, vectors, gate_decision = get_latest_vectors(db, session_id)
 
         # Get deltas (learning measurement)
         deltas = get_vector_deltas(db, session_id)
@@ -446,7 +465,8 @@ def main():
         # Format and output
         output = format_statusline(
             session, phase, vectors, drift_state, deltas, mode,
-            drift_detected=drift_detected, drift_severity=drift_severity
+            drift_detected=drift_detected, drift_severity=drift_severity,
+            gate_decision=gate_decision
         )
         print(output)
 
