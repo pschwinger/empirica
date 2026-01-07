@@ -56,30 +56,50 @@ class CheckpointManager:
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return False
-    
+
+    def _has_commits(self) -> bool:
+        """Check if repo has at least one commit (HEAD exists)"""
+        if not self._git_available:
+            return False
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', 'HEAD'],
+                cwd=self.workspace_root,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
+
     def is_enabled(self, no_git_flag: bool = False) -> bool:
         """
         Check if checkpoints are enabled
-        
+
         Logic:
         - If --no-git flag set: disabled
-        - If in git repo: enabled
+        - If in git repo with commits: enabled
         - Otherwise: disabled
-        
+
         Args:
             no_git_flag: User explicitly disabled git
-            
+
         Returns:
             bool: Whether checkpoints should be created
         """
         if no_git_flag:
             logger.debug("Git checkpoints disabled via --no-git flag")
             return False
-        
+
         if not self._git_available:
             logger.debug("Not in git repository, checkpoints disabled")
             return False
-        
+
+        if not self._has_commits():
+            logger.debug("Git repo has no commits yet, checkpoints disabled (create initial commit first)")
+            return False
+
         return True
     
     def auto_checkpoint(

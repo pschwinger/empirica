@@ -69,6 +69,22 @@ class GitGoalStore:
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return False
+
+    def _has_commits(self) -> bool:
+        """Check if repo has at least one commit (HEAD exists)"""
+        if not self._git_available:
+            return False
+        try:
+            result = subprocess.run(
+                ['git', 'rev-parse', 'HEAD'],
+                cwd=self.workspace_root,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
     
     def store_goal(
         self,
@@ -96,7 +112,11 @@ class GitGoalStore:
         if not self._git_available:
             logger.debug("Not in git repo, skipping goal storage")
             return False
-        
+
+        if not self._has_commits():
+            logger.debug("Git repo has no commits yet, skipping goal storage (create initial commit first)")
+            return False
+
         try:
             # Build goal payload
             payload = {
@@ -157,11 +177,14 @@ class GitGoalStore:
         """
         if not self._git_available:
             return None
-        
+
+        if not self._has_commits():
+            return None
+
         try:
             # Try to find goal in git notes
             note_ref = f'empirica/goals/{goal_id}'
-            
+
             # Get current commit
             result = subprocess.run(
                 ['git', 'rev-parse', 'HEAD'],
