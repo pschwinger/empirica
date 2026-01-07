@@ -136,7 +136,7 @@ def check_guidance(vectors: Dict[str, float], findings: list, unknowns: list) ->
 **RECOMMENDATION: 🔍 INVESTIGATE**
   Uncertainty is too high to proceed safely.
   Use: `empirica investigate --session-id <ID> --goal "Clarify X"`
-  OR: `empirica project-bootstrap --depth full` to load context
+  OR: `empirica project-bootstrap --depth auto` to load context
 """
     elif 0.35 < uncertainty <= 0.6:
         guidance += """

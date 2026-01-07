@@ -37,10 +37,12 @@ POSTFLIGHT (measure: "What did I learn?")
 ```bash
 # Session setup
 empirica session-create --ai-id <ai-id> --output json
-empirica project-bootstrap --session-id <ID> --output json
+
+# CRITICAL: Bootstrap BEFORE preflight (load context first)
+empirica project-bootstrap --session-id <ID> --depth auto --output json
 
 # CASCADE phases (JSON via stdin)
-empirica preflight-submit -    # Baseline vectors
+empirica preflight-submit -    # Baseline vectors (assessed WITH context)
 empirica check-submit -        # Gate decision
 empirica postflight-submit -   # Learning delta
 ```

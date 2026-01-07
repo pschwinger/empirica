@@ -237,7 +237,7 @@ empirica sessions-resume --ai-id "your-ai-id"
 empirica goals-ready --session-id <session-id>
 
 # See what others have discovered
-empirica project-bootstrap --project-id <project-id> --depth full
+empirica project-bootstrap --project-id <project-id> --depth auto
 
 # Claim a task
 empirica goals-claim --goal-id <goal-id>
@@ -406,7 +406,7 @@ empirica goals-ready --session-id $SESSION
 echo '{"goal_id": "<ready-goal-id>"}' | empirica goals-claim -
 
 # Load context for the task
-empirica project-bootstrap --project-id <project-id> --depth moderate
+empirica project-bootstrap --project-id <project-id> --depth auto
 
 # Work on the task with full CASCADE workflow
 # ... PREFLIGHT → WORK → POSTFLIGHT ...
