@@ -58,7 +58,8 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import', 'agent-discover'],
                     'Sentinel': ['sentinel-orchestrate', 'sentinel-load-profile', 'sentinel-status', 'sentinel-check'],
                     'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find'],
-                    'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats']
+                    'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats'],
+                    'CRM': ['crm']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -100,6 +101,7 @@ from .parsers import (
     add_persona_parsers,
     add_release_parsers,
     add_lesson_parsers,
+    add_crm_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -129,6 +131,7 @@ from .command_handlers.persona_commands import (
 )
 from .command_handlers.release_commands import handle_release_ready_command
 from .command_handlers.docs_commands import handle_docs_assess, handle_docs_explain
+from .command_handlers.crm_commands import handle_crm_command
 
 
 def _get_version():
@@ -187,6 +190,7 @@ def create_argument_parser():
     add_persona_parsers(subparsers)
     add_release_parsers(subparsers)
     add_lesson_parsers(subparsers)
+    add_crm_parsers(subparsers)
 
     return parser
 
@@ -405,6 +409,9 @@ def main(args=None):
             'lesson-replay-end': handle_lesson_replay_end_command,
             'lesson-stats': handle_lesson_stats_command,
             'lesson-embed': handle_lesson_embed_command,
+
+            # CRM commands
+            'crm': handle_crm_command,
         }
         
         if parsed_args.command in command_handlers:
