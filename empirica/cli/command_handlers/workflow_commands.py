@@ -1098,6 +1098,114 @@ def handle_postflight_submit_command(args):
                 # Trajectory storage is optional (requires Qdrant)
                 logger.debug(f"Epistemic trajectory storage skipped: {e}")
 
+<<<<<<< HEAD
+=======
+            # EPISODIC MEMORY: Create session narrative from POSTFLIGHT data (Qdrant)
+            episodic_stored = False
+            try:
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+                if session and session.get('project_id'):
+                    from empirica.core.qdrant.vector_store import embed_episodic
+                    import uuid as uuid_mod
+
+                    project_id = session['project_id']
+
+                    # Get project findings/unknowns for narrative richness (optional)
+                    try:
+                        findings = db.get_project_findings(project_id, limit=5)
+                        unknowns = db.get_project_unknowns(project_id, limit=5)
+                    except Exception:
+                        findings = []
+                        unknowns = []
+
+                    # Determine outcome from deltas
+                    outcome = "success" if deltas.get("know", 0) > 0.1 else (
+                        "partial" if deltas.get("completion", 0) > 0 else "abandoned"
+                    )
+
+                    # Build narrative from reasoning and context
+                    narrative = reasoning or f"Session completed with learning delta: {deltas}"
+
+                    # Create episodic memory entry (session narrative with temporal decay)
+                    episodic_stored = embed_episodic(
+                        project_id=project_id,
+                        episode_id=str(uuid_mod.uuid4()),
+                        narrative=narrative,
+                        episode_type="session_arc",
+                        session_id=session_id,
+                        ai_id=session.get('ai_id', 'claude-code'),
+                        goal_id=session.get('current_goal_id'),
+                        learning_delta=deltas,
+                        outcome=outcome,
+                        key_moments=[f.get('finding', '')[:100] for f in findings[:3]] if findings else [],
+                        tags=[session.get('ai_id', 'claude-code')],
+                        timestamp=time.time(),
+                    )
+                    if episodic_stored:
+                        logger.debug(f"Created episodic memory for session {session_id[:8]}")
+                db.close()
+            except Exception as e:
+                # Episodic storage is optional (requires Qdrant)
+                logger.debug(f"Episodic memory creation skipped: {e}")
+
+            # AUTO-EMBED: Sync this session's findings to Qdrant for hot memory retrieval
+            # This is incremental (just this session) vs full project-embed
+            memory_synced = 0
+            try:
+                from empirica.core.qdrant.vector_store import upsert_memory, init_collections, get_qdrant_url
+
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+                if get_qdrant_url() and session and session.get('project_id'):
+                    project_id = session['project_id']
+                    init_collections(project_id)
+
+                    # Get recent project findings/unknowns (session-specific filtering not available)
+                    try:
+                        session_findings = db.get_project_findings(project_id, limit=10)
+                        session_unknowns = db.get_project_unknowns(project_id, limit=10)
+                    except Exception:
+                        session_findings = []
+                        session_unknowns = []
+
+                    # Build memory items
+                    mem_items = []
+                    mid = 2_000_000 + hash(session_id) % 100000  # Offset to avoid collisions
+
+                    for f in session_findings:
+                        mem_items.append({
+                            'id': mid,
+                            'text': f.get('finding', ''),
+                            'type': 'finding',
+                            'session_id': f.get('session_id', session_id),
+                            'goal_id': f.get('goal_id'),
+                            'timestamp': f.get('created_timestamp'),
+                        })
+                        mid += 1
+
+                    for u in session_unknowns:
+                        mem_items.append({
+                            'id': mid,
+                            'text': u.get('unknown', ''),
+                            'type': 'unknown',
+                            'session_id': u.get('session_id', session_id),
+                            'goal_id': u.get('goal_id'),
+                            'timestamp': u.get('created_timestamp'),
+                            'is_resolved': u.get('is_resolved', False)
+                        })
+                        mid += 1
+
+                    if mem_items:
+                        upsert_memory(project_id, mem_items)
+                        memory_synced = len(mem_items)
+                        logger.debug(f"Auto-embedded {memory_synced} memory items to Qdrant")
+                db.close()
+            except Exception as e:
+                # Memory sync is optional (requires Qdrant)
+                logger.debug(f"Memory sync skipped: {e}")
+
+>>>>>>> 95ec2daf (fix: Onboard command + episodic memory storage bugs)
             # EPISTEMIC SNAPSHOT: Create replay-capable snapshot with delta chain
             # This enables session replay by storing explicit deltas + previous_snapshot_id links
             snapshot_created = False
