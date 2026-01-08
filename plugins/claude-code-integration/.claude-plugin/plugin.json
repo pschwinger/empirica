@@ -1,0 +1,8 @@
+{
+  "name": "empirica-integration",
+  "description": "Epistemic continuity across memory compacting - automatic check-drift integration",
+  "author": {
+    "name": "Empirica Team",
+    "email": "support@anthropic.com"
+  }
+}

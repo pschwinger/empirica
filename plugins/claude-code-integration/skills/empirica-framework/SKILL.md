@@ -157,9 +157,14 @@ empirica goals-add-subtask --goal-id <GOAL_ID> --description "Research OAuth pro
 # Complete subtasks with evidence
 empirica goals-complete-subtask --subtask-id <TASK_ID> --evidence "commit abc123"
 
+# Complete whole goal (triggers POSTFLIGHT options)
+empirica goals-complete --goal-id <GOAL_ID> --reason "Implementation verified"
+
 # Check progress
 empirica goals-progress --goal-id <GOAL_ID>
 ```
+
+**Note:** Subtasks use `--evidence`, goals use `--reason`.
 
 ## Handoff Types
 
@@ -246,13 +251,16 @@ PREFLIGHT → agent-spawn (×3) → agent-aggregate → CHECK → POSTFLIGHT
 
 ## Integration with Hooks
 
-This plugin includes automatic hooks for epistemic continuity:
+This plugin includes automatic hooks that enforce the CASCADE workflow:
 
-- **PreCompact:** Saves epistemic snapshot before context reduction
-- **SessionStart:** Loads bootstrap + triggers post-compact CHECK
-- **SessionEnd:** Cleans up old snapshots
+- **PreToolCall** (`sentinel-gate.py`): Gates Edit/Write/Bash until valid CHECK exists (<30min old)
+- **SessionStart:new** (`session-init.py`): Auto-creates session + bootstrap, prompts for PREFLIGHT
+- **SessionStart:compact** (`post-compact.py`): Auto-recovers session + bootstrap, prompts for CHECK
+- **SessionEnd** (`session-end-postflight.py`): Auto-captures POSTFLIGHT with final vectors
 
-These run automatically - no manual intervention needed.
+**MCP integration:** Set `EMPIRICA_EPISTEMIC_MODE=true` to enable VectorRouter (routes based on vectors).
+
+These run automatically - the workflow is enforced, not just suggested.
 
 ## Key Commands Reference
 
