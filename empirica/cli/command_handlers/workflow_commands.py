@@ -905,32 +905,38 @@ def handle_check_submit_command(args):
             # AUTO-POSTFLIGHT TRIGGER: Check if goal completion detected
             # Uses completion and impact vectors to determine if a goal was completed
             # This closes the epistemic loop automatically without user intervention
-            goal_completion = _check_goal_completion(vectors)
-            result["goal_completion"] = goal_completion
+            # Controlled by EMPIRICA_AUTO_POSTFLIGHT env var (default: true)
+            auto_postflight_enabled = os.getenv('EMPIRICA_AUTO_POSTFLIGHT', 'true').lower() == 'true'
 
-            if goal_completion.get("triggered"):
-                import sys as _sys
-                print(f"🎯 Goal completion detected: {goal_completion.get('reason')}", file=_sys.stderr)
-                print("📊 Auto-triggering POSTFLIGHT to capture learning delta...", file=_sys.stderr)
-
-                postflight_result = _auto_postflight(
-                    session_id=session_id,
-                    vectors=vectors,
-                    trigger_reason=goal_completion.get('reason', 'completion threshold met')
-                )
-
-                result["auto_postflight"] = {
-                    "triggered": True,
-                    "success": postflight_result.get("ok", False),
-                    "reason": goal_completion.get("reason")
-                }
-
-                if postflight_result.get("ok"):
-                    print("✅ Auto-POSTFLIGHT captured successfully", file=_sys.stderr)
-                else:
-                    print(f"⚠️  Auto-POSTFLIGHT failed: {postflight_result.get('error', 'unknown')}", file=_sys.stderr)
+            if not auto_postflight_enabled:
+                result["auto_postflight"] = {"triggered": False, "disabled": True, "reason": "EMPIRICA_AUTO_POSTFLIGHT=false"}
             else:
-                result["auto_postflight"] = {"triggered": False}
+                goal_completion = _check_goal_completion(vectors)
+                result["goal_completion"] = goal_completion
+
+                if goal_completion.get("triggered"):
+                    import sys as _sys
+                    print(f"🎯 Goal completion detected: {goal_completion.get('reason')}", file=_sys.stderr)
+                    print("📊 Auto-triggering POSTFLIGHT to capture learning delta...", file=_sys.stderr)
+
+                    postflight_result = _auto_postflight(
+                        session_id=session_id,
+                        vectors=vectors,
+                        trigger_reason=goal_completion.get('reason', 'completion threshold met')
+                    )
+
+                    result["auto_postflight"] = {
+                        "triggered": True,
+                        "success": postflight_result.get("ok", False),
+                        "reason": goal_completion.get("reason")
+                    }
+
+                    if postflight_result.get("ok"):
+                        print("✅ Auto-POSTFLIGHT captured successfully", file=_sys.stderr)
+                    else:
+                        print(f"⚠️  Auto-POSTFLIGHT failed: {postflight_result.get('error', 'unknown')}", file=_sys.stderr)
+                else:
+                    result["auto_postflight"] = {"triggered": False}
 
         except Exception as e:
             logger.error(f"Failed to save check assessment: {e}")
