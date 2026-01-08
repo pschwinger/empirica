@@ -557,12 +557,27 @@ def _format_memory_context(memory_context: dict) -> str:
     if not memory_context:
         return "  (No memory context available - Qdrant may not be running)"
 
-    results = memory_context.get('results', [])
+    results = memory_context.get('results', {})
     if not results:
         return "  (No relevant memories found)"
 
     lines = []
+
+    # Handle both old format (list) and new format (dict with docs/memory keys)
+    if isinstance(results, dict):
+        # New format: {"docs": [...], "memory": [...]}
+        all_results = []
+        for key in ['memory', 'docs', 'eidetic', 'episodic']:
+            if key in results and isinstance(results[key], list):
+                all_results.extend(results[key])
+        results = all_results
+
+    if not results:
+        return "  (No relevant memories found)"
+
     for r in results[:5]:  # Top 5 memories
+        if not isinstance(r, dict):
+            continue
         content = r.get('content', r.get('text', ''))[:150]
         score = r.get('score', 0)
         lines.append(f"  - [{score:.2f}] {content}...")

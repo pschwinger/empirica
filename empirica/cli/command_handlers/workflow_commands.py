@@ -1569,8 +1569,8 @@ def handle_postflight_submit_command(args):
             snapshot_created = False
             snapshot_id = None
             try:
-                from empirica.plugins.modality_switcher.snapshot_provider import EpistemicSnapshotProvider
-                from empirica.plugins.modality_switcher.epistemic_snapshot import ContextSummary
+                from empirica.data.snapshot_provider import EpistemicSnapshotProvider
+                from empirica.data.epistemic_snapshot import ContextSummary
 
                 # Get session for ai_id
                 db = SessionDatabase()
