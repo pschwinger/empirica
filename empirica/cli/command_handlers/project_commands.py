@@ -227,31 +227,41 @@ def handle_project_bootstrap_command(args):
             return None
 
         # Auto-detect project from git remote URL if not provided
+        # Uses normalized git repo URL for single-project-per-repo guarantee
         if not project_id:
             try:
-                result = subprocess.run(
-                    ['git', 'remote', 'get-url', 'origin'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
+                from empirica.cli.utils.project_resolver import (
+                    get_current_git_repo, resolve_project_by_git_repo, normalize_git_url
                 )
-                if result.returncode == 0:
-                    git_url = result.stdout.strip()
-                    # Find project by matching repo URL
+
+                git_repo = get_current_git_repo()
+                if git_repo:
                     db = SessionDatabase()
-                    cursor = db.conn.cursor()
-                    cursor.execute("""
-                        SELECT id FROM projects WHERE repos LIKE ?
-                    """, (f'%{git_url}%',))
-                    row = cursor.fetchone()
-                    if row:
-                        project_id = row['id']
+                    project_id = resolve_project_by_git_repo(git_repo, db)
+
+                    if not project_id:
+                        # Fallback: try substring match for legacy projects
+                        result = subprocess.run(
+                            ['git', 'remote', 'get-url', 'origin'],
+                            capture_output=True, text=True, timeout=5
+                        )
+                        if result.returncode == 0:
+                            git_url = result.stdout.strip()
+                            cursor = db.adapter.conn.cursor()
+                            cursor.execute("""
+                                SELECT id FROM projects WHERE repos LIKE ?
+                                ORDER BY last_activity_timestamp DESC LIMIT 1
+                            """, (f'%{git_url}%',))
+                            row = cursor.fetchone()
+                            if row:
+                                project_id = row['id']
+
                     db.close()
 
                     if not project_id:
                         return _error_output(
-                            f"No project found for git remote: {git_url}",
-                            "Create a project or specify --project-id explicitly"
+                            f"No project found for git repo: {git_repo}",
+                            "Create a project with: empirica project-create --name <name>"
                         )
                 else:
                     return _error_output(
@@ -363,6 +373,38 @@ def handle_project_bootstrap_command(args):
             depth=depth,
             ai_id=ai_id  # Pass AI ID to bootstrap
         )
+
+        # EIDETIC/EPISODIC MEMORY RETRIEVAL: Hot memories based on task context
+        # This arms the AI with relevant facts and session narratives from Qdrant
+        eidetic_memories = None
+        episodic_memories = None
+        if task_description and project_id:
+            try:
+                from empirica.core.qdrant.vector_store import search_eidetic, search_episodic, _check_qdrant_available
+                if _check_qdrant_available():
+                    eidetic_results = search_eidetic(project_id, task_description, limit=5, min_confidence=0.5)
+                    if eidetic_results:
+                        eidetic_memories = {
+                            'query': task_description,
+                            'facts': eidetic_results,
+                            'count': len(eidetic_results)
+                        }
+                    episodic_results = search_episodic(project_id, task_description, limit=3, apply_recency_decay=True)
+                    if episodic_results:
+                        episodic_memories = {
+                            'query': task_description,
+                            'narratives': episodic_results,
+                            'count': len(episodic_results)
+                        }
+                    logger.debug(f"Memory retrieval: {len(eidetic_results or [])} eidetic, {len(episodic_results or [])} episodic")
+            except Exception as e:
+                logger.debug(f"Memory retrieval failed (optional): {e}")
+
+        # Add memories to breadcrumbs
+        if eidetic_memories:
+            breadcrumbs['eidetic_memories'] = eidetic_memories
+        if episodic_memories:
+            breadcrumbs['episodic_memories'] = episodic_memories
 
         # Optional: Detect memory gaps if session-id provided
         memory_gap_report = None
