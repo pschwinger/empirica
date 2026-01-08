@@ -38,21 +38,31 @@ empirica_root = Path(__file__).parent.parent.parent
 if str(empirica_root) not in sys.path:
     sys.path.insert(0, str(empirica_root))
 
-from empirica.plugins.modality_switcher.snapshot_provider import EpistemicSnapshotProvider
-from empirica.plugins.modality_switcher.epistemic_snapshot import EpistemicStateSnapshot
+# Modality switcher is optional (commercial feature)
+try:
+    from empirica.plugins.modality_switcher.snapshot_provider import EpistemicSnapshotProvider
+    from empirica.plugins.modality_switcher.epistemic_snapshot import EpistemicStateSnapshot
+    SNAPSHOT_AVAILABLE = True
+except ImportError:
+    SNAPSHOT_AVAILABLE = False
+    EpistemicSnapshotProvider = None
+    EpistemicStateSnapshot = None
+
 from empirica.auto_tracker import EmpericaTracker
 
 
 class SnapshotMonitor:
     """Terminal-based snapshot monitoring dashboard"""
-    
+
     def __init__(self, session_id: Optional[str] = None):
         """
         Initialize snapshot monitor
-        
+
         Args:
             session_id: Session to monitor (uses current if None)
         """
+        if not SNAPSHOT_AVAILABLE:
+            raise ImportError("Snapshot monitoring requires modality switcher (commercial feature)")
         self.provider = EpistemicSnapshotProvider()
         self.session_id = session_id
         self.tracker = None
