@@ -2,7 +2,7 @@
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.2.4-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.4)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.3.0)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
@@ -93,7 +93,7 @@ Add to `claude_desktop_config.json`:
 
 ### Docker
 ```bash
-docker pull nubaeon/empirica:1.2.4
+docker pull nubaeon/empirica:1.3.0
 ```
 
 ### How It Works Day-to-Day
@@ -191,20 +191,20 @@ pip install empirica[all]
 
 ```bash
 # Pull the latest image
-docker pull nubaeon/empirica:1.2.4
+docker pull nubaeon/empirica:1.3.0
 
 # Run a command
-docker run -it nubaeon/empirica:1.2.4 empirica --help
+docker run -it nubaeon/empirica:1.3.0 empirica --help
 
 # Interactive session with persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.4 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.3.0 /bin/bash
 ```
 
 #### From Source
 
 ```bash
 # Latest stable release
-pip install git+https://github.com/Nubaeon/empirica.git@v1.2.4
+pip install git+https://github.com/Nubaeon/empirica.git@v1.3.0
 
 # Development branch
 pip install git+https://github.com/Nubaeon/empirica.git@develop

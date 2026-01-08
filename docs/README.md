@@ -1,6 +1,6 @@
 # Empirica Documentation
 
-**Current Version:** 1.2.3
+**Current Version:** 1.3.0
 **Status:** Production Ready
 
 ---

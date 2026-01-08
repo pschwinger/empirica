@@ -19,9 +19,9 @@ CASCADE Philosophy:
 - Scope is vectorial (self-assessed): {"breadth": 0-1, "duration": 0-1, "coordination": 0-1}
 - Trust AI reasoning: Let agents assess epistemic state → scope vectors (see goal_scopes.yaml)
 
-Author: Claude Code
-Date: 2025-01-18
-Version: 1.2.0
+Author: David S. L. Van Assche
+Date: 2026-01-08
+Version: 1.3.0
 """
 
 import asyncio
