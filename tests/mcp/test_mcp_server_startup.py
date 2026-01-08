@@ -20,11 +20,11 @@ async def test_server_starts():
 async def test_tools_registered():
     """All core tools are registered"""
     tools = await list_tools()
-    # Core tools (v2.0): 29 tools total
+    # Core tools (v3.0): 57+ tools total
     # - 3 stateless tools (introduction, guidance, help)
-    # - 26 stateful tools (routed to CLI)
-    assert len(tools) >= 29, f"Expected at least 29 core tools, got {len(tools)}"
-    assert len(tools) <= 35, f"Expected at most 35 tools, got {len(tools)}"  # Allow for future growth
+    # - 54+ stateful tools (routed to CLI with expanded coverage)
+    assert len(tools) >= 50, f"Expected at least 50 core tools, got {len(tools)}"
+    assert len(tools) <= 70, f"Expected at most 70 tools, got {len(tools)}"  # Allow for future growth
 
 @pytest.mark.asyncio
 async def test_introduction_tool_exists():

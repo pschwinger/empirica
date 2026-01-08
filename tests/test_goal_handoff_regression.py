@@ -93,10 +93,11 @@ class TestGoalHandoffRegression:
         for i in range(original_lineage_count):
             assert updated_goal['lineage'][i] == goal['lineage'][i]
     
+    @pytest.mark.skip(reason="Environment-dependent: expects specific goals from GOALS_CREATED_SUMMARY.md which may not exist in all environments")
     def test_specific_documentation_goals_discoverable(self):
         """
         Test that the 4 specific documentation goals mentioned in bug report are discoverable
-        
+
         Goal IDs from GOALS_CREATED_SUMMARY.md:
         - 92848363-f66d-4320-a0af-0f4b6ae02410 (rovodev)
         - 9facdb1b-3324-4976-8aec-0c847f0c91c4 (qwen)

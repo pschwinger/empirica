@@ -467,6 +467,29 @@ def migration_014_lessons_and_knowledge_graph(cursor: sqlite3.Cursor):
     logger.info("✅ Migration 014 complete: Lessons and knowledge graph tables created")
 
 
+# Migration 15: Add instance_id to sessions for multi-instance isolation
+def migration_015_sessions_instance_id(cursor: sqlite3.Cursor):
+    """
+    Add instance_id column to sessions table for multi-instance isolation.
+
+    This allows multiple Claude instances to run simultaneously without
+    session cross-talk. The instance_id is derived from:
+    1. EMPIRICA_INSTANCE_ID env var (explicit override)
+    2. TMUX_PANE (tmux terminal pane ID)
+    3. TERM_SESSION_ID (macOS Terminal.app)
+    4. WINDOWID (X11 window ID)
+    5. None (fallback to legacy behavior)
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    add_column_if_missing(cursor, "sessions", "instance_id", "TEXT")
+
+    # Add index for efficient instance-scoped queries
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_instance ON sessions(ai_id, instance_id)")
+    logger.info("✓ Added instance_id column and index to sessions table")
+
+
 ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("001_cascade_workflow_columns", "Add CASCADE workflow tracking to cascades", migration_001_cascade_workflow_columns),
     ("002_epistemic_delta", "Add epistemic delta JSON to cascades", migration_002_epistemic_delta),
@@ -482,4 +505,5 @@ ALL_MIGRATIONS: List[Tuple[str, str, Callable]] = [
     ("012_unknowns_impact", "Add impact scoring to project_unknowns", migration_012_unknowns_impact),
     ("013_session_scoped_breadcrumbs", "Add session-scoped breadcrumb tables (dual-scope Phase 1)", migration_013_session_scoped_breadcrumbs),
     ("014_lessons_and_knowledge_graph", "Add lessons and knowledge graph tables for epistemic procedural knowledge", migration_014_lessons_and_knowledge_graph),
+    ("015_sessions_instance_id", "Add instance_id to sessions for multi-instance isolation", migration_015_sessions_instance_id),
 ]

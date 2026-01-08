@@ -226,9 +226,11 @@ class EpistemicSnapshotProvider:
                 "created_at": snapshot.created_at
             })
         except Exception as e:
-            print(f"⚠️ Action hook update failed: {e}")
+            import sys
+            print(f"⚠️ Action hook update failed: {e}", file=sys.stderr)
 
-        print(f"📸 Snapshot saved: {snapshot.snapshot_id} (compression: {snapshot.compression_ratio:.1%})")
+        import sys
+        print(f"📸 Snapshot saved: {snapshot.snapshot_id} (compression: {snapshot.compression_ratio:.1%})", file=sys.stderr)
 
     def get_latest_snapshot(self, session_id: str) -> Optional[EpistemicStateSnapshot]:
         """

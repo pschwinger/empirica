@@ -16,7 +16,8 @@ class SessionRepository(BaseRepository):
         components_loaded: int = 0,
         user_id: Optional[str] = None,
         subject: Optional[str] = None,
-        bootstrap_level: int = 1
+        bootstrap_level: int = 1,
+        instance_id: Optional[str] = None
     ) -> str:
         """
         Create a new session
@@ -27,18 +28,25 @@ class SessionRepository(BaseRepository):
             user_id: Optional user identifier
             subject: Optional subject/topic for filtering
             bootstrap_level: Bootstrap configuration level (1-3, default 1)
+            instance_id: Optional instance identifier for multi-instance isolation.
+                         If None, auto-detected from environment (TMUX_PANE, etc.)
 
         Returns:
             session_id: UUID string
         """
+        # Auto-detect instance_id if not provided
+        if instance_id is None:
+            from empirica.utils.session_resolver import get_instance_id
+            instance_id = get_instance_id()
+
         session_id = str(uuid.uuid4())
         cursor = self._execute("""
             INSERT INTO sessions (
-                session_id, ai_id, user_id, start_time, components_loaded, subject, bootstrap_level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                session_id, ai_id, user_id, start_time, components_loaded, subject, bootstrap_level, instance_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             session_id, ai_id, user_id, datetime.now(timezone.utc).isoformat(),
-            components_loaded, subject, bootstrap_level
+            components_loaded, subject, bootstrap_level, instance_id
         ))
         return session_id
 

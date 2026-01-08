@@ -334,18 +334,30 @@ def handle_check_command(args):
     try:
         import time
         import sys
+        import os
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
 
-        # Try to load from stdin if available
+        # AI-FIRST MODE: Check if config provided as positional argument
         config_data = None
-        try:
-            if not sys.stdin.isatty():
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
                 config_data = parse_json_safely(sys.stdin.read())
-        except:
-            pass
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+        else:
+            # Try to load from stdin if available (legacy mode)
+            try:
+                if not sys.stdin.isatty():
+                    config_data = parse_json_safely(sys.stdin.read())
+            except:
+                pass
 
-        # Extract parameters from args or stdin config
+        # Extract parameters from args or config
         session_id = getattr(args, 'session_id', None) or (config_data.get('session_id') if config_data else None)
         cycle = getattr(args, 'cycle', None) or (config_data.get('cycle') if config_data else None)
         round_num = getattr(args, 'round', None) or (config_data.get('round') if config_data else None)
@@ -1495,7 +1507,8 @@ def handle_postflight_submit_command(args):
                     # Get recent project findings/unknowns (session-specific filtering not available)
                     try:
                         session_findings = db.get_project_findings(project_id, limit=10)
-                        session_unknowns = db.get_project_unknowns(project_id, limit=10)
+                        # Note: get_project_unknowns doesn't accept limit parameter
+                        session_unknowns = db.get_project_unknowns(project_id, resolved=False)[:10]
                     except Exception:
                         session_findings = []
                         session_unknowns = []

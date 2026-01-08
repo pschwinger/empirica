@@ -237,10 +237,17 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
 
     Priority:
     1. Check ~/.empirica/active_session file for explicit session
-    2. Match exact ai_id
+    2. Match exact ai_id (filtered by instance_id for multi-instance isolation)
     3. Match ai_id prefix (e.g., 'claude-code' matches 'claude-code-multimachine')
     """
     cursor = db.conn.cursor()
+
+    # Get current instance_id for multi-instance isolation
+    try:
+        from empirica.utils.session_resolver import get_instance_id
+        current_instance_id = get_instance_id()
+    except ImportError:
+        current_instance_id = None
 
     # Priority 1: Check active_session file
     active_session_file = Path.home() / '.empirica' / 'active_session'
@@ -259,26 +266,47 @@ def get_active_session(db: SessionDatabase, ai_id: str) -> dict:
         except Exception:
             pass  # Fall through to other methods
 
-    # Priority 2: Exact ai_id match
-    cursor.execute("""
-        SELECT session_id, ai_id, start_time
-        FROM sessions
-        WHERE end_time IS NULL AND ai_id = ?
-        ORDER BY start_time DESC
-        LIMIT 1
-    """, (ai_id,))
+    # Priority 2: Exact ai_id match (with instance isolation)
+    if current_instance_id:
+        # Filter by instance_id OR legacy sessions (NULL instance_id)
+        cursor.execute("""
+            SELECT session_id, ai_id, start_time
+            FROM sessions
+            WHERE end_time IS NULL AND ai_id = ?
+              AND (instance_id = ? OR instance_id IS NULL)
+            ORDER BY start_time DESC
+            LIMIT 1
+        """, (ai_id, current_instance_id))
+    else:
+        cursor.execute("""
+            SELECT session_id, ai_id, start_time
+            FROM sessions
+            WHERE end_time IS NULL AND ai_id = ?
+            ORDER BY start_time DESC
+            LIMIT 1
+        """, (ai_id,))
     row = cursor.fetchone()
     if row:
         return dict(row)
 
     # Priority 3: Prefix match (e.g., 'claude-code' matches 'claude-code-xyz')
-    cursor.execute("""
-        SELECT session_id, ai_id, start_time
-        FROM sessions
-        WHERE end_time IS NULL AND ai_id LIKE ?
-        ORDER BY start_time DESC
-        LIMIT 1
-    """, (f"{ai_id}%",))
+    if current_instance_id:
+        cursor.execute("""
+            SELECT session_id, ai_id, start_time
+            FROM sessions
+            WHERE end_time IS NULL AND ai_id LIKE ?
+              AND (instance_id = ? OR instance_id IS NULL)
+            ORDER BY start_time DESC
+            LIMIT 1
+        """, (f"{ai_id}%", current_instance_id))
+    else:
+        cursor.execute("""
+            SELECT session_id, ai_id, start_time
+            FROM sessions
+            WHERE end_time IS NULL AND ai_id LIKE ?
+            ORDER BY start_time DESC
+            LIMIT 1
+        """, (f"{ai_id}%",))
     row = cursor.fetchone()
     return dict(row) if row else None
 
