@@ -3,15 +3,19 @@ Provider-agnostic embeddings adapter.
 Reads provider/model from env (or defaults) and returns float vectors.
 
 ENV:
-- EMPIRICA_EMBEDDINGS_PROVIDER: openai|ollama|local|auto (default: auto)
+- EMPIRICA_EMBEDDINGS_PROVIDER: openai|ollama|jina|voyage|local|auto (default: auto)
 - EMPIRICA_EMBEDDINGS_MODEL: model name (default varies by provider)
 - EMPIRICA_OLLAMA_URL: Ollama server URL (default: http://localhost:11434)
 - OPENAI_API_KEY (for provider=openai)
+- JINA_API_KEY (for provider=jina)
+- VOYAGE_API_KEY (for provider=voyage)
 
 Providers:
 - auto: Auto-detect best available (ollama if running, else local)
 - openai: OpenAI API (requires openai package + API key)
-- ollama: Local Ollama server (phi3, nomic-embed-text, etc.)
+- ollama: Local Ollama server (bge-m3, nomic-embed-text, qwen3-embedding, etc.)
+- jina: Jina AI API (jina-embeddings-v3, jina-colbert-v2)
+- voyage: Voyage AI API (voyage-3.5, voyage-3-lite)
 - local: Hash-based fallback for testing (no external deps)
 """
 from __future__ import annotations
@@ -33,6 +37,8 @@ except Exception:  # pragma: no cover
 DEFAULT_MODELS = {
     "openai": "text-embedding-3-small",
     "ollama": "nomic-embed-text",  # 768-dim, good semantic quality
+    "jina": "jina-embeddings-v3",  # 1024-dim, multilingual, late-interaction
+    "voyage": "voyage-3-lite",  # 512-dim, fast and cheap
     "local": "hash-1536",
 }
 
@@ -42,13 +48,31 @@ MODEL_DIMENSIONS = {
     "text-embedding-3-small": 1536,
     "text-embedding-3-large": 3072,
     "text-embedding-ada-002": 1536,
-    # Ollama
+    # Ollama (local models)
     "nomic-embed-text": 768,
+    "nomic-embed-text-v2-moe": 768,  # MoE variant
     "mxbai-embed-large": 1024,
+    "bge-m3": 1024,  # BGE-M3: dense + sparse + colbert, multilingual
+    "bge-large": 1024,
+    "qwen3-embedding": 1024,  # Qwen3 embedding model
+    "snowflake-arctic-embed": 1024,
+    "snowflake-arctic-embed2": 1024,
+    "granite-embedding": 768,
     "all-minilm": 384,
     "phi3": 3072,
     "phi3:latest": 3072,
     "llama3.1:8b": 4096,
+    # Jina AI
+    "jina-embeddings-v3": 1024,  # Matryoshka: 1024/512/256/128/64
+    "jina-embeddings-v2-base-en": 768,
+    "jina-colbert-v2": 128,  # Late-interaction ColBERT
+    # Voyage AI
+    "voyage-3.5": 1024,  # Latest, best quality
+    "voyage-3": 1024,
+    "voyage-3-lite": 512,  # Fast and cheap
+    "voyage-code-3": 1024,  # Code-optimized
+    "voyage-finance-2": 1024,  # Finance domain
+    "voyage-multilingual-2": 1024,  # Multilingual
     # Local
     "hash-1536": 1536,
 }
@@ -94,6 +118,10 @@ def _resolve_auto_provider(ollama_url: str) -> str:
 
 
 class EmbeddingsProvider:
+    # Type declarations for conditional attributes
+    _jina_api_key: Optional[str] = None
+    _voyage_api_key: Optional[str] = None
+
     def __init__(self) -> None:
         self.ollama_url = os.getenv("EMPIRICA_OLLAMA_URL", "http://localhost:11434")
 
@@ -120,12 +148,26 @@ class EmbeddingsProvider:
             self._client = None
             # Vector size from MODEL_DIMENSIONS or determined on first embed
             self._vector_size = MODEL_DIMENSIONS.get(self.model)
+        elif self.provider == "jina":
+            # Jina AI uses REST API
+            self._jina_api_key = os.getenv("JINA_API_KEY")
+            if not self._jina_api_key:
+                raise RuntimeError("JINA_API_KEY env var required for provider=jina")
+            self._client = None
+            self._vector_size = MODEL_DIMENSIONS.get(self.model, 1024)
+        elif self.provider == "voyage":
+            # Voyage AI uses REST API
+            self._voyage_api_key = os.getenv("VOYAGE_API_KEY")
+            if not self._voyage_api_key:
+                raise RuntimeError("VOYAGE_API_KEY env var required for provider=voyage")
+            self._client = None
+            self._vector_size = MODEL_DIMENSIONS.get(self.model, 1024)
         elif self.provider == "local":
             # No external dependency; simple hashing-based embedding (for testing)
             self._client = None
             self._vector_size = 1536
         else:
-            raise RuntimeError(f"Unsupported provider '{self.provider}'. Set EMPIRICA_EMBEDDINGS_PROVIDER=openai|ollama|local|auto")
+            raise RuntimeError(f"Unsupported provider '{self.provider}'. Set EMPIRICA_EMBEDDINGS_PROVIDER=openai|ollama|jina|voyage|local|auto")
 
         logger.debug(f"Embeddings provider: {self.provider}, model: {self.model}")
 
@@ -133,11 +175,17 @@ class EmbeddingsProvider:
         text = text or ""
 
         if self.provider == "openai":
-            resp = self._client.embeddings.create(model=self.model, input=text)
+            resp = self._client.embeddings.create(model=self.model, input=text)  # type: ignore
             return resp.data[0].embedding  # type: ignore
 
         if self.provider == "ollama":
             return self._embed_ollama(text)
+
+        if self.provider == "jina":
+            return self._embed_jina(text)
+
+        if self.provider == "voyage":
+            return self._embed_voyage(text)
 
         if self.provider == "local":
             return self._embed_local_hash(text)
@@ -176,6 +224,78 @@ class EmbeddingsProvider:
             return self._embed_local_hash(text)
         except Exception as e:
             logger.warning(f"Ollama embedding failed: {e} - falling back to local hash")
+            return self._embed_local_hash(text)
+
+    def _embed_jina(self, text: str) -> List[float]:
+        """Embed using Jina AI API (jina-embeddings-v3, etc.)."""
+        import requests
+
+        url = "https://api.jina.ai/v1/embeddings"
+        headers = {
+            "Authorization": f"Bearer {self._jina_api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": self.model,
+            "input": [text],
+            "encoding_type": "float"
+        }
+
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            embedding = data.get("data", [{}])[0].get("embedding", [])
+
+            if not embedding:
+                logger.warning(f"Jina returned empty embedding for model {self.model}")
+                return self._embed_local_hash(text)
+
+            # Cache vector size
+            if self._vector_size is None:
+                self._vector_size = len(embedding)
+                logger.info(f"Jina {self.model} vector size: {self._vector_size}")
+
+            return embedding
+
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Jina embedding failed: {e} - falling back to local hash")
+            return self._embed_local_hash(text)
+
+    def _embed_voyage(self, text: str) -> List[float]:
+        """Embed using Voyage AI API (voyage-3.5, voyage-3-lite, etc.)."""
+        import requests
+
+        url = "https://api.voyageai.com/v1/embeddings"
+        headers = {
+            "Authorization": f"Bearer {self._voyage_api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": self.model,
+            "input": [text],
+            "input_type": "document"  # or "query" for search queries
+        }
+
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            embedding = data.get("data", [{}])[0].get("embedding", [])
+
+            if not embedding:
+                logger.warning(f"Voyage returned empty embedding for model {self.model}")
+                return self._embed_local_hash(text)
+
+            # Cache vector size
+            if self._vector_size is None:
+                self._vector_size = len(embedding)
+                logger.info(f"Voyage {self.model} vector size: {self._vector_size}")
+
+            return embedding
+
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Voyage embedding failed: {e} - falling back to local hash")
             return self._embed_local_hash(text)
 
     def _embed_local_hash(self, text: str) -> List[float]:

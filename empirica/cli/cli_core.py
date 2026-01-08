@@ -13,6 +13,7 @@ except Exception:
     pass  # Don't fail if fix can't be applied
 
 import argparse
+import json
 import sys
 import time
 from .cli_utils import handle_cli_error, print_header
@@ -57,7 +58,8 @@ class GroupedHelpFormatter(argparse.RawDescriptionHelpFormatter):
                     'Architecture': ['assess-component', 'assess-compare', 'assess-directory'],
                     'Agents': ['agent-spawn', 'agent-report', 'agent-aggregate', 'agent-export', 'agent-import', 'agent-discover'],
                     'Sentinel': ['sentinel-orchestrate', 'sentinel-load-profile', 'sentinel-status', 'sentinel-check'],
-                    'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find']
+                    'Personas': ['persona-list', 'persona-show', 'persona-promote', 'persona-find'],
+                    'Lessons': ['lesson-create', 'lesson-load', 'lesson-list', 'lesson-search', 'lesson-recommend', 'lesson-path', 'lesson-replay-start', 'lesson-replay-end', 'lesson-stats']
                 }
                 
                 parts = ['\nAvailable Commands (grouped by category):\n', '=' * 70 + '\n']
@@ -98,6 +100,7 @@ from .parsers import (
     add_sentinel_parsers,
     add_persona_parsers,
     add_release_parsers,
+    add_lesson_parsers,
     add_onboarding_parsers,
 )
 from .command_handlers.architecture_commands import (
@@ -127,7 +130,7 @@ from .command_handlers.persona_commands import (
     handle_persona_find_command,
 )
 from .command_handlers.release_commands import handle_release_ready_command
-from .command_handlers.docs_commands import handle_docs_assess
+from .command_handlers.docs_commands import handle_docs_assess, handle_docs_explain
 
 
 def _get_version():
@@ -185,6 +188,7 @@ def create_argument_parser():
     add_sentinel_parsers(subparsers)
     add_persona_parsers(subparsers)
     add_release_parsers(subparsers)
+    add_lesson_parsers(subparsers)
     add_onboarding_parsers(subparsers)
 
     return parser
@@ -391,6 +395,19 @@ def main(args=None):
             # Release commands
             'release-ready': handle_release_ready_command,
             'docs-assess': handle_docs_assess,
+            'docs-explain': handle_docs_explain,
+
+            # Lesson commands (Epistemic Procedural Knowledge)
+            'lesson-create': handle_lesson_create_command,
+            'lesson-load': handle_lesson_load_command,
+            'lesson-list': handle_lesson_list_command,
+            'lesson-search': handle_lesson_search_command,
+            'lesson-recommend': handle_lesson_recommend_command,
+            'lesson-path': handle_lesson_path_command,
+            'lesson-replay-start': handle_lesson_replay_start_command,
+            'lesson-replay-end': handle_lesson_replay_end_command,
+            'lesson-stats': handle_lesson_stats_command,
+            'lesson-embed': handle_lesson_embed_command,
 
             # Onboarding command
             'onboard': handle_onboard_command,
@@ -399,25 +416,45 @@ def main(args=None):
         if parsed_args.command in command_handlers:
             handler = command_handlers[parsed_args.command]
             result = handler(parsed_args)
-            
+
+            # Handle result output and exit code
+            exit_code = 0
+            if isinstance(result, dict):
+                # Dict results: print as JSON, exit based on 'ok' field
+                output_format = getattr(parsed_args, 'output', 'json')
+                if output_format == 'json':
+                    print(json.dumps(result, indent=2, default=str))
+                else:
+                    # Human-readable format
+                    if result.get('ok', True):
+                        for key, value in result.items():
+                            if key != 'ok':
+                                print(f"{key}: {value}")
+                    else:
+                        print(f"❌ {result.get('error', 'Unknown error')}")
+                exit_code = 0 if result.get('ok', True) else 1
+            elif result is not None and result != 0:
+                # Non-dict non-zero result is an exit code
+                exit_code = result
+
             # Log successful execution
             elapsed_ms = int((time.time() - start_time) * 1000)
             if verbose:
                 print(f"[VERBOSE] Execution time: {elapsed_ms}ms", file=sys.stderr)
-            
+
             try:
                 db = SessionDatabase()
                 db.log_command_usage(
                     command_name=parsed_args.command,
                     execution_time_ms=elapsed_ms,
-                    success=True,
-                    error_message=None
+                    success=(exit_code == 0),
+                    error_message=None if exit_code == 0 else "Command returned error"
                 )
                 db.close()
             except Exception:
                 pass
-            
-            sys.exit(0 if result is None or result == 0 else result)
+
+            sys.exit(exit_code)
         else:
             print(f"❌ Unknown command: {parsed_args.command}")
             sys.exit(1)

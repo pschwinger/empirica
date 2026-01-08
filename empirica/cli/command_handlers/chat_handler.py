@@ -14,7 +14,15 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import List, Dict, Optional
-from empirica.plugins.modality_switcher import ModalitySwitcher, RoutingStrategy, RoutingPreferences
+# Modality switcher is optional (commercial feature)
+try:
+    from empirica.plugins.modality_switcher import ModalitySwitcher, RoutingStrategy, RoutingPreferences
+    MODALITY_AVAILABLE = True
+except ImportError:
+    MODALITY_AVAILABLE = False
+    ModalitySwitcher = None
+    RoutingStrategy = None
+    RoutingPreferences = None
 from empirica.data.session_database import SessionDatabase
 from ..cli_utils import handle_cli_error
 from ..uvl_formatter import (
@@ -77,13 +85,18 @@ def render_markdown(text: str, use_glow: bool = True) -> str:
 def handle_chat_command(args):
     """
     Handle 'empirica chat' command for interactive conversations.
-    
+
     Provides REPL-style interface with:
     - Multi-turn conversation
     - Conversation history
     - Model switching during chat
     - Session persistence
     """
+    if not MODALITY_AVAILABLE:
+        print("Error: 'chat' command requires modality switcher (commercial feature)")
+        print("Use Claude Code or direct API calls instead.")
+        sys.exit(1)
+
     try:
         # Initialize
         session_id = getattr(args, 'session', None)

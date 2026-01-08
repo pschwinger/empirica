@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: empirica
-Version: 1.2.2
+Version: 1.2.4
 Summary: Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking
 Author: Empirica Team
 License-Expression: MIT
@@ -67,20 +67,143 @@ Dynamic: license-file
 
 > **AI agents that know what they know—and what they don't**
 
-[![Version](https://img.shields.io/badge/version-1.2.2-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.2)
+[![Version](https://img.shields.io/badge/version-1.2.4-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.2.4)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Nubaeon/empirica/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/docker-nubaeon%2Fempirica-blue)](https://hub.docker.com/r/nubaeon/empirica)
 
-## What's New in 1.2.2
+## What's New in 1.2.4
 
-- **🔧 MCP Server with 57 Tools** - Full Model Context Protocol integration with epistemic middleware
-- **👥 9 Human Copilot Tools** - Enhanced human oversight (monitor, check-drift, issue-handoff, etc.)
-- **🌙 3-Layer Signaling System** - Moon phase indicators for drift detection (basic/default/full)
-- **🚦 Sentinel Gates** - Automatic safety gates (HALT/BRANCH/REVISE/LOCK) for memory drift
-- **🔄 Memory Compact Hooks** - Seamless Claude Code integration with pre/post compact hooks
-- **📊 Unified Statusline** - Real-time epistemic status with vector health indicators
+- **🔄 project-switch Command** - AI-friendly project switching with clear context banner and automatic bootstrap loading
+- **✅ Vector Format Fixes** - check-submit now accepts flat, structured, and wrapped vector formats
+- **🎭 Persona Schema Validation** - Fixed agent-spawn errors for public_key and focus_domains
+- **📋 Deduplication Fix** - Eliminated duplicate findings/unknowns/dead-ends in project-bootstrap output
+- **🚦 Sentinel Safety Gates** - Human-in-the-loop gates (PROCEED/HALT/BRANCH/REVISE) that bound AI autonomy
+- **🤖 Multi-Agent Spawning** - Spawn epistemic sub-agents with `agent-spawn`, aggregate findings with `agent-aggregate`
+- **🎭 Persona System** - AI identity profiles that emerge from successful epistemic patterns (`persona-list`, `persona-promote`)
+- **🔧 108 CLI Commands** - Full coverage including assessment, trajectory projection, and drift detection
+
+## ⚡ Claude Code Quick Start
+
+### What You Do vs What Claude Does
+
+| You Do (Once) | Claude Does (Automatic) |
+|---------------|------------------------|
+| `pip install empirica` | Runs `project-bootstrap` to load prior learnings |
+| Add snippet to `~/.claude/CLAUDE.md` | Logs findings as it works |
+| Work normally | Runs CHECK gates before risky actions |
+| | Saves what it learned at session end |
+
+### Setup (2 minutes)
+
+**Step 1: Install**
+```bash
+pip install empirica
+```
+
+**Step 2: Add to ~/.claude/CLAUDE.md**
+Copy this to `~/.claude/CLAUDE.md` (Claude Code) or your AI's system prompt:
+
+```markdown
+# Empirica - Epistemic Self-Assessment
+
+You have Empirica installed. Use it to track what you know and learn.
+
+## Quick Start
+```bash
+# Start session
+empirica session-create --ai-id claude-code --output json
+
+# Before work: What do I know?
+empirica preflight-submit -
+
+# After work: What did I learn?
+empirica postflight-submit -
+```
+
+## Core Vectors (0.0-1.0)
+- **know**: Domain knowledge (0.7+ = ready)
+- **uncertainty**: Doubt level (0.35- = ready)
+- **context**: Information access
+- **do**: Execution capability
+
+## Log As You Work
+```bash
+empirica finding-log --finding "Discovered X" --impact 0.7
+empirica unknown-log --unknown "Need to investigate Y"
+```
+
+## When Uncertain
+Run CHECK gate: `empirica check-submit -`
+
+Full docs: `empirica --help`
+```
+
+**Full setup guide:** [CLAUDE_CODE_SETUP.md](docs/guides/CLAUDE_CODE_SETUP.md) (hooks, MCP, troubleshooting)
+**Full system prompt:** [CLAUDE.md](docs/system-prompts/CLAUDE.md) | [CANONICAL_CORE.md](docs/system-prompts/CANONICAL_CORE.md)
+
+### Step 3: (Optional) MCP for Claude Desktop
+Add to `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "empirica": {
+      "command": "empirica-mcp",
+      "env": { "EMPIRICA_AI_ID": "claude-desktop" }
+    }
+  }
+}
+```
+
+### Docker
+```bash
+docker pull nubaeon/empirica:1.2.4
+```
+
+### How It Works Day-to-Day
+
+**You don't need to type Empirica commands.** Just talk to Claude normally:
+
+| You Say (Natural Language) | Claude Does (Behind the Scenes) |
+|---------------------------|--------------------------------|
+| "Continue working on the auth refactor" | Runs `project-bootstrap` → loads what it learned last session |
+| "I'm not sure about this approach" | Runs `check-submit` → assesses if it knows enough to proceed |
+| "Good work, let's wrap up" | Runs `postflight-submit` → saves learnings for next time |
+
+**What is `project-bootstrap`?**
+
+When Claude starts a session, `project-bootstrap` loads ~800 tokens of structured context:
+```
+📊 Epistemic State: know=0.85, uncertainty=0.15
+🎯 Active Goals: Refactor auth module (in_progress)
+💡 Recent Findings: "Auth uses JWT with 15min expiry"
+❓ Open Unknowns: "Token rotation mechanism unclear"
+```
+
+This replaces 200k tokens of conversation history with just the important bits.
+
+**Will Claude ignore the commands?**
+
+Sometimes, especially mid-task. But after a memory compact (when context summarizes), Claude naturally looks for context—that's when bootstrap shines. The CLAUDE.md instructions make this reliable.
+
+### Live Metacognitive Signal
+
+With Claude Code hooks enabled, you see Claude's epistemic state in real-time:
+
+```
+[empirica] ⚡79% │ ⚡ PRAXIC │ POSTFLIGHT │ K:80% U:20% C:90% │ Δ K:+0.30 U:-0.30 C:+0.30 │ ✓ stable
+```
+
+**What this tells you:**
+- **⚡79%** - Overall epistemic confidence
+- **PRAXIC** - Claude is in action mode (vs NOETIC = investigation mode)
+- **POSTFLIGHT** - Just completed a task and logged learnings
+- **K:80% U:20%** - 80% knowledge, 20% uncertainty (healthy state)
+- **Δ K:+0.30** - Gained 30% knowledge this session (learning delta)
+- **✓ stable** - No epistemic drift detected
+
+**Why this matters:** You can see when Claude is uncertain before it acts, when it's learning, and when it might be drifting from reality. No more guessing if Claude actually knows what it's doing.
 
 ## What is Empirica?
 
@@ -133,20 +256,20 @@ pip install empirica[all]
 
 ```bash
 # Pull the latest image
-docker pull nubaeon/empirica:1.2.2
+docker pull nubaeon/empirica:1.2.4
 
 # Run a command
-docker run -it nubaeon/empirica:1.2.2 empirica --help
+docker run -it nubaeon/empirica:1.2.4 empirica --help
 
 # Interactive session with persistent data
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.2 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.2.4 /bin/bash
 ```
 
 #### From Source
 
 ```bash
 # Latest stable release
-pip install git+https://github.com/Nubaeon/empirica.git@v1.2.2
+pip install git+https://github.com/Nubaeon/empirica.git@v1.2.4
 
 # Development branch
 pip install git+https://github.com/Nubaeon/empirica.git@develop
@@ -249,6 +372,18 @@ empirica project-bootstrap --project-id <PROJECT_ID>
 
 ### 🤝 Multi-Agent Coordination
 
+**Spawn epistemic sub-agents:**
+```bash
+# Spawn a sub-agent for parallel investigation
+empirica agent-spawn --session-id <ID> --task "Investigate auth patterns" --depth medium
+
+# Sub-agent reports back
+empirica agent-report --session-id <SUB_ID> --findings '[...]' --confidence 0.8
+
+# Aggregate findings from multiple agents
+empirica agent-aggregate --parent-session-id <ID> --merge-strategy weighted
+```
+
 **Share epistemic state via git notes:**
 ```bash
 # Push your epistemic checkpoints
@@ -257,6 +392,60 @@ git push origin refs/notes/empirica/*
 # Pull team member's state
 git fetch origin refs/notes/empirica/*:refs/notes/empirica/*
 ```
+
+### 🚦 Sentinel Safety Gates
+
+**Bounded AI autonomy with human oversight:**
+```bash
+# Check if operation is safe to proceed
+empirica sentinel-check --operation '{"type": "code_generation", "scope": "high"}' --session-id <ID>
+
+# Returns: PROCEED | HALT | BRANCH | REVISE
+
+# Orchestrate multi-step workflow with gates
+empirica sentinel-orchestrate --workflow workflow.json --session-id <ID>
+```
+
+**Gate types:**
+- `PROCEED` - Safe to continue autonomously
+- `HALT` - Requires human approval before continuing
+- `BRANCH` - Spawn investigation before proceeding
+- `REVISE` - Modify approach and resubmit
+
+### 🎭 Persona System
+
+**AI identity profiles that emerge from successful patterns:**
+```bash
+# List available personas
+empirica persona-list
+
+# Find persona matching current task
+empirica persona-find --task "security audit" --session-id <ID>
+
+# Promote traits based on successful outcomes
+empirica persona-promote --persona-id researcher --trait thoroughness --evidence "Found 3 critical bugs"
+```
+
+### 📈 Drift Detection & Trajectory
+
+**Monitor epistemic health and project learning curves:**
+```bash
+# Check for behavioral drift
+empirica check-drift --session-id <ID>
+
+# Project epistemic trajectory
+empirica trajectory-project --session-id <ID> --horizon 5
+
+# Assess current epistemic state
+empirica assess-state --session-id <ID> --include-history
+```
+
+**Moon phase indicators for health at a glance:**
+- 🌑 Critical (coverage < 25%)
+- 🌒 Low (25-50%)
+- 🌓 Moderate (50-75%)
+- 🌔 Good (75-90%)
+- 🌕 Excellent (90%+)
 
 ## 📦 Optional Integrations
 

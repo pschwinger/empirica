@@ -9,7 +9,7 @@ import sys
 import time
 from datetime import datetime
 
-def test_result(test_name, status, details=None, duration=None):
+def report_result(test_name, status, details=None, duration=None):
     """Helper to format test results"""
     result = {
         "test": test_name,

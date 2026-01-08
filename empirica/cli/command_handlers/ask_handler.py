@@ -6,7 +6,15 @@ Provides simple question-answering interface that routes through modality switch
 
 import sys
 from typing import Optional
-from empirica.plugins.modality_switcher import ModalitySwitcher, RoutingStrategy, RoutingPreferences
+# Modality switcher is optional (commercial feature)
+try:
+    from empirica.plugins.modality_switcher import ModalitySwitcher, RoutingStrategy, RoutingPreferences
+    MODALITY_AVAILABLE = True
+except ImportError:
+    MODALITY_AVAILABLE = False
+    ModalitySwitcher = None
+    RoutingStrategy = None
+    RoutingPreferences = None
 from empirica.data.session_database import SessionDatabase
 from empirica.data.session_json_handler import SessionJSONHandler
 from ..cli_utils import handle_cli_error
@@ -16,10 +24,15 @@ import uuid
 def handle_ask_command(args):
     """
     Handle 'empirica ask' command for human users.
-    
+
     Simple query interface that routes through modality switcher to appropriate AI model.
     Optionally tracks conversation in session for history.
     """
+    if not MODALITY_AVAILABLE:
+        print("Error: 'ask' command requires modality switcher (commercial feature)")
+        print("Use direct API calls or Claude Code instead.")
+        sys.exit(1)
+
     try:
         query = args.query
         

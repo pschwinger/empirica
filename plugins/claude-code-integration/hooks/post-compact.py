@@ -87,31 +87,13 @@ def main():
     # CRITICAL: Detect phase state to route recovery correctly
     phase_state = _get_session_phase_state(empirica_session)
 
-    # Step 1: Capture FRESH epistemic state POST-compact (canonical via assess-state)
-    # This shows what the AI's epistemic state actually is NOW (after compacting)
-    fresh_vectors_post = {}
-    try:
-        assess_result = subprocess.run(
-            ['empirica', 'assess-state', '--session-id', empirica_session, '--output', 'json'],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        if assess_result.returncode == 0:
-            assess_data = json.loads(assess_result.stdout)
-            fresh_vectors_post = assess_data.get('state', {}).get('vectors', {})
-    except Exception:
-        pass  # Non-fatal
-
-    # Load pre-compact snapshot (what the AI thought it knew BEFORE compacting)
+    # Load pre-compact snapshot (what the AI thought it knew)
     pre_snapshot = _load_pre_snapshot()
     pre_vectors = {}
     pre_reasoning = None
 
     if pre_snapshot:
-        # Use canonical vectors if available, fallback to live_state
-        pre_vectors = pre_snapshot.get('vectors_canonical', {}) or \
-                      pre_snapshot.get('checkpoint', {}) or \
+        pre_vectors = pre_snapshot.get('checkpoint', {}) or \
                       (pre_snapshot.get('live_state') or {}).get('vectors', {})
         pre_reasoning = (pre_snapshot.get('live_state') or {}).get('reasoning')
 
@@ -119,16 +101,27 @@ def main():
     dynamic_context = _load_dynamic_context(empirica_session, ai_id, pre_snapshot)
 
     # Route based on phase state:
-    # - Session COMPLETE (has POSTFLIGHT) → New session + PREFLIGHT
+    # - Session COMPLETE (has POSTFLIGHT) → Create new session + bootstrap + PREFLIGHT
     # - Session INCOMPLETE (mid-work) → CHECK gate on old session
+    session_bootstrap = None
     if phase_state.get('is_complete'):
+        # NEW: Actually create session and run bootstrap here
+        # This enforces the correct sequence before AI does PREFLIGHT
+        project_id = dynamic_context.get('session_context', {}).get('project_id')
+        session_bootstrap = _create_session_and_bootstrap(ai_id, project_id)
+
         recovery_prompt = _generate_new_session_prompt(
             pre_vectors=pre_vectors,
             dynamic_context=dynamic_context,
             old_session_id=empirica_session,
-            ai_id=ai_id
+            ai_id=ai_id,
+            session_bootstrap=session_bootstrap
         )
         action_required = "NEW_SESSION_PREFLIGHT"
+
+        # Update session_id if we created one
+        if session_bootstrap.get('session_id'):
+            empirica_session = session_bootstrap['session_id']
     else:
         recovery_prompt = _generate_check_prompt(
             pre_vectors=pre_vectors,
@@ -154,17 +147,14 @@ def main():
             "reasoning": pre_reasoning,
             "timestamp": pre_snapshot.get('timestamp') if pre_snapshot else None
         },
-        "post_compact_state": {
-            "vectors_fresh": fresh_vectors_post,  # TIER 2a: Fresh vectors POST-compact
-            "captured_via": "assess-state (canonical)"
-        },
-        "potential_drift_warning": potential_drift
+        "potential_drift_warning": potential_drift,
+        "session_bootstrap": session_bootstrap  # NEW: Include bootstrap result
     }
 
     print(json.dumps(output), file=sys.stdout)
 
     # User-visible message to stderr
-    _print_user_message(pre_vectors, dynamic_context, potential_drift, phase_state, ai_id)
+    _print_user_message(pre_vectors, dynamic_context, potential_drift, phase_state, ai_id, session_bootstrap)
 
     sys.exit(0)
 
@@ -361,12 +351,88 @@ def _load_dynamic_context(session_id: str, ai_id: str, pre_snapshot: dict) -> di
         }
 
 
-def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_session_id: str, ai_id: str) -> str:
+def _create_session_and_bootstrap(ai_id: str, project_id: str = None) -> dict:
+    """
+    Create a new session AND run project-bootstrap in one step.
+
+    This enforces the correct sequence: session-create → project-bootstrap
+    before the AI does PREFLIGHT. Previously, AI could skip bootstrap.
+
+    Returns:
+        {
+            "session_id": str,
+            "bootstrap_output": dict or None,
+            "memory_context": dict or None,
+            "error": str or None
+        }
+    """
+    result = {
+        "session_id": None,
+        "bootstrap_output": None,
+        "memory_context": None,
+        "error": None
+    }
+
+    try:
+        # Step 1: Create new session
+        create_cmd = subprocess.run(
+            ['empirica', 'session-create', '--ai-id', ai_id, '--output', 'json'],
+            capture_output=True, text=True, timeout=15
+        )
+        if create_cmd.returncode != 0:
+            result["error"] = f"session-create failed: {create_cmd.stderr}"
+            return result
+
+        create_output = json.loads(create_cmd.stdout)
+        new_session_id = create_output.get('session_id')
+        if not new_session_id:
+            result["error"] = "session-create returned no session_id"
+            return result
+
+        result["session_id"] = new_session_id
+
+        # Step 2: Run project-bootstrap to load context
+        bootstrap_cmd = subprocess.run(
+            ['empirica', 'project-bootstrap', '--session-id', new_session_id, '--output', 'json'],
+            capture_output=True, text=True, timeout=30
+        )
+        if bootstrap_cmd.returncode == 0:
+            try:
+                result["bootstrap_output"] = json.loads(bootstrap_cmd.stdout)
+            except json.JSONDecodeError:
+                result["bootstrap_output"] = {"raw": bootstrap_cmd.stdout[:500]}
+
+        # Step 3: Try to get memory context from Qdrant (optional)
+        if project_id:
+            try:
+                search_cmd = subprocess.run(
+                    ['empirica', 'project-search', '--project-id', project_id,
+                     '--task', 'current context and recent work', '--output', 'json'],
+                    capture_output=True, text=True, timeout=15
+                )
+                if search_cmd.returncode == 0:
+                    result["memory_context"] = json.loads(search_cmd.stdout)
+            except Exception:
+                pass  # Memory search is optional
+
+    except subprocess.TimeoutExpired:
+        result["error"] = "Command timed out"
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
+
+
+def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_session_id: str, ai_id: str,
+                                  session_bootstrap: dict = None) -> str:
     """
     Generate prompt for NEW session + PREFLIGHT when old session was complete.
 
     This is the correct path when compact happens AFTER POSTFLIGHT - the old
     session is done, we need a fresh start with proper baseline.
+
+    If session_bootstrap is provided, the session was already created and bootstrapped
+    by the hook - AI just needs to do PREFLIGHT with the loaded context.
     """
     goals_text = _format_goals(dynamic_context)
     findings_text = _format_findings(dynamic_context)
@@ -375,6 +441,61 @@ def _generate_new_session_prompt(pre_vectors: dict, dynamic_context: dict, old_s
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
 
+    # If hook already created session and ran bootstrap, use that
+    if session_bootstrap and session_bootstrap.get('session_id'):
+        new_session_id = session_bootstrap['session_id']
+        memory_text = _format_memory_context(session_bootstrap.get('memory_context'))
+
+        return f"""
+## POST-COMPACT: SESSION CREATED, PREFLIGHT REQUIRED
+
+Your context was just compacted. The previous session ({old_session_id[:8]}...) was **COMPLETE**
+(had POSTFLIGHT).
+
+**✅ Session created:** `{new_session_id}`
+**✅ Project context loaded via bootstrap**
+
+**Pre-compact vectors (NOW INVALID):** know={pre_know}, uncertainty={pre_unc}
+
+### Evidence from Database (Ground Truth):
+
+**Active Goals:**
+{goals_text}
+
+**Recent Findings (high-impact learnings):**
+{findings_text}
+
+**Open Unknowns (unresolved questions):**
+{unknowns_text}
+
+### Memory Context (Auto-Retrieved):
+{memory_text}
+
+### REQUIRED: Run PREFLIGHT (Baseline)
+
+The session is ready. Now assess your ACTUAL epistemic state after loading this context:
+
+```bash
+empirica preflight-submit - << 'EOF'
+{{
+  "session_id": "{new_session_id}",
+  "task_context": "<what you're working on>",
+  "vectors": {{
+    "know": <0.0-1.0: What do you ACTUALLY know now after loading context?>,
+    "uncertainty": <0.0-1.0: How uncertain are you?>,
+    "context": <0.0-1.0: How well do you understand current state?>,
+    "engagement": <0.0-1.0: How engaged are you with the task?>
+  }},
+  "reasoning": "Post-compact with loaded context: <explain current epistemic state>"
+}}
+EOF
+```
+
+**Key principle:** Your PREFLIGHT should reflect knowledge AFTER reading the bootstrap context above.
+This makes the PREFLIGHT→POSTFLIGHT delta meaningful.
+"""
+
+    # Fallback: Hook couldn't create session, AI needs to do full sequence
     return f"""
 ## POST-COMPACT: NEW SESSION REQUIRED
 
@@ -400,13 +521,16 @@ Your context was just compacted. The previous session ({old_session_id[:8]}...) 
 empirica session-create --ai-id {ai_id} --output json
 ```
 
-### Step 2: Load Project Context
+### Step 2: Load Project Context (REQUIRED BEFORE PREFLIGHT)
 
 ```bash
 empirica project-bootstrap --session-id <NEW_SESSION_ID> --output json
 ```
 
 ### Step 3: Run PREFLIGHT (Baseline)
+
+**IMPORTANT:** Only run PREFLIGHT AFTER loading context in Step 2.
+PREFLIGHT should measure your knowledge AFTER bootstrap, not before.
 
 ```bash
 empirica preflight-submit - << 'EOF'
@@ -426,6 +550,39 @@ EOF
 
 **Key principle:** Be HONEST about reduced knowledge. This is a FRESH START, not a continuation.
 """
+
+
+def _format_memory_context(memory_context: dict) -> str:
+    """Format memory context from Qdrant search for prompt."""
+    if not memory_context:
+        return "  (No memory context available - Qdrant may not be running)"
+
+    results = memory_context.get('results', {})
+    if not results:
+        return "  (No relevant memories found)"
+
+    lines = []
+
+    # Handle both old format (list) and new format (dict with docs/memory keys)
+    if isinstance(results, dict):
+        # New format: {"docs": [...], "memory": [...]}
+        all_results = []
+        for key in ['memory', 'docs', 'eidetic', 'episodic']:
+            if key in results and isinstance(results[key], list):
+                all_results.extend(results[key])
+        results = all_results
+
+    if not results:
+        return "  (No relevant memories found)"
+
+    for r in results[:5]:  # Top 5 memories
+        if not isinstance(r, dict):
+            continue
+        content = r.get('content', r.get('text', ''))[:150]
+        score = r.get('score', 0)
+        lines.append(f"  - [{score:.2f}] {content}...")
+
+    return "\n".join(lines) if lines else "  (No memories)"
 
 
 def _format_goals(dynamic_context: dict) -> str:
@@ -581,7 +738,8 @@ def _calculate_potential_drift(pre_vectors: dict) -> dict:
 
 
 def _print_user_message(pre_vectors: dict, dynamic_context: dict, potential_drift: dict,
-                        phase_state: dict = None, ai_id: str = 'claude-code'):
+                        phase_state: dict = None, ai_id: str = 'claude-code',
+                        session_bootstrap: dict = None):
     """Print user-visible summary to stderr"""
     pre_know = pre_vectors.get('know', 'N/A')
     pre_unc = pre_vectors.get('uncertainty', 'N/A')
@@ -594,8 +752,34 @@ def _print_user_message(pre_vectors: dict, dynamic_context: dict, potential_drif
     last_phase = phase_state.get('last_phase', 'unknown') if phase_state else 'unknown'
 
     if is_complete:
-        # Session was complete - need new session + PREFLIGHT
-        print(f"""
+        # Session was complete - check if hook created new session
+        if session_bootstrap and session_bootstrap.get('session_id'):
+            new_session_id = session_bootstrap['session_id']
+            print(f"""
+🔄 Empirica: Post-Compact Recovery (Session Complete)
+
+📊 Previous Session State:
+   Last Phase: {last_phase} (COMPLETE)
+   Pre-compact vectors (NOW INVALID): know={pre_know}, uncertainty={pre_unc}
+
+✅ NEW SESSION CREATED: {new_session_id}
+✅ Project context bootstrapped automatically
+
+📚 Dynamic Context Loaded:
+   Active Goals: {goals_count}
+   Recent Findings: {findings_count}
+   Open Unknowns: {unknowns_count}
+
+🎯 ACTION REQUIRED:
+   Run PREFLIGHT with your ACTUAL knowledge state (after reading loaded context):
+   empirica preflight-submit --session-id {new_session_id}
+
+💡 TIP: Your PREFLIGHT should reflect knowledge AFTER reading the bootstrap context.
+   This makes the PREFLIGHT→POSTFLIGHT delta meaningful.
+""", file=sys.stderr)
+        else:
+            # Fallback: Hook couldn't create session
+            print(f"""
 🔄 Empirica: Post-Compact Recovery (Session Complete)
 
 📊 Previous Session State:
@@ -613,7 +797,7 @@ def _print_user_message(pre_vectors: dict, dynamic_context: dict, potential_drif
 🎯 ACTION REQUIRED:
    1. Create new session: empirica session-create --ai-id {ai_id}
    2. Load context: empirica project-bootstrap --session-id <NEW_ID>
-   3. Run PREFLIGHT: empirica preflight-submit (with honest baseline)
+   3. Run PREFLIGHT: empirica preflight-submit (AFTER loading context!)
 """, file=sys.stderr)
     else:
         # Session incomplete - need CHECK to continue

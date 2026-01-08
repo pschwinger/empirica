@@ -21,6 +21,84 @@ auto_enable_sentinel()
 logger = logging.getLogger(__name__)
 
 
+def _check_bootstrap_status(session_id: str) -> dict:
+    """
+    Check if project-bootstrap has been run for this session.
+
+    Returns:
+        {
+            "has_bootstrap": bool,
+            "project_id": str or None,
+            "session_exists": bool
+        }
+    """
+    try:
+        from empirica.data.session_database import SessionDatabase
+        db = SessionDatabase()
+        cursor = db.conn.cursor()
+
+        # Check if session exists and has project_id
+        cursor.execute("""
+            SELECT session_id, project_id FROM sessions
+            WHERE session_id = ?
+        """, (session_id,))
+        row = cursor.fetchone()
+        db.close()
+
+        if not row:
+            return {
+                "has_bootstrap": False,
+                "project_id": None,
+                "session_exists": False
+            }
+
+        project_id = row[1] if row else None
+        return {
+            "has_bootstrap": project_id is not None,
+            "project_id": project_id,
+            "session_exists": True
+        }
+    except Exception as e:
+        return {
+            "has_bootstrap": False,
+            "project_id": None,
+            "session_exists": False,
+            "error": str(e)
+        }
+
+
+def _auto_bootstrap(session_id: str) -> dict:
+    """
+    Auto-run project-bootstrap for a session.
+
+    Returns:
+        {"ok": bool, "project_id": str, "message": str}
+    """
+    import subprocess
+    try:
+        result = subprocess.run(
+            ['empirica', 'project-bootstrap', '--session-id', session_id, '--output', 'json'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        if result.returncode == 0:
+            try:
+                output = json.loads(result.stdout)
+                return {
+                    "ok": True,
+                    "project_id": output.get('project_id'),
+                    "message": "Auto-bootstrap completed"
+                }
+            except json.JSONDecodeError:
+                return {"ok": True, "project_id": None, "message": "Bootstrap ran (non-JSON output)"}
+        else:
+            return {"ok": False, "error": result.stderr[:500]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 def handle_preflight_submit_command(args):
     """Handle preflight-submit command - AI-first with config file support"""
     try:
@@ -50,6 +128,7 @@ def handle_preflight_submit_command(args):
             session_id = config_data.get('session_id')
             vectors = config_data.get('vectors')
             reasoning = config_data.get('reasoning', '')
+            task_context = config_data.get('task_context', '')  # For pattern retrieval
             output_format = 'json'  # AI-first always uses JSON output
 
             # Validate required fields
@@ -65,6 +144,7 @@ def handle_preflight_submit_command(args):
             session_id = args.session_id
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             reasoning = args.reasoning
+            task_context = getattr(args, 'task_context', '') or ''  # For pattern retrieval
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
             # Validate required fields for legacy mode
@@ -152,7 +232,31 @@ def handle_preflight_submit_command(args):
             except Exception as e:
                 logger.debug(f"Calibration loading failed (non-fatal): {e}")
 
+            # Get project_id for pattern retrieval
+            project_id = None
+            try:
+                cursor = db.conn.cursor()
+                cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                project_id = row[0] if row else None
+            except Exception:
+                pass
+
             db.close()
+
+            # PATTERN RETRIEVAL: Load relevant patterns based on task_context
+            # This arms the AI with lessons, dead_ends, and findings BEFORE starting work
+            patterns = None
+            if task_context and project_id:
+                try:
+                    from empirica.core.qdrant.pattern_retrieval import retrieve_task_patterns
+                    patterns = retrieve_task_patterns(project_id, task_context)
+                    if patterns and any(patterns.values()):
+                        logger.debug(f"Retrieved patterns: {len(patterns.get('lessons', []))} lessons, "
+                                   f"{len(patterns.get('dead_ends', []))} dead_ends, "
+                                   f"{len(patterns.get('relevant_findings', []))} findings")
+                except Exception as e:
+                    logger.debug(f"Pattern retrieval failed (optional): {e}")
 
             result = {
                 "ok": True,
@@ -177,7 +281,8 @@ def handle_preflight_submit_command(args):
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
                     "decision": sentinel_decision.value if sentinel_decision else None
-                } if SentinelHooks.is_enabled() else None
+                } if SentinelHooks.is_enabled() else None,
+                "patterns": patterns if patterns and any(patterns.values()) else None
             }
         except Exception as e:
             logger.error(f"Failed to save preflight assessment: {e}")
@@ -229,18 +334,30 @@ def handle_check_command(args):
     try:
         import time
         import sys
+        import os
         from empirica.core.canonical.git_enhanced_reflex_logger import GitEnhancedReflexLogger
         from empirica.data.session_database import SessionDatabase
 
-        # Try to load from stdin if available
+        # AI-FIRST MODE: Check if config provided as positional argument
         config_data = None
-        try:
-            if not sys.stdin.isatty():
+        if hasattr(args, 'config') and args.config:
+            if args.config == '-':
                 config_data = parse_json_safely(sys.stdin.read())
-        except:
-            pass
+            else:
+                if not os.path.exists(args.config):
+                    print(json.dumps({"ok": False, "error": f"Config file not found: {args.config}"}))
+                    sys.exit(1)
+                with open(args.config, 'r') as f:
+                    config_data = parse_json_safely(f.read())
+        else:
+            # Try to load from stdin if available (legacy mode)
+            try:
+                if not sys.stdin.isatty():
+                    config_data = parse_json_safely(sys.stdin.read())
+            except:
+                pass
 
-        # Extract parameters from args or stdin config
+        # Extract parameters from args or config
         session_id = getattr(args, 'session_id', None) or (config_data.get('session_id') if config_data else None)
         cycle = getattr(args, 'cycle', None) or (config_data.get('cycle') if config_data else None)
         round_num = getattr(args, 'round', None) or (config_data.get('round') if config_data else None)
@@ -374,6 +491,38 @@ def handle_check_command(args):
         else:
             drift_level = "low"
 
+        # PATTERN MATCHING: Check current approach against known failures
+        # This is REACTIVE validation - surfacing warnings before proceeding
+        pattern_warnings = None
+        if project_id:
+            try:
+                from empirica.core.qdrant.pattern_retrieval import check_against_patterns
+
+                # Get approach from config or checkpoint metadata
+                current_approach = None
+                if config_data:
+                    current_approach = config_data.get('approach') or config_data.get('reasoning')
+                if not current_approach and checkpoints:
+                    current_approach = checkpoints[0].get('metadata', {}).get('reasoning')
+
+                pattern_warnings = check_against_patterns(
+                    project_id,
+                    current_approach or "",
+                    current_vectors
+                )
+
+                if pattern_warnings and pattern_warnings.get('has_warnings'):
+                    # Add warnings to suggestions
+                    if pattern_warnings.get('dead_end_matches'):
+                        for de in pattern_warnings['dead_end_matches']:
+                            suggestions.append(f"⚠️ Similar to dead end: {de.get('approach', '')[:50]}... (why: {de.get('why_failed', '')[:50]})")
+                    if pattern_warnings.get('mistake_risk'):
+                        suggestions.append(f"⚠️ {pattern_warnings['mistake_risk']}")
+
+                    logger.debug(f"Pattern warnings: {len(pattern_warnings.get('dead_end_matches', []))} dead_end matches")
+            except Exception as e:
+                logger.debug(f"Pattern matching failed (optional): {e}")
+
         # 6. Create checkpoint with new assessment
         checkpoint_id = git_logger.add_checkpoint(
             phase="CHECK",
@@ -422,6 +571,7 @@ def handle_check_command(args):
                 "suggestions": suggestions,
                 "note": "This is an evidence-based suggestion. Override if task context warrants it."
             },
+            "pattern_warnings": pattern_warnings if pattern_warnings and pattern_warnings.get('has_warnings') else None,
             "timestamp": time.time()
         }
 
@@ -494,6 +644,48 @@ def handle_check_submit_command(args):
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
 
+        # BOOTSTRAP GATE: Ensure project context is loaded before CHECK
+        # Without bootstrap, CHECK vectors are hollow (same bug as PREFLIGHT-before-bootstrap)
+        bootstrap_status = _check_bootstrap_status(session_id)
+        bootstrap_result = None
+        reground_reason = None
+
+        # Parse vectors early to check for reground triggers
+        _vectors_for_check = vectors
+        if isinstance(_vectors_for_check, str):
+            _vectors_for_check = parse_json_safely(_vectors_for_check)
+        if isinstance(_vectors_for_check, dict) and 'vectors' in _vectors_for_check:
+            _vectors_for_check = _vectors_for_check['vectors']
+
+        # VECTOR-BASED REGROUND: Re-bootstrap if vectors indicate drift/uncertainty
+        # This ensures long-running sessions stay grounded
+        context_val = _vectors_for_check.get('context', 0.7) if isinstance(_vectors_for_check, dict) else 0.7
+        uncertainty_val = _vectors_for_check.get('uncertainty', 0.3) if isinstance(_vectors_for_check, dict) else 0.3
+
+        needs_reground = False
+        if not bootstrap_status.get('has_bootstrap'):
+            needs_reground = True
+            reground_reason = "initial bootstrap"
+        elif context_val < 0.5:
+            needs_reground = True
+            reground_reason = f"low context ({context_val:.2f} < 0.50)"
+        elif uncertainty_val > 0.6:
+            needs_reground = True
+            reground_reason = f"high uncertainty ({uncertainty_val:.2f} > 0.60)"
+
+        if needs_reground:
+            # Auto-run bootstrap to ensure CHECK has context
+            import sys as _sys
+            print(f"🔄 Auto-running project-bootstrap ({reground_reason})...", file=_sys.stderr)
+            bootstrap_result = _auto_bootstrap(session_id)
+
+            if bootstrap_result.get('ok'):
+                print(f"✅ Bootstrap complete: project_id={bootstrap_result.get('project_id')}", file=_sys.stderr)
+            else:
+                # Bootstrap failed - warn but don't block (graceful degradation)
+                print(f"⚠️  Bootstrap failed: {bootstrap_result.get('error', 'unknown')}", file=_sys.stderr)
+                print("   CHECK will proceed but vectors may be hollow.", file=_sys.stderr)
+
         # AUTO-INCREMENT ROUND: Get next round from CHECK history
         try:
             from empirica.data.session_database import SessionDatabase
@@ -508,6 +700,30 @@ def handle_check_submit_command(args):
             db.close()
         except Exception:
             round_num = getattr(args, 'round', 1)  # Fallback to arg or 1
+
+        # Normalize vectors into a flat dict of 13 canonical keys.
+        # Accepts:
+        # - flat dict: {engagement, know, do, ... uncertainty}
+        # - structured dict: {engagement, foundation:{know,do,context}, comprehension:{clarity,...}, execution:{state,...}, uncertainty}
+        # - wrapped dict: {vectors: {...}}
+        # - JSON string (AI-first inputs)
+        if isinstance(vectors, str):
+            vectors = parse_json_safely(vectors)
+
+        if isinstance(vectors, dict) and 'vectors' in vectors and isinstance(vectors.get('vectors'), dict):
+            vectors = vectors['vectors']
+
+        if isinstance(vectors, dict) and any(k in vectors for k in ('foundation', 'comprehension', 'execution')):
+            flat = {}
+            # keep engagement/uncertainty if present
+            for k in ('engagement', 'uncertainty'):
+                if k in vectors:
+                    flat[k] = vectors[k]
+            # flatten groups
+            flat.update((vectors.get('foundation') or {}))
+            flat.update((vectors.get('comprehension') or {}))
+            flat.update((vectors.get('execution') or {}))
+            vectors = flat
 
         # Validate inputs
         if not isinstance(vectors, dict):
@@ -527,8 +743,16 @@ def handle_check_submit_command(args):
         else:
             computed_decision = "investigate"
 
-        # Use computed decision if none provided
-        if not decision:
+        # AUTOPILOT MODE: Check if decisions should be binding (enforced)
+        # When enabled, CHECK decisions are requirements, not suggestions
+        # Controlled by EMPIRICA_AUTOPILOT_MODE env var (default: false)
+        autopilot_mode = os.getenv('EMPIRICA_AUTOPILOT_MODE', 'false').lower() in ('true', '1', 'yes')
+        decision_binding = autopilot_mode  # Binding when autopilot is enabled
+
+        # Use computed decision if none provided OR if autopilot is enforcing
+        if not decision or (autopilot_mode and decision != computed_decision):
+            if autopilot_mode and decision and decision != computed_decision:
+                logger.info(f"AUTOPILOT override: {decision} → {computed_decision} (autopilot enforcement)")
             decision = computed_decision
             logger.info(f"CHECK auto-computed decision: {decision} (know={know:.2f}→{corrected_know:.2f}, uncertainty={uncertainty:.2f}→{corrected_uncertainty:.2f})")
 
@@ -641,7 +865,8 @@ def handle_check_submit_command(args):
                 )
 
                 # SENTINEL OVERRIDE: Feed Sentinel decision back to override AI decision
-                if sentinel_decision:
+                # NOTE: When autopilot is binding, autopilot takes precedence over Sentinel
+                if sentinel_decision and not decision_binding:
                     sentinel_map = {
                         SentinelDecision.PROCEED: "proceed",
                         SentinelDecision.INVESTIGATE: "investigate",
@@ -655,6 +880,8 @@ def handle_check_submit_command(args):
                             logger.info(f"Sentinel override: {decision} → {new_decision} (sentinel={sentinel_decision.value})")
                             decision = new_decision
                             sentinel_override = True
+                elif sentinel_decision and decision_binding:
+                    logger.info(f"Autopilot binding active - Sentinel override blocked (sentinel wanted: {sentinel_decision.value})")
 
             # AUTO-CHECKPOINT: Create git checkpoint if uncertainty > 0.5 (risky decision)
             # This preserves context if AI needs to investigate further
@@ -702,12 +929,23 @@ def handle_check_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True
                 },
+                "bootstrap": {
+                    "had_context": bootstrap_status.get('has_bootstrap', False),
+                    "auto_run": bootstrap_result is not None,
+                    "reground_reason": reground_reason,
+                    "project_id": bootstrap_result.get('project_id') if bootstrap_result else bootstrap_status.get('project_id')
+                },
                 "metacog": {
                     "computed_decision": computed_decision,
                     "raw_vectors": {"know": know, "uncertainty": uncertainty},
                     "corrected_vectors": {"know": corrected_know, "uncertainty": corrected_uncertainty},
                     "readiness_gate": "know>=0.70 AND uncertainty<=0.35 (after bias correction)",
-                    "gate_passed": computed_decision == "proceed"
+                    "gate_passed": computed_decision == "proceed",
+                    "autopilot": {
+                        "enabled": autopilot_mode,
+                        "binding": decision_binding,
+                        "note": "When binding=true, decision is enforced (not suggestive). Set EMPIRICA_AUTOPILOT_MODE=true to enable."
+                    }
                 },
                 "sentinel": {
                     "enabled": SentinelHooks.is_enabled(),
@@ -716,6 +954,42 @@ def handle_check_submit_command(args):
                     "note": "Sentinel feeds back to override AI decision"
                 } if SentinelHooks.is_enabled() else None
             }
+
+            # AUTO-POSTFLIGHT TRIGGER: Check if goal completion detected
+            # Uses completion and impact vectors to determine if a goal was completed
+            # This closes the epistemic loop automatically without user intervention
+            # Controlled by EMPIRICA_AUTO_POSTFLIGHT env var (default: true)
+            auto_postflight_enabled = os.getenv('EMPIRICA_AUTO_POSTFLIGHT', 'true').lower() == 'true'
+
+            if not auto_postflight_enabled:
+                result["auto_postflight"] = {"triggered": False, "disabled": True, "reason": "EMPIRICA_AUTO_POSTFLIGHT=false"}
+            else:
+                goal_completion = _check_goal_completion(vectors)
+                result["goal_completion"] = goal_completion
+
+                if goal_completion.get("triggered"):
+                    import sys as _sys
+                    print(f"🎯 Goal completion detected: {goal_completion.get('reason')}", file=_sys.stderr)
+                    print("📊 Auto-triggering POSTFLIGHT to capture learning delta...", file=_sys.stderr)
+
+                    postflight_result = _auto_postflight(
+                        session_id=session_id,
+                        vectors=vectors,
+                        trigger_reason=goal_completion.get('reason', 'completion threshold met')
+                    )
+
+                    result["auto_postflight"] = {
+                        "triggered": True,
+                        "success": postflight_result.get("ok", False),
+                        "reason": goal_completion.get("reason")
+                    }
+
+                    if postflight_result.get("ok"):
+                        print("✅ Auto-POSTFLIGHT captured successfully", file=_sys.stderr)
+                    else:
+                        print(f"⚠️  Auto-POSTFLIGHT failed: {postflight_result.get('error', 'unknown')}", file=_sys.stderr)
+                else:
+                    result["auto_postflight"] = {"triggered": False}
 
         except Exception as e:
             logger.error(f"Failed to save check assessment: {e}")
@@ -726,7 +1000,7 @@ def handle_check_submit_command(args):
                 "persisted": False,
                 "error": str(e)
             }
-        
+
         # Format output
         if output_format == 'json':
             print(json.dumps(result, indent=2))
@@ -745,6 +1019,93 @@ def handle_check_submit_command(args):
         
     except Exception as e:
         handle_cli_error(e, "Check submit", getattr(args, 'verbose', False))
+
+
+def _check_goal_completion(vectors: dict, calibration_adjustments: dict = None) -> dict:
+    """
+    Check if vectors indicate goal completion.
+
+    Thresholds (raw, before calibration):
+    - completion >= 0.7 (we underestimate by +0.14, so 0.7 raw ≈ 0.84 actual)
+    - impact >= 0.5 (if present)
+
+    Returns:
+        {
+            "triggered": bool,
+            "raw_completion": float,
+            "calibrated_completion": float,
+            "raw_impact": float,
+            "reason": str
+        }
+    """
+    completion = vectors.get('completion', 0.0)
+    impact = vectors.get('impact', 0.0)
+
+    # Apply calibration adjustment if available
+    completion_adj = 0.14  # Default from historical data
+    if calibration_adjustments and 'completion' in calibration_adjustments:
+        completion_adj = calibration_adjustments['completion']
+
+    calibrated_completion = completion + completion_adj
+
+    # Thresholds
+    COMPLETION_THRESHOLD = 0.7  # Raw threshold
+    IMPACT_THRESHOLD = 0.5
+
+    triggered = completion >= COMPLETION_THRESHOLD and impact >= IMPACT_THRESHOLD
+
+    reason = None
+    if triggered:
+        reason = f"Goal completion detected (completion={completion:.2f}→{calibrated_completion:.2f}, impact={impact:.2f})"
+    elif completion >= COMPLETION_THRESHOLD:
+        reason = f"High completion but low impact (completion={completion:.2f}, impact={impact:.2f})"
+    elif impact >= IMPACT_THRESHOLD:
+        reason = f"High impact but low completion (completion={completion:.2f}, impact={impact:.2f})"
+
+    return {
+        "triggered": triggered,
+        "raw_completion": completion,
+        "calibrated_completion": calibrated_completion,
+        "raw_impact": impact,
+        "reason": reason
+    }
+
+
+def _auto_postflight(session_id: str, vectors: dict, trigger_reason: str) -> dict:
+    """
+    Auto-submit POSTFLIGHT when goal completion is detected.
+
+    This closes the epistemic loop automatically without user intervention.
+    """
+    import subprocess
+
+    # Build POSTFLIGHT payload
+    payload = {
+        "session_id": session_id,
+        "vectors": vectors,
+        "learnings": [f"Auto-POSTFLIGHT triggered: {trigger_reason}"],
+        "delta_summary": "Auto-captured on goal completion detection"
+    }
+
+    try:
+        result = subprocess.run(
+            ['empirica', 'postflight-submit', '-'],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        if result.returncode == 0:
+            try:
+                output = json.loads(result.stdout)
+                return {"ok": True, "output": output}
+            except json.JSONDecodeError:
+                return {"ok": True, "output": result.stdout[:500]}
+        else:
+            return {"ok": False, "error": result.stderr[:500]}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 def _extract_numeric_value(value):
@@ -1112,7 +1473,7 @@ def handle_postflight_submit_command(args):
                     # Get project findings/unknowns for narrative richness (optional)
                     try:
                         findings = db.get_project_findings(project_id, limit=5)
-                        unknowns = db.get_project_unknowns(project_id, limit=5)
+                        unknowns = db.get_project_unknowns(project_id, resolved=False, limit=5)
                     except Exception:
                         findings = []
                         unknowns = []
@@ -1151,18 +1512,18 @@ def handle_postflight_submit_command(args):
             # This is incremental (just this session) vs full project-embed
             memory_synced = 0
             try:
-                from empirica.core.qdrant.vector_store import upsert_memory, init_collections, get_qdrant_url
+                from empirica.core.qdrant.vector_store import upsert_memory, init_collections, _check_qdrant_available
 
                 db = SessionDatabase()
                 session = db.get_session(session_id)
-                if get_qdrant_url() and session and session.get('project_id'):
+                if _check_qdrant_available() and session and session.get('project_id'):
                     project_id = session['project_id']
                     init_collections(project_id)
 
                     # Get recent project findings/unknowns (session-specific filtering not available)
                     try:
                         session_findings = db.get_project_findings(project_id, limit=10)
-                        session_unknowns = db.get_project_unknowns(project_id, limit=10)
+                        session_unknowns = db.get_project_unknowns(project_id, resolved=False, limit=10)
                     except Exception:
                         session_findings = []
                         session_unknowns = []
@@ -1208,8 +1569,8 @@ def handle_postflight_submit_command(args):
             snapshot_created = False
             snapshot_id = None
             try:
-                from empirica.plugins.modality_switcher.snapshot_provider import EpistemicSnapshotProvider
-                from empirica.plugins.modality_switcher.epistemic_snapshot import ContextSummary
+                from empirica.data.snapshot_provider import EpistemicSnapshotProvider
+                from empirica.data.epistemic_snapshot import ContextSummary
 
                 # Get session for ai_id
                 db = SessionDatabase()
@@ -1270,8 +1631,11 @@ def handle_postflight_submit_command(args):
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
                     "json_logs": True,
                     "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False,
-                    "epistemic_snapshots": snapshot_created
+                    "episodic_memory": episodic_stored,
+                    "epistemic_snapshots": snapshot_created,
+                    "qdrant_memory": memory_synced > 0
                 },
+                "memory_synced": memory_synced,
                 "snapshot": {
                     "created": snapshot_created,
                     "snapshot_id": snapshot_id,

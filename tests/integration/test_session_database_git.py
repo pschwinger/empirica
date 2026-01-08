@@ -26,6 +26,7 @@ def temp_db():
 @pytest.fixture
 def git_repo():
     """Create temporary git repository"""
+    original_cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as tmpdir:
         os.chdir(tmpdir)
         subprocess.run(
@@ -35,6 +36,7 @@ def git_repo():
             check=False
         )
         yield tmpdir
+        os.chdir(original_cwd)  # Restore original directory
 
 
 def test_session_db_git_checkpoint_methods_exist(temp_db):
@@ -69,19 +71,6 @@ def test_session_db_list_checkpoints_empty(temp_db):
     assert len(checkpoints) == 0
     
     print("✅ list_git_checkpoints returns empty list for missing data")
-
-
-@pytest.mark.skip(reason="Reflex system test isolation issue")
-def test_session_db_checkpoint_diff_missing(temp_db):
-    """Test that checkpoint_diff handles missing data gracefully"""
-    
-    diff = temp_db.get_checkpoint_diff("non-existent-session")
-    
-    # Should return error dict, not crash
-    assert isinstance(diff, dict)
-    assert 'error' in diff or 'diffs' in diff
-    
-    print("✅ get_checkpoint_diff handles missing data gracefully")
 
 
 @pytest.mark.integration

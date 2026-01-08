@@ -104,6 +104,14 @@ def resolve_session_id(session_id_or_alias: str, ai_id: Optional[str] = None) ->
             params.append(filters['ai_id'])
             logger.debug(f"Filtering for ai_id: {filters['ai_id']}")
 
+        # Multi-instance isolation: filter by instance_id
+        current_instance_id = get_instance_id()
+        if current_instance_id:
+            # Match exact instance_id OR sessions without instance_id (legacy)
+            query += " AND (instance_id = ? OR instance_id IS NULL)"
+            params.append(current_instance_id)
+            logger.debug(f"Filtering for instance_id: {current_instance_id}")
+
         query += " ORDER BY start_time DESC LIMIT 1"
 
         logger.debug(f"Executing query: {query} with params: {params}")
@@ -124,6 +132,8 @@ def resolve_session_id(session_id_or_alias: str, ai_id: Optional[str] = None) ->
                 error_msg += f" (ai_id: {filters['ai_id']})"
             if filters['active_only']:
                 error_msg += " (active only)"
+            if current_instance_id:
+                error_msg += f" (instance: {current_instance_id})"
             logger.warning(error_msg)
             raise ValueError(error_msg)
 
@@ -246,3 +256,69 @@ def is_session_alias(session_id_or_alias: str) -> bool:
         False
     """
     return session_id_or_alias.startswith("latest") or session_id_or_alias == "last"
+
+
+def get_instance_id() -> Optional[str]:
+    """
+    Get a unique instance identifier for multi-instance isolation.
+
+    This allows multiple Claude instances to run simultaneously without
+    session cross-talk. Each instance gets its own session namespace.
+
+    Priority order:
+    1. EMPIRICA_INSTANCE_ID env var (explicit override)
+    2. TMUX_PANE (tmux terminal pane ID, e.g., "%0", "%1")
+    3. TERM_SESSION_ID (macOS Terminal.app session ID)
+    4. WINDOWID (X11 window ID)
+    5. None (fallback to legacy behavior - first match wins)
+
+    Returns:
+        Instance identifier string, or None for legacy behavior
+
+    Examples:
+        # In tmux pane %0
+        >>> get_instance_id()
+        'tmux:%0'
+
+        # With explicit env var
+        >>> os.environ['EMPIRICA_INSTANCE_ID'] = 'my-instance'
+        >>> get_instance_id()
+        'my-instance'
+
+        # Outside tmux, no special env
+        >>> get_instance_id()
+        None
+    """
+    import os
+
+    # Priority 1: Explicit override
+    explicit_id = os.environ.get('EMPIRICA_INSTANCE_ID')
+    if explicit_id:
+        logger.debug(f"Using explicit instance_id: {explicit_id}")
+        return explicit_id
+
+    # Priority 2: tmux pane (most common for multi-instance work)
+    tmux_pane = os.environ.get('TMUX_PANE')
+    if tmux_pane:
+        instance_id = f"tmux:{tmux_pane}"
+        logger.debug(f"Using tmux pane as instance_id: {instance_id}")
+        return instance_id
+
+    # Priority 3: macOS Terminal.app session
+    term_session = os.environ.get('TERM_SESSION_ID')
+    if term_session:
+        # Truncate to reasonable length (full ID is very long)
+        instance_id = f"term:{term_session[:16]}"
+        logger.debug(f"Using Terminal.app session as instance_id: {instance_id}")
+        return instance_id
+
+    # Priority 4: X11 window ID
+    window_id = os.environ.get('WINDOWID')
+    if window_id:
+        instance_id = f"x11:{window_id}"
+        logger.debug(f"Using X11 window ID as instance_id: {instance_id}")
+        return instance_id
+
+    # Priority 5: No isolation (legacy behavior)
+    logger.debug("No instance_id available - using legacy behavior")
+    return None

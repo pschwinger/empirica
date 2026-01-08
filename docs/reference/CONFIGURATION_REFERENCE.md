@@ -581,7 +581,7 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_INVESTIGATION_PROFILE`: Force investigation profile
 - `EMPIRICA_PROFILE_MODE`: Override profile mode
 - `EMPIRICA_PERSONALITY`: Set AI personality/persona (`researcher`, `implementer`, `reviewer`, etc.)
-- `EMPIRICA_EPISTEMIC_MODE`: Set epistemic mode (`strict`, `balanced`, `exploratory`)
+- `EMPIRICA_EPISTEMIC_MODE`: Enable VectorRouter in MCP server (`true`/`false`). When `true`, MCP tools route based on epistemic vectors (clarify/investigate/proceed)
 
 ### Modality
 
@@ -593,6 +593,7 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 
 - `SENTINEL_URL`: URL for external Sentinel service (optional)
 - `EMPIRICA_ENFORCE_CASCADE_PHASES`: Strictly enforce CASCADE phase ordering (`true`, `false`)
+- `EMPIRICA_SENTINEL_LOOPING`: Enable/disable sentinel CHECK-investigate loop (`true`, `false`, default: `true`). When `false`, CHECK decisions bypass investigate requirement
 
 ### Vector Search & Embeddings
 
@@ -609,6 +610,7 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_AUTO_CHECKPOINT`: Enable/disable auto checkpoints (`true`, `false`)
 - `EMPIRICA_GIT_INTEGRATION`: Enable/disable git integration
 - `EMPIRICA_MODALITY_ENABLED`: Enable/disable modality switching
+- `EMPIRICA_AUTO_POSTFLIGHT`: Enable/disable automatic POSTFLIGHT trigger on goal completion (`true`, `false`, default: `true`). When `true`, CHECK auto-triggers POSTFLIGHT when completion >= 0.7 AND impact >= 0.5
 
 ---
 

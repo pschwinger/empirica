@@ -16,7 +16,8 @@ class SessionRepository(BaseRepository):
         components_loaded: int = 0,
         user_id: Optional[str] = None,
         subject: Optional[str] = None,
-        bootstrap_level: int = 1
+        bootstrap_level: int = 1,
+        instance_id: Optional[str] = None
     ) -> str:
         """
         Create a new session
@@ -27,18 +28,25 @@ class SessionRepository(BaseRepository):
             user_id: Optional user identifier
             subject: Optional subject/topic for filtering
             bootstrap_level: Bootstrap configuration level (1-3, default 1)
+            instance_id: Optional instance identifier for multi-instance isolation.
+                         If None, auto-detected from environment (TMUX_PANE, etc.)
 
         Returns:
             session_id: UUID string
         """
+        # Auto-detect instance_id if not provided
+        if instance_id is None:
+            from empirica.utils.session_resolver import get_instance_id
+            instance_id = get_instance_id()
+
         session_id = str(uuid.uuid4())
         cursor = self._execute("""
             INSERT INTO sessions (
-                session_id, ai_id, user_id, start_time, components_loaded, subject, bootstrap_level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                session_id, ai_id, user_id, start_time, components_loaded, subject, bootstrap_level, instance_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             session_id, ai_id, user_id, datetime.now(timezone.utc).isoformat(),
-            components_loaded, subject, bootstrap_level
+            components_loaded, subject, bootstrap_level, instance_id
         ))
         return session_id
 
@@ -203,19 +211,24 @@ class SessionRepository(BaseRepository):
                     cascade_tasks[cascade_id] = cascade_row[0]
 
         # Get investigation tools used (if detailed)
+        # Note: noetic_tools table was designed but never wired up
         tools_used = []
         if detail_level in ['detailed', 'full']:
-            cursor = self._execute("""
-                SELECT tool_name, COUNT(*) as count
-                FROM noetic_tools
-                WHERE cascade_id IN (
-                    SELECT cascade_id FROM cascades WHERE session_id = ?
-                )
-                GROUP BY tool_name
-                ORDER BY count DESC
-                LIMIT 10
-            """, (session_id,))
-            tools_used = [{"tool": row[0], "count": row[1]} for row in cursor.fetchall()]
+            try:
+                cursor = self._execute("""
+                    SELECT tool_name, COUNT(*) as count
+                    FROM noetic_tools
+                    WHERE cascade_id IN (
+                        SELECT cascade_id FROM cascades WHERE session_id = ?
+                    )
+                    GROUP BY tool_name
+                    ORDER BY count DESC
+                    LIMIT 10
+                """, (session_id,))
+                tools_used = [{"tool": row[0], "count": row[1]} for row in cursor.fetchall()]
+            except Exception:
+                # Table doesn't exist yet - feature not implemented
+                tools_used = []
 
         # Calculate epistemic delta
         delta = None

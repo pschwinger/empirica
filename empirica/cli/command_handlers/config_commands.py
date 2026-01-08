@@ -8,7 +8,14 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any
 
-from empirica.plugins.modality_switcher.config_loader import ConfigLoader, get_config
+# Modality switcher config is optional (commercial feature)
+try:
+    from empirica.plugins.modality_switcher.config_loader import ConfigLoader, get_config
+    CONFIG_AVAILABLE = True
+except ImportError:
+    CONFIG_AVAILABLE = False
+    ConfigLoader = None
+    get_config = None
 from ..cli_utils import handle_cli_error
 
 

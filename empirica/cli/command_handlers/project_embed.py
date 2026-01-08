@@ -79,6 +79,33 @@ def handle_project_embed_command(args):
             ORDER BY m.created_timestamp DESC
         """, (project_id,))
         mistakes = [dict(row) for row in cur.fetchall()]
+
+        # Dead ends - things that didn't work (prevents re-exploration)
+        cur.execute("""
+            SELECT id, approach, why_failed, session_id, goal_id, subtask_id, created_timestamp
+            FROM project_dead_ends
+            WHERE project_id = ?
+            ORDER BY created_timestamp DESC
+        """, (project_id,))
+        dead_ends = [dict(row) for row in cur.fetchall()]
+
+        # Lessons - reusable knowledge (cold storage → hot memory)
+        cur.execute("""
+            SELECT id, name, description, domain, tags, lesson_data, created_timestamp
+            FROM lessons
+            ORDER BY created_timestamp DESC
+        """)
+        lessons = [dict(row) for row in cur.fetchall()]
+
+        # Epistemic snapshots - session narratives (episodic memory)
+        cur.execute("""
+            SELECT snapshot_id, session_id, context_summary, timestamp
+            FROM epistemic_snapshots
+            WHERE session_id IN (SELECT session_id FROM sessions WHERE project_id = ?)
+            ORDER BY timestamp DESC
+        """, (project_id,))
+        snapshots = [dict(row) for row in cur.fetchall()]
+
         db.close()
 
         mem_items: List[Dict] = []
@@ -121,6 +148,50 @@ def handle_project_embed_command(args):
             })
             mid += 1
 
+        # Dead ends - important for avoiding re-exploration of failed paths
+        for d in dead_ends:
+            text = f"DEAD END: {d.get('approach', '')} Why failed: {d.get('why_failed', '')}"
+            mem_items.append({
+                'id': mid,
+                'text': text,
+                'type': 'dead_end',
+                'session_id': d.get('session_id'),
+                'goal_id': d.get('goal_id'),
+                'subtask_id': d.get('subtask_id'),
+                'timestamp': d.get('created_timestamp')
+            })
+            mid += 1
+
+        # Lessons - reusable knowledge patterns
+        for lesson in lessons:
+            # Combine name, description, and domain for searchability
+            text = f"LESSON: {lesson.get('name', '')} - {lesson.get('description', '')} Domain: {lesson.get('domain', '')}"
+            mem_items.append({
+                'id': mid,
+                'text': text,
+                'type': 'lesson',
+                'lesson_id': lesson.get('id'),
+                'domain': lesson.get('domain'),
+                'tags': lesson.get('tags'),
+                'timestamp': lesson.get('created_timestamp')
+            })
+            mid += 1
+
+        # Epistemic snapshots - session narratives (episodic memory)
+        for snap in snapshots:
+            context = snap.get('context_summary', '')
+            if context:  # Only embed non-empty summaries
+                text = f"SESSION NARRATIVE: {context}"
+                mem_items.append({
+                    'id': mid,
+                    'text': text,
+                    'type': 'episodic',
+                    'session_id': snap.get('session_id'),
+                    'snapshot_id': snap.get('snapshot_id'),
+                    'timestamp': snap.get('timestamp')
+                })
+                mid += 1
+
         upsert_memory(project_id, mem_items)
 
         # Sync high-impact items to global collection if --global flag
@@ -133,13 +204,22 @@ def handle_project_embed_command(args):
             'ok': True,
             'docs': len(docs_to_upsert),
             'memory': len(mem_items),
+            'breakdown': {
+                'findings': len(findings),
+                'unknowns': len(unknowns),
+                'mistakes': len(mistakes),
+                'dead_ends': len(dead_ends),
+                'lessons': len(lessons),
+                'snapshots': len(snapshots)
+            },
             'global_synced': global_synced if sync_global else None
         }
 
         if getattr(args, 'output', 'default') == 'json':
             print(json.dumps(result, indent=2))
         else:
-            msg = f"✅ Embedded docs: {len(docs_to_upsert)} | memory items: {len(mem_items)}"
+            msg = f"✅ Embedded docs: {len(docs_to_upsert)} | memory: {len(mem_items)}"
+            msg += f" (findings: {len(findings)}, unknowns: {len(unknowns)}, dead_ends: {len(dead_ends)}, lessons: {len(lessons)}, snapshots: {len(snapshots)})"
             if sync_global:
                 msg += f" | global: {global_synced}"
             print(msg)

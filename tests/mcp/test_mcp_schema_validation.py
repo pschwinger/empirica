@@ -22,7 +22,8 @@ def test_all_tools_have_schemas():
         return await list_tools()
     
     tools = asyncio.run(_get_tools())
-    assert len(tools) == 29, f"Expected 29 tools, found {len(tools)}"
+    # Tool count increased from 29 (v2.0) to 57+ (v3.0) with expanded CLI coverage
+    assert len(tools) >= 50, f"Expected at least 50 tools, found {len(tools)}"
     
     for tool in tools:
         assert hasattr(tool, 'inputSchema'), f"{tool.name} missing inputSchema"

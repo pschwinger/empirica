@@ -16,6 +16,11 @@ def handle_modality_route_command(args):
     """Handle modality routing command - routes to optimal LLM adapter (EXPERIMENTAL)"""
     try:
         from empirica.plugins.modality_switcher.modality_switcher import ModalitySwitcher, RoutingPreferences, RoutingStrategy
+    except ImportError:
+        print(json.dumps({"ok": False, "error": "Modality switcher not available (commercial feature)"}))
+        return
+
+    try:
         
         logger.info(f"🔄 Running epistemic adaptive routing: {args.question}")
         logger.warning("⚠️  EXPERIMENTAL: ModalitySwitcher is experimental and not required for core Empirica")

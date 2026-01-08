@@ -1,6 +1,28 @@
 {
-  "description": "Empirica epistemic continuity hooks - capture state before compact, restore after, curate snapshots",
+  "description": "Empirica epistemic hooks - Sentinel gating + continuity management",
   "hooks": {
+    "PreToolCall": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/sentinel-gate.py",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash\\((?!cat|ls|grep|find|echo|pwd|cd|git status|git log|git diff|empirica).*\\)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/sentinel-gate.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PreCompact": [
       {
         "matcher": "auto|manual",
@@ -23,12 +45,27 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "new|fresh",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/session-init.py",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "SessionEnd": [
       {
         "matcher": ".*",
         "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/session-end-postflight.py",
+            "timeout": 20
+          },
           {
             "type": "command",
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/curate-snapshots.py --output json",

@@ -385,29 +385,45 @@ class BreadcrumbRepository(BaseRepository):
         """
         # Query findings from BOTH project_findings and session_findings (across all sessions in project)
         if subject:
+            # NOTE: created_timestamp has mixed formats (epoch float vs datetime string)
+            # Wrap in subquery to apply CASE-based sorting after UNION
             query = """
-                SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope 
-                FROM project_findings 
-                WHERE project_id = ? AND subject = ? 
-                UNION ALL
-                SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope 
-                FROM session_findings f
-                JOIN sessions s ON f.session_id = s.session_id
-                WHERE s.project_id = ? AND f.subject = ?
-                ORDER BY created_timestamp DESC
+                SELECT * FROM (
+                    SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope
+                    FROM project_findings
+                    WHERE project_id = ? AND subject = ?
+                    UNION
+                    SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope
+                    FROM session_findings f
+                    JOIN sessions s ON f.session_id = s.session_id
+                    WHERE s.project_id = ? AND f.subject = ?
+                )
+                ORDER BY CASE
+                    WHEN created_timestamp GLOB '[0-9]*.[0-9]*' OR created_timestamp GLOB '[0-9]*'
+                    THEN CAST(created_timestamp AS REAL)
+                    ELSE strftime('%s', created_timestamp)
+                END DESC
             """
             params = (project_id, subject, project_id, subject)
         else:
+            # NOTE: created_timestamp has mixed formats (epoch float vs datetime string)
+            # Wrap in subquery to apply CASE-based sorting after UNION
             query = """
-                SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope 
-                FROM project_findings 
-                WHERE project_id = ? 
-                UNION ALL
-                SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope 
-                FROM session_findings f
-                JOIN sessions s ON f.session_id = s.session_id
-                WHERE s.project_id = ?
-                ORDER BY created_timestamp DESC
+                SELECT * FROM (
+                    SELECT id, session_id, goal_id, subtask_id, finding, created_timestamp, finding_data, subject, impact, project_id, 'project' as scope
+                    FROM project_findings
+                    WHERE project_id = ?
+                    UNION
+                    SELECT f.id, f.session_id, f.goal_id, f.subtask_id, f.finding, f.created_timestamp, f.finding_data, f.subject, f.impact, s.project_id, 'session' as scope
+                    FROM session_findings f
+                    JOIN sessions s ON f.session_id = s.session_id
+                    WHERE s.project_id = ?
+                )
+                ORDER BY CASE
+                    WHEN created_timestamp GLOB '[0-9]*.[0-9]*' OR created_timestamp GLOB '[0-9]*'
+                    THEN CAST(created_timestamp AS REAL)
+                    ELSE strftime('%s', created_timestamp)
+                END DESC
             """
             params = (project_id, project_id)
         
@@ -446,7 +462,7 @@ class BreadcrumbRepository(BaseRepository):
         
         return filtered
 
-    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None) -> List[Dict]:
+    def get_project_unknowns(self, project_id: str, resolved: Optional[bool] = None, subject: Optional[str] = None, limit: Optional[int] = None) -> List[Dict]:
         """Get unknowns for a project (DUAL-SCOPE: aggregates session + project unknowns)"""
         # Column list: id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, scope
         if subject:
@@ -455,7 +471,7 @@ class BreadcrumbRepository(BaseRepository):
                     SELECT id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, 'project' as scope 
                     FROM project_unknowns
                     WHERE project_id = ? AND subject = ?
-                    UNION ALL
+                    UNION
                     SELECT u.id, u.session_id, u.goal_id, u.subtask_id, u.unknown, u.is_resolved, u.resolved_by, u.created_timestamp, u.resolved_timestamp, u.unknown_data, u.subject, u.impact, s.project_id, 'session' as scope 
                     FROM session_unknowns u
                     JOIN sessions s ON u.session_id = s.session_id
@@ -467,7 +483,7 @@ class BreadcrumbRepository(BaseRepository):
                     SELECT id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, 'project' as scope 
                     FROM project_unknowns
                     WHERE project_id = ? AND subject = ? AND is_resolved = ?
-                    UNION ALL
+                    UNION
                     SELECT u.id, u.session_id, u.goal_id, u.subtask_id, u.unknown, u.is_resolved, u.resolved_by, u.created_timestamp, u.resolved_timestamp, u.unknown_data, u.subject, u.impact, s.project_id, 'session' as scope 
                     FROM session_unknowns u
                     JOIN sessions s ON u.session_id = s.session_id
@@ -480,7 +496,7 @@ class BreadcrumbRepository(BaseRepository):
                     SELECT id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, 'project' as scope 
                     FROM project_unknowns
                     WHERE project_id = ?
-                    UNION ALL
+                    UNION
                     SELECT u.id, u.session_id, u.goal_id, u.subtask_id, u.unknown, u.is_resolved, u.resolved_by, u.created_timestamp, u.resolved_timestamp, u.unknown_data, u.subject, u.impact, s.project_id, 'session' as scope 
                     FROM session_unknowns u
                     JOIN sessions s ON u.session_id = s.session_id
@@ -492,14 +508,17 @@ class BreadcrumbRepository(BaseRepository):
                     SELECT id, session_id, goal_id, subtask_id, unknown, is_resolved, resolved_by, created_timestamp, resolved_timestamp, unknown_data, subject, impact, project_id, 'project' as scope 
                     FROM project_unknowns
                     WHERE project_id = ? AND is_resolved = ?
-                    UNION ALL
+                    UNION
                     SELECT u.id, u.session_id, u.goal_id, u.subtask_id, u.unknown, u.is_resolved, u.resolved_by, u.created_timestamp, u.resolved_timestamp, u.unknown_data, u.subject, u.impact, s.project_id, 'session' as scope 
                     FROM session_unknowns u
                     JOIN sessions s ON u.session_id = s.session_id
                     WHERE s.project_id = ? AND u.is_resolved = ?
                     ORDER BY created_timestamp DESC
                 """, (project_id, resolved, project_id, resolved))
-        return [dict(row) for row in cursor.fetchall()]
+        results = [dict(row) for row in cursor.fetchall()]
+        if limit:
+            results = results[:limit]
+        return results
 
     def get_project_dead_ends(self, project_id: str, limit: Optional[int] = None, subject: Optional[str] = None) -> List[Dict]:
         """Get all dead ends for a project (DUAL-SCOPE: aggregates session + project)"""
@@ -508,7 +527,7 @@ class BreadcrumbRepository(BaseRepository):
             query = """
                 SELECT id, session_id, goal_id, subtask_id, approach, why_failed, created_timestamp, dead_end_data, subject, project_id, 'project' as scope 
                 FROM project_dead_ends WHERE project_id = ? AND subject = ?
-                UNION ALL
+                UNION
                 SELECT d.id, d.session_id, d.goal_id, d.subtask_id, d.approach, d.why_failed, d.created_timestamp, d.dead_end_data, d.subject, s.project_id, 'session' as scope 
                 FROM session_dead_ends d
                 JOIN sessions s ON d.session_id = s.session_id
@@ -520,7 +539,7 @@ class BreadcrumbRepository(BaseRepository):
             query = """
                 SELECT id, session_id, goal_id, subtask_id, approach, why_failed, created_timestamp, dead_end_data, subject, project_id, 'project' as scope 
                 FROM project_dead_ends WHERE project_id = ?
-                UNION ALL
+                UNION
                 SELECT d.id, d.session_id, d.goal_id, d.subtask_id, d.approach, d.why_failed, d.created_timestamp, d.dead_end_data, d.subject, s.project_id, 'session' as scope 
                 FROM session_dead_ends d
                 JOIN sessions s ON d.session_id = s.session_id

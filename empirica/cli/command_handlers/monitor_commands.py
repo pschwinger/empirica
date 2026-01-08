@@ -12,9 +12,17 @@ from pathlib import Path
 from typing import Dict, Any
 import os
 
-from empirica.plugins.modality_switcher.modality_switcher import ModalitySwitcher
-from empirica.plugins.modality_switcher.register_adapters import get_registry
-from empirica.plugins.modality_switcher.config_loader import get_config
+# Modality switcher is optional (commercial feature)
+try:
+    from empirica.plugins.modality_switcher.modality_switcher import ModalitySwitcher
+    from empirica.plugins.modality_switcher.register_adapters import get_registry
+    from empirica.plugins.modality_switcher.config_loader import get_config
+    MODALITY_AVAILABLE = True
+except ImportError:
+    MODALITY_AVAILABLE = False
+    ModalitySwitcher = None
+    get_registry = None
+    get_config = None
 from ..cli_utils import handle_cli_error
 
 # Set up logging for monitor commands

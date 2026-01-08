@@ -227,31 +227,41 @@ def handle_project_bootstrap_command(args):
             return None
 
         # Auto-detect project from git remote URL if not provided
+        # Uses normalized git repo URL for single-project-per-repo guarantee
         if not project_id:
             try:
-                result = subprocess.run(
-                    ['git', 'remote', 'get-url', 'origin'],
-                    capture_output=True,
-                    text=True,
-                    timeout=5
+                from empirica.cli.utils.project_resolver import (
+                    get_current_git_repo, resolve_project_by_git_repo, normalize_git_url
                 )
-                if result.returncode == 0:
-                    git_url = result.stdout.strip()
-                    # Find project by matching repo URL
+
+                git_repo = get_current_git_repo()
+                if git_repo:
                     db = SessionDatabase()
-                    cursor = db.conn.cursor()
-                    cursor.execute("""
-                        SELECT id FROM projects WHERE repos LIKE ?
-                    """, (f'%{git_url}%',))
-                    row = cursor.fetchone()
-                    if row:
-                        project_id = row['id']
+                    project_id = resolve_project_by_git_repo(git_repo, db)
+
+                    if not project_id:
+                        # Fallback: try substring match for legacy projects
+                        result = subprocess.run(
+                            ['git', 'remote', 'get-url', 'origin'],
+                            capture_output=True, text=True, timeout=5
+                        )
+                        if result.returncode == 0:
+                            git_url = result.stdout.strip()
+                            cursor = db.adapter.conn.cursor()
+                            cursor.execute("""
+                                SELECT id FROM projects WHERE repos LIKE ?
+                                ORDER BY last_activity_timestamp DESC LIMIT 1
+                            """, (f'%{git_url}%',))
+                            row = cursor.fetchone()
+                            if row:
+                                project_id = row['id']
+
                     db.close()
 
                     if not project_id:
                         return _error_output(
-                            f"No project found for git remote: {git_url}",
-                            "Create a project or specify --project-id explicitly"
+                            f"No project found for git repo: {git_repo}",
+                            "Create a project with: empirica project-create --name <name>"
                         )
                 else:
                     return _error_output(
@@ -363,6 +373,38 @@ def handle_project_bootstrap_command(args):
             depth=depth,
             ai_id=ai_id  # Pass AI ID to bootstrap
         )
+
+        # EIDETIC/EPISODIC MEMORY RETRIEVAL: Hot memories based on task context
+        # This arms the AI with relevant facts and session narratives from Qdrant
+        eidetic_memories = None
+        episodic_memories = None
+        if task_description and project_id:
+            try:
+                from empirica.core.qdrant.vector_store import search_eidetic, search_episodic, _check_qdrant_available
+                if _check_qdrant_available():
+                    eidetic_results = search_eidetic(project_id, task_description, limit=5, min_confidence=0.5)
+                    if eidetic_results:
+                        eidetic_memories = {
+                            'query': task_description,
+                            'facts': eidetic_results,
+                            'count': len(eidetic_results)
+                        }
+                    episodic_results = search_episodic(project_id, task_description, limit=3, apply_recency_decay=True)
+                    if episodic_results:
+                        episodic_memories = {
+                            'query': task_description,
+                            'narratives': episodic_results,
+                            'count': len(episodic_results)
+                        }
+                    logger.debug(f"Memory retrieval: {len(eidetic_results or [])} eidetic, {len(episodic_results or [])} episodic")
+            except Exception as e:
+                logger.debug(f"Memory retrieval failed (optional): {e}")
+
+        # Add memories to breadcrumbs
+        if eidetic_memories:
+            breadcrumbs['eidetic_memories'] = eidetic_memories
+        if episodic_memories:
+            breadcrumbs['episodic_memories'] = episodic_memories
 
         # Optional: Detect memory gaps if session-id provided
         memory_gap_report = None
@@ -1241,12 +1283,77 @@ def handle_finding_log_command(args):
                 # Non-fatal - log but continue
                 logger.warning(f"Auto-embed failed: {embed_err}")
 
+        # EIDETIC MEMORY: Extract fact and add to eidetic layer for confidence tracking
+        eidetic_result = None
+        if project_id and finding_ids:
+            try:
+                from empirica.core.qdrant.vector_store import (
+                    embed_eidetic,
+                    confirm_eidetic_fact,
+                )
+                import hashlib
+
+                # Content hash for deduplication
+                content_hash = hashlib.md5(finding.encode()).hexdigest()
+
+                # Try to confirm existing fact first
+                confirmed = confirm_eidetic_fact(project_id, content_hash, session_id)
+                if confirmed:
+                    eidetic_result = "confirmed"
+                    logger.debug(f"Confirmed existing eidetic fact: {content_hash[:8]}")
+                else:
+                    # Create new eidetic entry
+                    primary_id = next((fid for scope, fid in finding_ids if scope == 'project'), None)
+                    if not primary_id:
+                        primary_id = finding_ids[0][1] if finding_ids else None
+
+                    eidetic_created = embed_eidetic(
+                        project_id=project_id,
+                        fact_id=primary_id,
+                        content=finding,
+                        fact_type="fact",
+                        domain=subject,  # Use subject as domain hint
+                        confidence=0.5 + (impact * 0.2),  # Higher impact → higher initial confidence
+                        confirmation_count=1,
+                        source_sessions=[session_id] if session_id else [],
+                        source_findings=[primary_id] if primary_id else [],
+                        tags=[subject] if subject else [],
+                    )
+                    if eidetic_created:
+                        eidetic_result = "created"
+                        logger.debug(f"Created new eidetic fact: {primary_id}")
+            except Exception as eidetic_err:
+                # Non-fatal - log but continue
+                logger.warning(f"Eidetic ingestion failed: {eidetic_err}")
+
+        # IMMUNE SYSTEM: Decay related lessons when findings are logged
+        # This implements the pattern where new learnings naturally supersede old lessons
+        # CENTRAL TOLERANCE: Scope decay to finding's domain to prevent autoimmune attacks
+        decayed_lessons = []
+        try:
+            from empirica.core.lessons.storage import LessonStorageManager
+            lesson_storage = LessonStorageManager()
+            decayed_lessons = lesson_storage.decay_related_lessons(
+                finding_text=finding,
+                domain=subject,  # Central tolerance: only decay lessons in same domain
+                decay_amount=0.05,  # 5% decay per related finding
+                min_confidence=0.3,  # Floor at 30%
+                keywords_threshold=2  # Require at least 2 keyword matches
+            )
+            if decayed_lessons:
+                logger.info(f"IMMUNE: Decayed {len(decayed_lessons)} related lessons in domain '{subject}'")
+        except Exception as decay_err:
+            # Non-fatal - log but continue
+            logger.debug(f"Lesson decay check failed: {decay_err}")
+
         result = {
             "ok": True,
             "scope": scope,
             "findings": [{"scope": s, "finding_id": fid} for s, fid in finding_ids],
             "project_id": project_id if project_id else None,
             "embedded": embedded,
+            "eidetic": eidetic_result,  # "created" | "confirmed" | None
+            "immune_decay": decayed_lessons if decayed_lessons else None,  # Lessons affected by this finding
             "message": f"Finding logged to {scope} scope{'s' if scope == 'both' else ''}"
         }
 
@@ -1263,6 +1370,10 @@ def handle_finding_log_command(args):
                 print(f"   Project: {project_id[:8]}...")
             if embedded:
                 print(f"   🔍 Auto-embedded for semantic search")
+            if decayed_lessons:
+                print(f"   🛡️ IMMUNE: Decayed {len(decayed_lessons)} related lesson(s)")
+                for dl in decayed_lessons:
+                    print(f"      - {dl['name']}: {dl['previous_confidence']:.2f} → {dl['new_confidence']:.2f}")
 
         return 0  # Success
 

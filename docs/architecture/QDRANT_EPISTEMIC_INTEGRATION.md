@@ -127,7 +127,48 @@ Empirica uses a **dual-database architecture** for optimal AI learning:
 **Purpose:** Cross-project semantic search for high-impact learnings
 **Population:** Via `sync_high_impact_to_global()` or auto-sync on high-impact findings
 
-### 5. **`personas`** - Epistemic Agent Profiles
+### 5. **`empirica_lessons`** - Procedural Knowledge (Epistemic Lesson Graphs)
+```python
+{
+  "id": "md5_hash_of_lesson_id",
+  "vector": [384-dim embedding],  # Hash-based placeholder, or model embedding
+  "payload": {
+    "lesson_id": "8f89dc21e5160e5a",
+    "name": "NotebookLM: Navigate to Studio Tab",
+    "description": "CRITICAL: Navigate from Chat to Studio tab...",
+    "domain": "notebooklm",
+    "tags": ["notebooklm", "studio", "navigation", "atomic"],
+    "source_confidence": 0.95,
+    "teaching_quality": 0.90
+  }
+}
+```
+
+**Purpose:** Semantic search for procedural knowledge (how-to lessons)
+
+**Architecture:** 4-layer storage for optimal speed:
+- **HOT (ns):** In-memory graph - relationships, prerequisites, deltas
+- **WARM (μs):** SQLite `lessons` table - metadata, queryable
+- **SEARCH (ms):** Qdrant `empirica_lessons` - semantic similarity
+- **COLD (10ms):** YAML files in `.empirica/lessons/` - full content
+
+**Knowledge Graph:** Lessons connected via `knowledge_graph` table with edges:
+- `requires` - Must complete prerequisite first
+- `enables` - Opens up dependent lessons
+- `related_to` - Semantic similarity
+
+**API Note (Qdrant 1.7+):** Use `query_points()` instead of deprecated `search()`:
+```python
+response = client.query_points(
+    collection_name="empirica_lessons",
+    query=vector,  # Not query_vector
+    limit=10
+)
+for point in response.points:  # Not hits
+    print(point.payload, point.score)
+```
+
+### 6. **`personas`** - Epistemic Agent Profiles
 ```python
 {
   "id": "persona_uuid",
