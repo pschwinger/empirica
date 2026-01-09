@@ -300,8 +300,8 @@ def install_empirica_mcp():
     try:
         run_command([python_cmd, "-m", "pip", "install", "empirica-mcp"])
         print_success("Empirica MCP server installed")
-        print_info("Configure in Claude Desktop: Settings > Developer > MCP Servers")
-        print_info("Server command: python -m empirica_mcp")
+        print_info("Configure in ~/.claude/mcp.json or Claude Desktop settings")
+        print_info("Server command: empirica-mcp")
         return True
     except Exception as e:
         print_warning(f"Failed to install empirica-mcp: {e}")
