@@ -1,7 +1,12 @@
+# Empirica Guides
 
-## Slide Deck Generation
+**Workflow guides and generation tools for Empirica.**
 
-### Quick Start
+---
+
+## Available Guides
+
+### Slide Deck Generation
 
 Generate professional slide decks for Empirica using NotebookLM:
 
@@ -26,3 +31,16 @@ Generate professional slide decks for Empirica using NotebookLM:
 **Estimated Time:** 4-6 hours for both decks with refinement
 
 See `SLIDE_DECK_GENERATION.md` for full details.
+
+---
+
+## Guide Philosophy
+
+Guides in this directory are **task-oriented** rather than reference-oriented:
+
+- **Guides** = "How to accomplish X" (step-by-step)
+- **Reference** = "What does Y do?" (lookup)
+- **Architecture** = "How does Z work?" (understanding)
+
+For reference documentation, see [../reference/](../reference/).
+For architecture documentation, see [../architecture/](../architecture/).

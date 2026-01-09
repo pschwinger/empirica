@@ -1,4 +1,4 @@
-# System Prompts - Architecture v1.2.3
+# System Prompts - Architecture v1.3.0
 
 **Multi-AI system prompt management for Empirica**
 
@@ -9,7 +9,7 @@
 Empirica uses a **canonical core + model deltas** architecture:
 
 ```
-CANONICAL_CORE.md          <- AI-agnostic source of truth (128 lines)
+CANONICAL_CORE.md          <- AI-agnostic source of truth
       |
       + model_deltas/
       |     claude.md      <- Claude-specific additions
@@ -55,7 +55,7 @@ python3 scripts/sync_system_prompts.py
 
 ### Source of Truth
 
-1. **CANONICAL_CORE.md** - AI-agnostic core prompt (~128 lines)
+1. **CANONICAL_CORE.md** - AI-agnostic core prompt
    - All shared workflow: CASCADE, vectors, breadcrumbs
    - Edit this to change behavior for ALL AIs
 
@@ -121,10 +121,11 @@ empirica deadend-log --approach "..." --why-failed "..."
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.3.0 | 2026-01-09 | Qdrant memory, lessons system, cognitive immune decay |
 | v1.2.3 | 2026-01-06 | Add self-serve knowledge (docs-explain), Claude calibration data |
 | v1.2.2 | 2026-01-01 | Canonical core + model deltas architecture |
 | v4.0 | 2025-12 | Single canonical prompt (deprecated) |
 
 ---
 
-**Syncs with:** Empirica v1.2.3
+**Syncs with:** Empirica v1.3.0

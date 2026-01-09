@@ -1,7 +1,6 @@
 # Empirica Python API Reference
 
-**Framework Version:** 1.2.2
-**Generated:** 2025-12-27
+**Framework Version:** 1.3.0
 **Status:** Production Ready
 
 ---
@@ -43,6 +42,11 @@
 - **Epistemic sources** - Source attribution and confidence
 - **Reference documents** - Project documentation links
 
+### [Memory & Search](memory_search.md)
+- **QdrantMemory** - Vector search for semantic retrieval
+- **EmbeddingProvider** - Multi-provider embeddings (Jina, Voyage, Ollama, OpenAI)
+- **Lessons System** - Cold storage procedural knowledge
+
 ### [System Utilities](system_utilities.md)
 - **BranchMapping** - Git branch to goal mapping
 - **DocCodeIntegrity** - Documentation-code integrity checking
@@ -58,6 +62,8 @@
 
 **Modular Architecture:** APIs organized in logical modules that can be used independently while maintaining consistency.
 
+**Four-Layer Storage:** Data flows through SQLite (hot), Git Notes (warm), JSON Logs (audit), and Qdrant (search).
+
 ---
 
 ## Getting Started
@@ -69,6 +75,5 @@ For new users, start with:
 
 ---
 
-**Total Classes:** 3
-**Total Functions:** 3+ (distributed across modules)
+**Total Modules:** 9 categories
 **API Stability:** Production ready
