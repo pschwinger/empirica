@@ -21,7 +21,7 @@ CASCADE Philosophy:
 
 Author: Claude Code
 Date: 2025-01-18
-Version: 1.2.0
+Version: 1.3.0
 """
 
 import asyncio
