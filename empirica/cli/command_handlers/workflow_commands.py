@@ -13,6 +13,7 @@ These commands provide JSON output for MCP v2 server integration.
 import json
 import logging
 from ..cli_utils import handle_cli_error, parse_json_safely
+from ..validation import PreflightInput, CheckInput, PostflightInput, safe_validate
 from empirica.core.canonical.empirica_git.sentinel_hooks import SentinelHooks, SentinelDecision, auto_enable_sentinel
 
 # Auto-enable Sentinel with default evaluator on module load
@@ -124,21 +125,21 @@ def handle_preflight_submit_command(args):
 
         # Extract parameters from config or fall back to legacy flags
         if config_data:
-            # AI-FIRST MODE: Use config file
-            session_id = config_data.get('session_id')
-            vectors = config_data.get('vectors')
-            reasoning = config_data.get('reasoning', '')
-            task_context = config_data.get('task_context', '')  # For pattern retrieval
-            output_format = 'json'  # AI-first always uses JSON output
-
-            # Validate required fields
-            if not session_id or not vectors:
+            # AI-FIRST MODE: Use config file with Pydantic validation
+            validated, error = safe_validate(config_data, PreflightInput)
+            if error:
                 print(json.dumps({
                     "ok": False,
-                    "error": "Config file must include 'session_id' and 'vectors' fields",
-                    "hint": "See /tmp/preflight_config_example.json for schema"
+                    "error": f"Invalid input: {error}",
+                    "hint": "Required: session_id (str), vectors (dict with know, uncertainty)"
                 }))
                 sys.exit(1)
+
+            session_id = validated.session_id
+            vectors = validated.vectors
+            reasoning = validated.reasoning or ''
+            task_context = validated.task_context or ''
+            output_format = 'json'  # AI-first always uses JSON output
         else:
             # LEGACY MODE: Use CLI flags
             session_id = args.session_id
@@ -156,9 +157,17 @@ def handle_preflight_submit_command(args):
                 }))
                 sys.exit(1)
 
-        # Validate vectors
-        if not isinstance(vectors, dict):
-            raise ValueError("Vectors must be a dictionary")
+            # Validate vectors with Pydantic in legacy mode too
+            legacy_data = {'session_id': session_id, 'vectors': vectors, 'reasoning': reasoning}
+            validated, error = safe_validate(legacy_data, PreflightInput)
+            if error:
+                print(json.dumps({
+                    "ok": False,
+                    "error": f"Invalid vectors: {error}",
+                    "hint": "Vectors must include 'know' and 'uncertainty' (0.0-1.0)"
+                }))
+                sys.exit(1)
+            vectors = validated.vectors  # Use validated vectors
 
         # Extract all numeric values from vectors (handle both simple and nested formats)
         extracted_vectors = _extract_all_vectors(vectors)

@@ -43,6 +43,36 @@ logger = logging.getLogger(__name__)
 # Cache for git root (expensive to compute repeatedly)
 _git_root_cache: Optional[Path] = None
 
+# Forbidden system paths for workspace/data directories
+FORBIDDEN_PATH_PREFIXES = ['/etc', '/var/log', '/usr', '/bin', '/sbin', '/root', '/boot', '/proc', '/sys']
+
+
+def _validate_user_path(path_str: str, env_var_name: str) -> Path:
+    """
+    Validate that a user-provided path is safe.
+
+    Args:
+        path_str: The path string from environment variable
+        env_var_name: Name of the env var (for error messages)
+
+    Returns:
+        Validated and resolved Path
+
+    Raises:
+        ValueError: If path is in a forbidden system directory
+    """
+    resolved = Path(path_str).expanduser().resolve()
+    resolved_str = str(resolved)
+
+    for prefix in FORBIDDEN_PATH_PREFIXES:
+        if resolved_str.startswith(prefix):
+            raise ValueError(
+                f"{env_var_name} cannot point to system directory: {prefix}. "
+                f"Got: {resolved_str}"
+            )
+
+    return resolved
+
 
 def get_git_root() -> Optional[Path]:
     """
@@ -116,17 +146,25 @@ def get_empirica_root() -> Path:
     """
     # 1. Check workspace root (Docker/multi-AI environments)
     if workspace_root := os.getenv('EMPIRICA_WORKSPACE_ROOT'):
-        workspace_path = Path(workspace_root).expanduser().resolve()
-        empirica_root = workspace_path / '.empirica'
-        if empirica_root.exists() or workspace_path.exists():
-            logger.debug(f"📍 Using EMPIRICA_WORKSPACE_ROOT: {empirica_root}")
-            return empirica_root
+        try:
+            workspace_path = _validate_user_path(workspace_root, 'EMPIRICA_WORKSPACE_ROOT')
+            empirica_root = workspace_path / '.empirica'
+            if empirica_root.exists() or workspace_path.exists():
+                logger.debug(f"📍 Using EMPIRICA_WORKSPACE_ROOT: {empirica_root}")
+                return empirica_root
+        except ValueError as e:
+            logger.warning(f"⚠️  Invalid EMPIRICA_WORKSPACE_ROOT: {e}")
+            # Fall through to next option
 
     # 2. Check explicit data dir environment variable
     if env_root := os.getenv('EMPIRICA_DATA_DIR'):
-        root = Path(env_root).expanduser().resolve()
-        logger.debug(f"📍 Using EMPIRICA_DATA_DIR: {root}")
-        return root
+        try:
+            root = _validate_user_path(env_root, 'EMPIRICA_DATA_DIR')
+            logger.debug(f"📍 Using EMPIRICA_DATA_DIR: {root}")
+            return root
+        except ValueError as e:
+            logger.warning(f"⚠️  Invalid EMPIRICA_DATA_DIR: {e}")
+            # Fall through to next option
 
     # 3. Check .empirica/config.yaml
     config = load_empirica_config()
@@ -162,9 +200,13 @@ def get_session_db_path() -> Path:
     """
     # 1. Check environment variable
     if env_db := os.getenv('EMPIRICA_SESSION_DB'):
-        db_path = Path(env_db).expanduser().resolve()
-        logger.debug(f"📍 Using EMPIRICA_SESSION_DB: {db_path}")
-        return db_path
+        try:
+            db_path = _validate_user_path(env_db, 'EMPIRICA_SESSION_DB')
+            logger.debug(f"📍 Using EMPIRICA_SESSION_DB: {db_path}")
+            return db_path
+        except ValueError as e:
+            logger.warning(f"⚠️  Invalid EMPIRICA_SESSION_DB: {e}")
+            # Fall through to next option
 
     # 2. Check config
     config = load_empirica_config()

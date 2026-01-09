@@ -43,6 +43,7 @@ empirica/cli/cli_core.py
 empirica/cli/cli_utils.py
 empirica/cli/simple_session_server.py
 empirica/cli/uvl_formatter.py
+empirica/cli/validation.py
 empirica/cli/command_handlers/__init__.py
 empirica/cli/command_handlers/action_commands.py
 empirica/cli/command_handlers/agent_commands.py
