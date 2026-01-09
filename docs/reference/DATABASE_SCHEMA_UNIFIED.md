@@ -1,6 +1,6 @@
 # Empirica Database Schema (Unified)
 
-**Total Tables:** 31 (active)
+**Total Tables:** 36 (active)
 **Database Type:** SQLite (with PostgreSQL adapter support)
 **Architecture:** Modular with unified goal/task system
 **Every project (mapped to git repo) has its own SQLite database**
@@ -40,14 +40,22 @@ sessions (1) ──> (N) epistemic_snapshots
 cascades (1) ──> (N) bayesian_beliefs
 ```
 
-### 4. Goals & Tasks System (2 tables)
+### 4. Goals & Tasks System (6 tables)
 - **goals** - Goals with success criteria and status tracking
 - **subtasks** - Individual tasks associated with goals
+- **goal_dependencies** - Dependencies between goals
+- **subtask_dependencies** - Dependencies between subtasks
+- **success_criteria** - Measurable success criteria for goals
+- **task_decompositions** - Task breakdown hierarchy
 
 **Relationships:**
 ```
 sessions (1) ──> (N) goals
 goals (1) ──> (N) subtasks
+goals (1) ──> (N) goal_dependencies
+subtasks (1) ──> (N) subtask_dependencies
+goals (1) ──> (N) success_criteria
+goals (1) ──> (N) task_decompositions
 ```
 
 ### 5. Project Management (8 tables)
@@ -135,7 +143,16 @@ sessions (1) ──> (N) lesson_replays
 lessons (1) ──> (N) lesson_replays
 ```
 
-### 11. Infrastructure (2 tables)
+### 11. Auto-Capture System (1 table)
+- **auto_captured_issues** - Issues auto-captured from CLI errors and exceptions
+
+**Relationships:**
+```
+sessions (1) ──> (N) auto_captured_issues
+projects (1) ──> (N) auto_captured_issues
+```
+
+### 12. Infrastructure (2 tables)
 - **knowledge_graph** - Concept relationships for semantic linking
 - **schema_migrations** - Database migration version tracking
 
