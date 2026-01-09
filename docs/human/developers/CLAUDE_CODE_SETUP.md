@@ -114,7 +114,7 @@ Don't batch multiple goals - complete one loop before starting the next.
 | **context** | Information access | >= 0.60 |
 | **do** | Execution capability | >= 0.60 |
 
-**Bias correction:** Add +0.10 to uncertainty, subtract -0.05 from know (AIs overestimate).
+**Bias correction (from 995 observations):** Subtract 0.14 from uncertainty, add 0.10 to know (Claude overestimates doubt, underestimates knowledge).
 
 ## Log As You Work
 
