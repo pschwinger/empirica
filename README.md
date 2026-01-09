@@ -146,6 +146,25 @@ cd your-project
 empirica project-init
 ```
 
+> **⚠️ Important: System Prompt Required**
+>
+> Empirica requires a system prompt to function correctly. The CLI tools work without it,
+> but the full epistemic workflow (CASCADE phases, calibration, Sentinel gates) requires
+> the AI to understand the framework.
+>
+> **For manual installations, copy the system prompt:**
+> ```bash
+> # Create Claude Code config directory
+> mkdir -p ~/.claude
+>
+> # Copy the system prompt (choose your AI)
+> curl -fsSL https://raw.githubusercontent.com/Nubaeon/empirica/main/docs/human/developers/system-prompts/CLAUDE.md \
+>   -o ~/.claude/CLAUDE.md
+> ```
+>
+> The installer handles this automatically. See [System Prompts](docs/human/developers/system-prompts/)
+> for prompts for other AI assistants (Copilot, etc.).
+
 ### Homebrew (macOS)
 
 ```bash
