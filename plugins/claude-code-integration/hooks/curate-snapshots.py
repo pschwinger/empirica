@@ -40,7 +40,7 @@ def should_keep_snapshot(
 
     # Rule 1: Always keep recent snapshots (last N)
     snapshot_index = next(
-        (i for i, s in enumerate(all_snapshots) if s['timestamp'] == timestamp),
+        (i for i, s in enumerate(all_snapshots) if s.get('timestamp') == timestamp),
         -1
     )
     if snapshot_index >= 0 and snapshot_index < recent_count:
@@ -66,13 +66,28 @@ def should_keep_snapshot(
     return {"keep": False, "reason": f"archive (impact={impact:.2f}, completion={completion:.2f})"}
 
 
+def parse_snapshot_timestamp(ts: str) -> datetime:
+    """Parse snapshot timestamp, handling both ISO and dash-separated formats"""
+    # Handle format like "2026-01-08T03-17-11" (dashes in time)
+    ts = ts.replace('T', ' ').replace('Z', '')
+    # If time portion has dashes instead of colons, fix it
+    parts = ts.split(' ')
+    if len(parts) == 2 and '-' in parts[1]:
+        time_parts = parts[1].split('-')
+        if len(time_parts) == 3:
+            ts = f"{parts[0]} {':'.join(time_parts)}"
+    return datetime.fromisoformat(ts)
+
+
 def is_best_in_window(
     snapshot: Dict[str, Any],
     all_snapshots: List[Dict[str, Any]],
     window_hours: int = 24
 ) -> bool:
     """Check if snapshot has highest impact in its time window"""
-    snapshot_time = datetime.fromisoformat(snapshot['timestamp'].replace('T', ' ').replace('Z', ''))
+    if 'timestamp' not in snapshot:
+        return False
+    snapshot_time = parse_snapshot_timestamp(snapshot['timestamp'])
     snapshot_impact = snapshot.get('checkpoint', {}).get('vectors', {}).get('impact', 0.0)
 
     window_start = snapshot_time - timedelta(hours=window_hours / 2)
@@ -81,7 +96,9 @@ def is_best_in_window(
     # Find all snapshots in window
     window_snapshots = []
     for s in all_snapshots:
-        s_time = datetime.fromisoformat(s['timestamp'].replace('T', ' ').replace('Z', ''))
+        if 'timestamp' not in s:
+            continue
+        s_time = parse_snapshot_timestamp(s['timestamp'])
         if window_start <= s_time <= window_end:
             window_snapshots.append(s)
 

@@ -20,7 +20,7 @@ WORKDIR /app
 # - git: required for empirica git operations
 # - build deps: only for compilation, removed after
 RUN apk add --no-cache \
-    git=2.43.0-r0 \
+    git \
     && rm -rf /var/cache/apk/*
 
 # Copy package files
