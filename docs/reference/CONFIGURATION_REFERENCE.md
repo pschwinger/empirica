@@ -166,9 +166,11 @@ empirica project-bootstrap --project-id myproject --output json
 
 Feature-specific configuration files.
 
-### 1. Modality Config (`modality_config.yaml`)
+### 1. Modality Config (`modality_config.yaml`) - DEPRECATED
 
-**Purpose:** Configure adapter routing for ModalitySwitcher
+**Status:** DEPRECATED/UNSUPPORTED - Experimental feature, not required for core Empirica operation.
+
+**Purpose:** Configure adapter routing for ModalitySwitcher (requires commercial plugin)
 
 **Size:** 118 lines
 
@@ -583,11 +585,13 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 - `EMPIRICA_PERSONALITY`: Set AI personality/persona (`researcher`, `implementer`, `reviewer`, etc.)
 - `EMPIRICA_EPISTEMIC_MODE`: Enable VectorRouter in MCP server (`true`/`false`). When `true`, MCP tools route based on epistemic vectors (clarify/investigate/proceed)
 
-### Modality
+### Modality - DEPRECATED
 
-- `EMPIRICA_MODALITY_STRATEGY`: Override routing strategy
-- `MINIMAX_API_KEY`: MiniMax API key
-- `EMPIRICA_DEFAULT_ADAPTER`: Override default adapter
+> **Note:** Modality switcher is deprecated/unsupported experimental feature.
+
+- `EMPIRICA_MODALITY_STRATEGY`: Override routing strategy (deprecated)
+- `MINIMAX_API_KEY`: MiniMax API key (deprecated)
+- `EMPIRICA_DEFAULT_ADAPTER`: Override default adapter (deprecated)
 
 ### Sentinel (Safety Gates)
 
@@ -621,7 +625,7 @@ has_key = loader.has_credential("MINIMAX_API_KEY")
 
 - `EMPIRICA_AUTO_CHECKPOINT`: Enable/disable auto checkpoints (`true`, `false`)
 - `EMPIRICA_GIT_INTEGRATION`: Enable/disable git integration
-- `EMPIRICA_ENABLE_MODALITY_SWITCHER`: Enable/disable modality switching (`true`, `false`, default: `false`)
+- `EMPIRICA_ENABLE_MODALITY_SWITCHER`: Enable/disable modality switching (`true`, `false`, default: `false`) - DEPRECATED
 - `EMPIRICA_AUTO_POSTFLIGHT`: Enable/disable automatic POSTFLIGHT trigger on goal completion (`true`, `false`, default: `true`). When `true`, CHECK auto-triggers POSTFLIGHT when completion >= 0.7 AND impact >= 0.5
 
 ---
