@@ -23,7 +23,10 @@ docs/
 ├── human/                    # For human readers
 │   ├── end-users/            # Installation, concepts, troubleshooting
 │   └── developers/           # Integration, system prompts, API
-│       └── system-prompts/   # Model-specific prompts (Claude, Copilot, etc.)
+│       ├── system-prompts/   # Model-specific prompts (Claude, Copilot, etc.)
+│       │   └── model_deltas/ # Model-specific adjustments
+│       ├── skills/           # Skill pipeline documentation
+│       └── Security/         # Security patterns and privacy
 │
 ├── architecture/             # For AI context loading
 │   ├── README.md             # Architecture index
@@ -34,10 +37,10 @@ docs/
 │
 ├── reference/                # API and configuration reference
 │   ├── api/                  # Python API by module
-│   └── CONFIGURATION_*.md    # Environment variables
+│   └── epistemic/            # Epistemic vector reference
 │
 ├── guides/                   # AI workflow guides
-└── examples/                 # Configuration examples
+└── examples/                 # Configuration examples (YAML, JSON)
 ```
 
 ---
@@ -94,7 +97,7 @@ python scripts/doc_health_audit.py
 empirica docs-assess --summary-only
 ```
 
-**Current Status:** 87% coverage across 76 docs
+**Current Status:** 80 active docs (excluding archive)
 
 ---
 
