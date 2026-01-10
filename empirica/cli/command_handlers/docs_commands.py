@@ -75,9 +75,29 @@ class EpistemicDocsAgent:
     """
 
     def __init__(self, project_root: Path | None = None, verbose: bool = False):
-        self.root = project_root or Path.cwd()
+        self.root = project_root or self._detect_project_root()
         self.verbose = verbose
         self.categories: list[FeatureCoverage] = []
+
+    @staticmethod
+    def _detect_project_root() -> Path:
+        """Auto-detect project root by walking up to find markers."""
+        cwd = Path.cwd()
+
+        # Walk up the directory tree looking for project markers
+        for parent in [cwd] + list(cwd.parents):
+            # Check for pyproject.toml (Python project root)
+            if (parent / "pyproject.toml").exists():
+                return parent
+            # Check for empirica package directory
+            if (parent / "empirica" / "__init__.py").exists():
+                return parent
+            # Check for .git directory (repo root)
+            if (parent / ".git").exists():
+                return parent
+
+        # Fallback to cwd if no markers found
+        return cwd
 
     def _load_all_docs_content(self) -> str:
         """Load all documentation content for searching."""
@@ -600,7 +620,7 @@ class DocsExplainAgent:
     }
 
     def __init__(self, project_root: Path | None = None, project_id: str | None = None):
-        self.root = project_root or Path.cwd()
+        self.root = project_root or EpistemicDocsAgent._detect_project_root()
         self.docs_dir = self.root / "docs"
         self._docs_cache: dict[str, str] = {}
         self.project_id = project_id or self._detect_project_id()
