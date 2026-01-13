@@ -26,7 +26,8 @@ from typing import Optional
 # Configuration
 # =============================================================================
 
-EMPIRICA_VERSION = "1.3.0"
+EMPIRICA_VERSION = "1.3.2"
+MIN_PYTHON_VERSION = (3, 10)
 
 # Recommended embeddings model (small, fast, good quality)
 RECOMMENDED_EMBEDDINGS_MODEL = "nomic-embed-text"
@@ -793,6 +794,17 @@ def show_completion_summary(config: dict):
 
 def main():
     """Main installation flow."""
+    # Check Python version first
+    if sys.version_info < MIN_PYTHON_VERSION:
+        print(f"\n{Colors.RED}ERROR: Empirica requires Python {MIN_PYTHON_VERSION[0]}.{MIN_PYTHON_VERSION[1]}+{Colors.ENDC}")
+        print(f"You have Python {sys.version_info.major}.{sys.version_info.minor}")
+        print(f"\n{Colors.YELLOW}Solutions:{Colors.ENDC}")
+        print("  • macOS: brew install python@3.11")
+        print("  • Ubuntu/Debian: sudo apt install python3.11")
+        print("  • Windows: Download from https://python.org/downloads/")
+        print("  • pyenv: pyenv install 3.11 && pyenv global 3.11")
+        sys.exit(1)
+
     print_header(f"Empirica Installer v{EMPIRICA_VERSION}")
     print(f"Platform: {platform.system()} {platform.release()}")
     print(f"Python: {sys.version.split()[0]}")
