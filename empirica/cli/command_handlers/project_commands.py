@@ -2244,7 +2244,13 @@ def handle_project_switch_command(args):
             return None
         
         project_name = project['name']
-        repos = json.loads(project['repos']) if project.get('repos') else []
+        repos_raw = project.get('repos')
+        repos = []
+        if repos_raw and repos_raw.strip():
+            try:
+                repos = json.loads(repos_raw)
+            except json.JSONDecodeError:
+                repos = []
         
         # 3. Try to find project git root
         project_path = None
