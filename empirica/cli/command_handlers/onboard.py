@@ -130,10 +130,9 @@ MCP Tool (for AI agents):
    # Create session
    session_create(ai_id="myai")
 
-   # Execute workflow
-   execute_preflight(session_id=sid, prompt="Task")
-   submit_preflight_assessment(session_id=sid, vectors={...})
-   execute_postflight(session_id=sid, task_summary="Done")
+   # Execute workflow - assess directly, no execute_ steps needed
+   submit_preflight_assessment(session_id=sid, vectors={...}, reasoning="...")
+   submit_postflight_assessment(session_id=sid, vectors={...}, reasoning="...")
 
 ═══════════════════════════════════════════════════════════════════════
 

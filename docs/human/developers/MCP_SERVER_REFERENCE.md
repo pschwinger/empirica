@@ -1,7 +1,7 @@
 # Empirica MCP Server Reference (v5.0)
 
 **Last Updated:** 2026-01-09
-**Total Tools:** 56
+**Total Tools:** 55
 **Architecture:** Thin wrappers around CLI commands
 
 ---
@@ -17,7 +17,7 @@ The Empirica MCP (Model Context Protocol) server exposes Empirica functionality 
 - **Command:** `empirica-mcp`
 - **Protocol:** MCP (Model Context Protocol)
 - **Transport:** stdio
-- **Tools:** 56 tools (stateless utilities + CLI wrappers)
+- **Tools:** 55 tools (stateless utilities + CLI wrappers)
 
 **For complete MCP ↔ CLI mapping:** See [`api/mcp_cli_mapping.md`](api/mcp_cli_mapping.md)
 
@@ -794,10 +794,9 @@ Query logged mistakes for learning.
 7. `resume_previous_session` - Resume sessions
 
 ### CASCADE Workflow
-8. `submit_preflight_assessment` - Submit PREFLIGHT (no execute_preflight - assess directly)
-9. `submit_check_assessment` - Submit CHECK (no execute_check - assess directly)
-10. `execute_postflight` - POSTFLIGHT context
-11. `submit_postflight_assessment` - Submit POSTFLIGHT
+8. `submit_preflight_assessment` - Submit PREFLIGHT (assess directly)
+9. `submit_check_assessment` - Submit CHECK (assess directly)
+10. `submit_postflight_assessment` - Submit POSTFLIGHT (assess directly)
 
 ### Goals & Tasks
 14. `create_goal` - Create goal

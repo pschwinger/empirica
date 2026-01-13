@@ -3,7 +3,7 @@
 Empirica MCP Server - Epistemic Middleware for AI Agents
 
 Full-featured MCP server providing:
-- **56 tools** wrapping Empirica CLI commands
+- **55 tools** wrapping Empirica CLI commands
 - **Epistemic middleware** for confidence-gated actions
 - **Sentinel integration** for CHECK gate decisions
 - **CASCADE workflow** (PREFLIGHT → CHECK → POSTFLIGHT)
@@ -21,7 +21,7 @@ CASCADE Philosophy:
 - Scope is vectorial (self-assessed): {"breadth": 0-1, "duration": 0-1, "coordination": 0-1}
 - Trust AI reasoning: Let agents assess epistemic state → scope vectors
 
-Version: 1.3.1
+Version: 1.3.2
 """
 
 import asyncio
@@ -178,18 +178,8 @@ async def list_tools() -> List[types.Tool]:
             }
         ),
 
-        types.Tool(
-            name="execute_postflight",
-            description="Execute POSTFLIGHT pure self-assessment after task completion. Returns session context (WITHOUT baseline vectors to prevent anchoring). AI assesses CURRENT state genuinely; system calculates deltas objectively and detects confabulation. Call submit_postflight_assessment with current-state vectors only.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "session_id": {"type": "string", "description": "Session ID or alias (e.g., 'latest:active:ai-id')"},
-                    "task_summary": {"type": "string", "description": "Summary of ALL work completed in session (not just last task)"}
-                },
-                "required": ["session_id", "task_summary"]
-            }
-        ),
+        # NOTE: execute_postflight removed - unnecessary theater. AI calls submit_postflight_assessment directly.
+        # POSTFLIGHT is mechanistic: assess current 13 vectors honestly, record them. AI knows what it learned.
 
         types.Tool(
             name="submit_postflight_assessment",
@@ -960,8 +950,7 @@ async def _call_tool_impl(name: str, arguments: dict) -> List[types.TextContent]
         # Category 2: Direct Python handlers (AI-centric, no CLI conversion)
         elif name == "create_goal":
             return await handle_create_goal_direct(arguments)
-        elif name == "execute_postflight":
-            return await handle_execute_postflight_direct(arguments)
+        # execute_postflight removed - AI calls submit_postflight_assessment directly
         elif name == "get_calibration_report":
             return await handle_get_calibration_report(arguments)
         elif name == "edit_with_confidence":
@@ -1130,117 +1119,6 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
             }, indent=2)
         )]
 
-async def handle_execute_postflight_direct(arguments: dict) -> List[types.TextContent]:
-    """Handle execute_postflight - returns session context for pure self-assessment
-    
-    Returns PREFLIGHT baseline, CHECK history, and task summary.
-    AI should assess CURRENT state only (not deltas).
-    System calculates deltas and detects memory gaps automatically.
-    """
-    try:
-        session_id = arguments.get("session_id")
-        task_summary = arguments.get("task_summary", "Session work completed")
-
-        if not session_id:
-            return [types.TextContent(
-                type="text",
-                text=json.dumps({"ok": False, "error": "session_id required"}, indent=2)
-            )]
-
-        # Resolve session alias if needed
-        session_id = resolve_session_id(session_id)
-
-        # Query reflexes for session context
-        # Fix: Use path_resolver to get correct database location (repo-local, not home)
-        db = SessionDatabase(db_path=str(get_session_db_path()))
-        cursor = db.conn.cursor()
-        
-        # Get PREFLIGHT baseline
-        cursor.execute("""
-            SELECT engagement, know, do, context, clarity, coherence, signal, density,
-                   state, change, completion, impact, uncertainty, reasoning, timestamp
-            FROM reflexes
-            WHERE session_id = ? AND phase = 'PREFLIGHT'
-            ORDER BY timestamp DESC LIMIT 1
-        """, (session_id,))
-        preflight = cursor.fetchone()
-        
-        # Get CHECK assessments (intermediate states)
-        cursor.execute("""
-            SELECT engagement, know, do, context, clarity, coherence, signal, density,
-                   state, change, completion, impact, uncertainty, metadata, timestamp
-            FROM reflexes
-            WHERE session_id = ? AND phase = 'CHECK'
-            ORDER BY timestamp ASC
-        """, (session_id,))
-        checks = cursor.fetchall()
-        
-        db.close()
-        
-        if not preflight:
-            return [types.TextContent(
-                type="text",
-                text=json.dumps({
-                    "ok": False,
-                    "error": "No PREFLIGHT assessment found for this session",
-                    "session_id": session_id,
-                    "suggestion": "Cannot run POSTFLIGHT without PREFLIGHT baseline"
-                }, indent=2)
-            )]
-        
-        # Build context for AI
-        vector_names = ["engagement", "know", "do", "context", "clarity", "coherence", 
-                       "signal", "density", "state", "change", "completion", "impact", "uncertainty"]
-        
-        preflight_vectors = {name: preflight[i] for i, name in enumerate(vector_names)}
-        preflight_reasoning = preflight[13]
-        preflight_timestamp = preflight[14]
-        
-        # Parse CHECK history
-        check_history = []
-        for check_row in checks:
-            check_vectors = {name: check_row[i] for i, name in enumerate(vector_names)}
-            check_metadata = json.loads(check_row[13]) if check_row[13] else {}
-            check_history.append({
-                "timestamp": check_row[14],
-                "vectors": check_vectors,
-                "decision": check_metadata.get("decision", "unknown"),
-                "confidence": check_metadata.get("confidence", 0.5),
-                "findings_count": check_metadata.get("findings_count", 0),
-                "unknowns_count": check_metadata.get("unknowns_count", 0)
-            })
-        
-        # Build response - PURE SELF-ASSESSMENT (no baseline vectors to prevent anchoring)
-        result = {
-            "ok": True,
-            "session_id": session_id,
-            "phase": "POSTFLIGHT",
-            "task_summary": task_summary,
-            "instructions": "Perform PURE self-assessment: Rate your CURRENT epistemic state across all 13 vectors (0.0-1.0). Do NOT reference PREFLIGHT or try to estimate deltas - assess genuinely what you know/can do RIGHT NOW. System will calculate learning deltas and calibration objectively after submission.",
-            "session_context": {
-                "preflight_timestamp": preflight_timestamp,
-                "preflight_reasoning": preflight_reasoning,
-                "check_cycles_completed": len(check_history)
-            },
-            "check_history": check_history,
-            "check_count": len(check_history),
-            "next_step": "Call submit_postflight_assessment with your CURRENT epistemic state vectors",
-            "reminder": "Rate CURRENT state genuinely. Do not anchor on remembered baseline. System calculates growth independently to ensure honest calibration and detect confabulation."
-        }
-        
-        return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
-        
-    except Exception as e:
-        return [types.TextContent(
-            type="text",
-            text=json.dumps({
-                "ok": False,
-                "error": f"SESSION RESOLUTION ERROR - V2.0.1: {str(e)}",
-                "tool": "execute_postflight"
-            }, indent=2)
-        )]
-
-
 async def handle_get_calibration_report(arguments: dict) -> List[types.TextContent]:
     """Handle get_calibration_report by querying SQLite reflexes directly
     
@@ -1350,7 +1228,7 @@ async def handle_get_calibration_report(arguments: dict) -> List[types.TextConte
                 result["calibration"] = "moderate_calibration"
         else:
             result["postflight"] = None
-            result["message"] = "POSTFLIGHT not yet completed - run execute_postflight to enable calibration"
+            result["message"] = "POSTFLIGHT not yet completed - run submit_postflight_assessment to enable calibration"
         
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
         
@@ -1590,8 +1468,7 @@ def build_cli_command(tool_name: str, arguments: dict) -> List[str]:
         "submit_preflight_assessment": ["preflight-submit"],
         # "execute_check" removed - blocks on stdin
         "submit_check_assessment": ["check-submit"],
-        # Note: execute_postflight doesn't map to CLI - it returns context programmatically
-        # AI should call submit_postflight_assessment directly after reviewing context
+        # "execute_postflight" removed - unnecessary theater. AI calls submit_postflight_assessment directly.
         "submit_postflight_assessment": ["postflight-submit"],
 
         # Goals
@@ -1891,22 +1768,16 @@ Execute the actual work after passing CHECK gate.
 
 **Critical:** This is where you do the actual task.""",
 
-        "postflight": """**POSTFLIGHT: Measure actual learning**
+        "postflight": """**POSTFLIGHT: Record final epistemic state**
 
-MUST execute after completing task to calibrate epistemic growth.
+Mechanistic self-assessment: record current knowledge state after task completion.
 
 **Action items:**
-1. Call `execute_postflight(session_id, task_summary)`
-2. Reassess 13 vectors HONESTLY:
-   - Compare to PREFLIGHT baseline
-   - Did KNOW increase? (expected: yes)
-   - Did DO increase? (expected: yes if built capability)
-   - Did UNCERTAINTY decrease? (expected: yes)
-   - Is COMPLETION ~1.0? (task done?)
-3. Call `submit_postflight_assessment(session_id, vectors, reasoning)`
-4. Review calibration report to see if predictions matched reality
+1. Assess your 13 vectors honestly (0-1 scale) - current state, not delta
+2. Call `submit_postflight_assessment(session_id, vectors, reasoning)`
+3. System calculates deltas vs PREFLIGHT automatically
 
-**Critical:** Genuine reflection enables learning measurement and calibration.""",
+**Critical:** Measure what's in context now. System handles calibration calculation.""",
 
         "cascade": "**CASCADE Workflow:** BOOTSTRAP → PREFLIGHT → [INVESTIGATE → CHECK]* → ACT → POSTFLIGHT",
         

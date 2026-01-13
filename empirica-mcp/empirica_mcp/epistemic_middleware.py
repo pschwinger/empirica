@@ -89,12 +89,9 @@ class EpistemicMiddleware:
             'session_snapshot',
             'resume_previous_session',  # NOT session_resume
             'memory_compact',
-            # CASCADE workflow tools
-            'execute_preflight',
+            # CASCADE workflow tools (execute_* removed - assess directly)
             'submit_preflight_assessment',  # NOT preflight_submit
-            'execute_check',
-            'submit_check_assessment',
-            'execute_postflight',
+            'submit_check_assessment',  # execute_check also removed
             'submit_postflight_assessment',  # NOT postflight_submit
             # Goal management
             'create_goal',  # NOT goals_create
