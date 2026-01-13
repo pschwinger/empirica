@@ -161,8 +161,10 @@ def handle_project_list_command(args):
     """Handle project-list command"""
     try:
         from empirica.data.session_database import SessionDatabase
-        
-        db = SessionDatabase()
+        from empirica.config.path_resolver import get_global_session_db_path
+
+        # Always use global database for project registry
+        db = SessionDatabase(db_path=str(get_global_session_db_path()))
         cursor = db.conn.cursor()
         
         # Get all projects
@@ -208,6 +210,7 @@ def handle_project_bootstrap_command(args):
         from empirica.data.session_database import SessionDatabase
         from empirica.config.project_config_loader import get_current_subject
         from empirica.cli.utils.project_resolver import resolve_project_id
+        from empirica.config.path_resolver import get_global_session_db_path
         import subprocess
 
         output_format = getattr(args, 'output', 'human')
@@ -236,7 +239,8 @@ def handle_project_bootstrap_command(args):
 
                 git_repo = get_current_git_repo()
                 if git_repo:
-                    db = SessionDatabase()
+                    # Use global database for project registry lookup
+                    db = SessionDatabase(db_path=str(get_global_session_db_path()))
                     project_id = resolve_project_by_git_repo(git_repo, db)
 
                     if not project_id:
@@ -275,7 +279,8 @@ def handle_project_bootstrap_command(args):
                 )
         else:
             # Resolve project name to UUID if needed
-            db = SessionDatabase()
+            # Use global database for project registry lookup
+            db = SessionDatabase(db_path=str(get_global_session_db_path()))
             project_id = resolve_project_id(project_id, db)
             db.close()
         
@@ -297,8 +302,9 @@ def handle_project_bootstrap_command(args):
         subject = getattr(args, 'subject', None)
         if subject is None:
             subject = get_current_subject()  # Auto-detect from directory
-        
-        db = SessionDatabase()
+
+        # Use global database for project data (breadcrumbs, findings, goals)
+        db = SessionDatabase(db_path=str(get_global_session_db_path()))
 
         # Get new parameters
         session_id = getattr(args, 'session_id', None)
@@ -2204,12 +2210,14 @@ def handle_project_switch_command(args):
     """
     try:
         from empirica.data.session_database import SessionDatabase
-        
+        from empirica.config.path_resolver import get_global_session_db_path
+
         project_identifier = args.project_identifier
         output_format = getattr(args, 'output', 'human')
-        
-        db = SessionDatabase()
-        
+
+        # Always use global database for project registry lookup
+        db = SessionDatabase(db_path=str(get_global_session_db_path()))
+
         # 1. Resolve project (by name or ID)
         project_id = db.projects.resolve_project_id(project_identifier)
         

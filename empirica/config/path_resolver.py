@@ -223,6 +223,27 @@ def get_session_db_path() -> Path:
     return db_path
 
 
+def get_global_session_db_path() -> Path:
+    """
+    Get path to GLOBAL sessions database (~/.empirica/sessions/sessions.db).
+
+    This always returns the global database path, ignoring any local .empirica
+    folders. Use this for operations that need the global projects registry
+    (e.g., project-list, project-switch).
+
+    The hub-and-spoke architecture stores:
+    - GLOBAL (~/.empirica/): projects registry, CRM, cross-project data
+    - LOCAL (project/.empirica/): sessions, goals, findings for that project
+
+    Returns:
+        Path to global sessions.db (always ~/.empirica/sessions/sessions.db)
+    """
+    global_root = Path.home() / '.empirica'
+    db_path = global_root / 'sessions' / 'sessions.db'
+    logger.debug(f"📍 Using GLOBAL sessions path: {db_path}")
+    return db_path
+
+
 def get_identity_dir() -> Path:
     """Get identity keys directory."""
     config = load_empirica_config()
