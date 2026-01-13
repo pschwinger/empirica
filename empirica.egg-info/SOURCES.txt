@@ -11,6 +11,7 @@ docs/architecture/EPISTEMIC_AGENT_ARCHITECTURE.md
 docs/architecture/EPISTEMIC_BUS.md
 docs/architecture/EPISTEMIC_STATE_COMPLETE_CAPTURE.md
 docs/architecture/HANDOFF_SYSTEM.md
+docs/architecture/MULTI_PROJECT_STORAGE.md
 docs/architecture/NOETIC_PRAXIC_FRAMEWORK.md
 docs/architecture/QDRANT_EPISTEMIC_INTEGRATION.md
 docs/architecture/README.md
