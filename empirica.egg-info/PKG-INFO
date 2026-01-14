@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: empirica
-Version: 1.3.1
+Version: 1.3.2
 Summary: Genuine AI epistemic self-assessment framework - Universal interface for single AI tracking
 Author: David S. L. Van Assche
 License-Expression: MIT
@@ -67,9 +67,9 @@ Dynamic: license-file
 
 > **Teaching AI to know what it knows—and what it doesn't**
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.3.0)
+[![Version](https://img.shields.io/badge/version-1.3.2-blue)](https://github.com/Nubaeon/empirica/releases/tag/v1.3.2)
 [![PyPI](https://img.shields.io/pypi/v/empirica)](https://pypi.org/project/empirica/)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)]()
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ---
@@ -241,13 +241,13 @@ brew install empirica
 
 ```bash
 # Standard image (Debian slim, ~414MB)
-docker pull nubaeon/empirica:1.3.0
+docker pull nubaeon/empirica:1.3.2
 
 # Security-hardened Alpine image (~276MB, recommended)
-docker pull nubaeon/empirica:1.3.0-alpine
+docker pull nubaeon/empirica:1.3.2-alpine
 
 # Run
-docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.3.0 /bin/bash
+docker run -it -v $(pwd)/.empirica:/data/.empirica nubaeon/empirica:1.3.2 /bin/bash
 ```
 
 ---
@@ -423,14 +423,16 @@ Projects using Empirica's epistemic foundations:
 
 ---
 
-## What's New in 1.3.0
+## What's New in 1.3.2
 
+- **Simplified CASCADE Workflow** — Direct `submit_preflight_assessment` / `submit_postflight_assessment` (removed execute_* theater)
+- **Python 3.10+ Support** — Lowered minimum from 3.11 to 3.10 for broader compatibility
+- **Fixed Homebrew/Installer** — Corrected checksums and version, added Python version check
+- **Plugin Auto-Discovery** — Entry points for extending Empirica
 - **Qdrant Memory Integration** — Full 4-collection semantic memory system
-- **Embedding Providers** — Jina AI, Voyage AI, expanded Ollama support
 - **Lessons System** — Cold storage procedural knowledge with cognitive immune decay
 - **Cross-Platform Installer** — One-command setup for Linux, macOS, Windows
 - **Sentinel Safety Gates** — Human-in-the-loop gates bounding AI autonomy
-- **Multi-Agent Spawning** — Spawn epistemic sub-agents for parallel investigation
 
 ---
 
@@ -463,6 +465,6 @@ See [LICENSE](LICENSE) for details.
 ---
 
 **Author:** David S. L. Van Assche
-**Version:** 1.3.0
+**Version:** 1.3.2
 
-*Built through 600+ sessions of genuine epistemic collaboration between humans and AI.*
+*Built through 800+ sessions of genuine epistemic collaboration between humans and AI.*
