@@ -1,7 +1,7 @@
-# Empirica System Prompt - Canonical Core v1.3.0
+# Empirica System Prompt - Canonical Core v1.3.2
 
 **AI-Agnostic Core - All agents extend this**
-**Syncs with:** Empirica v1.3.0
+**Syncs with:** Empirica v1.3.2
 **Status:** AUTHORITATIVE
 
 ---

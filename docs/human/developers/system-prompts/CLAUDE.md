@@ -1,7 +1,7 @@
-# Empirica System Prompt - CLAUDE v1.3.0
+# Empirica System Prompt - CLAUDE v1.3.2
 
 **Model:** CLAUDE | **Generated:** 2026-01-09
-**Syncs with:** Empirica v1.3.0
+**Syncs with:** Empirica v1.3.2
 **Status:** AUTHORITATIVE
 
 ---
