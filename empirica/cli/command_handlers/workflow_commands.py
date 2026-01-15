@@ -267,6 +267,29 @@ def handle_preflight_submit_command(args):
                 except Exception as e:
                     logger.debug(f"Pattern retrieval failed (optional): {e}")
 
+            # NOETIC EIDETIC: Extract task understanding concepts and embed as eidetic facts
+            noetic_result = None
+            try:
+                from empirica.core.noetic_eidetic import hook_cascade_noetic
+
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+                if session and session.get('project_id'):
+                    noetic_result = hook_cascade_noetic(
+                        phase="PREFLIGHT",
+                        session_id=session_id,
+                        project_id=session['project_id'],
+                        reasoning=reasoning or "",
+                        task_context=task_context,
+                        vectors=vectors,
+                        domain=session.get('subject'),
+                    )
+                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded")
+                db.close()
+            except Exception as e:
+                # Noetic extraction is optional
+                logger.debug(f"Noetic eidetic extraction skipped: {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -279,7 +302,8 @@ def handle_preflight_submit_command(args):
                 "storage_layers": {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True
+                    "json_logs": True,
+                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
                 },
                 "calibration": {
                     "adjustments": calibration_adjustments if calibration_adjustments else None,
@@ -922,6 +946,29 @@ def handle_check_submit_command(args):
                     # Auto-checkpoint failure is not fatal, but log it
                     logger.warning(f"Auto-checkpoint after CHECK (uncertainty > 0.5) failed (non-fatal): {e}")
 
+            # NOETIC EIDETIC: Extract decision rationale concepts and embed as eidetic facts
+            noetic_result = None
+            try:
+                from empirica.core.noetic_eidetic import hook_cascade_noetic
+
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+                if session and session.get('project_id'):
+                    noetic_result = hook_cascade_noetic(
+                        phase="CHECK",
+                        session_id=session_id,
+                        project_id=session['project_id'],
+                        reasoning=reasoning or "",
+                        task_context=approach,  # CHECK uses 'approach' as context
+                        vectors=vectors,
+                        domain=session.get('subject'),
+                    )
+                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded")
+                db.close()
+            except Exception as e:
+                # Noetic extraction is optional
+                logger.debug(f"Noetic eidetic extraction skipped: {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -936,7 +983,8 @@ def handle_check_submit_command(args):
                 "storage_layers": {
                     "sqlite": True,
                     "git_notes": checkpoint_id is not None and checkpoint_id != "",
-                    "json_logs": True
+                    "json_logs": True,
+                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
                 },
                 "bootstrap": {
                     "had_context": bootstrap_status.get('has_bootstrap', False),
@@ -1620,6 +1668,30 @@ def handle_postflight_submit_command(args):
                 # Snapshot creation is non-fatal
                 logger.debug(f"Epistemic snapshot creation skipped: {e}")
 
+            # NOETIC EIDETIC: Extract conceptual reasoning and embed as eidetic facts
+            # This captures WHY/WHICH/FOR WHOM - the noetic concepts behind the learning
+            noetic_result = None
+            try:
+                from empirica.core.noetic_eidetic import hook_cascade_noetic
+
+                db = SessionDatabase()
+                session = db.get_session(session_id)
+                if session and session.get('project_id'):
+                    noetic_result = hook_cascade_noetic(
+                        phase="POSTFLIGHT",
+                        session_id=session_id,
+                        project_id=session['project_id'],
+                        reasoning=reasoning or "",
+                        task_context=session.get('subject'),
+                        vectors=vectors,
+                        domain=session.get('subject'),
+                    )
+                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded")
+                db.close()
+            except Exception as e:
+                # Noetic extraction is optional
+                logger.debug(f"Noetic eidetic extraction skipped: {e}")
+
             result = {
                 "ok": True,
                 "session_id": session_id,
@@ -1642,9 +1714,11 @@ def handle_postflight_submit_command(args):
                     "bayesian_beliefs": len(belief_updates) > 0 if belief_updates else False,
                     "episodic_memory": episodic_stored,
                     "epistemic_snapshots": snapshot_created,
-                    "qdrant_memory": memory_synced > 0
+                    "qdrant_memory": memory_synced > 0,
+                    "noetic_eidetic": noetic_result.get('concepts_embedded', 0) > 0 if noetic_result else False
                 },
                 "memory_synced": memory_synced,
+                "noetic_concepts": noetic_result.get('concepts_embedded', 0) if noetic_result else 0,
                 "snapshot": {
                     "created": snapshot_created,
                     "snapshot_id": snapshot_id,
