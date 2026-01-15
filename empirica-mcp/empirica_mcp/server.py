@@ -1094,7 +1094,38 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
         except Exception as e:
             # Safe degradation - don't fail goal creation if git storage fails
             pass
-        
+
+        # Embed goal to Qdrant for semantic search (safe degradation)
+        qdrant_embedded = False
+        try:
+            from empirica.core.qdrant.vector_store import embed_goal
+            # Get project_id from session
+            db = SessionDatabase(db_path=str(get_session_db_path()))
+            cursor = db.conn.cursor()
+            cursor.execute("SELECT project_id FROM sessions WHERE session_id = ?", (session_id,))
+            row = cursor.fetchone()
+            project_id = row[0] if row else None
+            db.close()
+
+            if project_id:
+                qdrant_embedded = embed_goal(
+                    project_id=project_id,
+                    goal_id=goal.id,
+                    objective=objective,
+                    session_id=session_id,
+                    ai_id=arguments.get("ai_id", "empirica_mcp"),
+                    scope_breadth=scope.breadth,
+                    scope_duration=scope.duration,
+                    scope_coordination=scope.coordination,
+                    estimated_complexity=estimated_complexity,
+                    success_criteria=[sc.description for sc in success_criteria_objects],
+                    status="in_progress",
+                    timestamp=goal.created_timestamp,
+                )
+        except Exception as e:
+            # Safe degradation - don't fail goal creation if Qdrant embedding fails
+            logger.debug(f"Goal Qdrant embedding skipped: {e}")
+
         # Return success response
         result = {
             "ok": True,
@@ -1103,7 +1134,8 @@ async def handle_create_goal_direct(arguments: dict) -> List[types.TextContent]:
             "message": "Goal created successfully",
             "objective": objective,
             "scope": scope.to_dict(),
-            "timestamp": goal.created_timestamp
+            "timestamp": goal.created_timestamp,
+            "qdrant_embedded": qdrant_embedded
         }
         
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]

@@ -415,6 +415,22 @@ def _create_session_and_bootstrap(ai_id: str, project_id: str = None) -> dict:
             except Exception:
                 pass  # Memory search is optional
 
+        # Step 4: Semantic search for related goals (optional)
+        if project_id:
+            try:
+                goals_cmd = subprocess.run(
+                    ['empirica', 'goals-search', 'current work in progress',
+                     '--project-id', project_id, '--status', 'in_progress',
+                     '--limit', '5', '--output', 'json'],
+                    capture_output=True, text=True, timeout=15
+                )
+                if goals_cmd.returncode == 0:
+                    goals_result = json.loads(goals_cmd.stdout)
+                    if goals_result.get('results'):
+                        result["related_goals"] = goals_result['results']
+            except Exception:
+                pass  # Goal search is optional - Qdrant may not have goals yet
+
     except subprocess.TimeoutExpired:
         result["error"] = "Command timed out"
     except Exception as e:

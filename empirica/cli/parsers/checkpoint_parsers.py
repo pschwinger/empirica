@@ -495,6 +495,25 @@ def add_checkpoint_parsers(subparsers):
     goals_list_all_parser.add_argument('--output', choices=['human', 'json'], default='human',
         help='Output format')
 
+    # Goals semantic search command (Qdrant-powered)
+    goals_search_parser = subparsers.add_parser('goals-search',
+        help='Semantic search for goals across sessions (Qdrant)')
+    goals_search_parser.add_argument('query', help='Search query (e.g., "authentication system")')
+    goals_search_parser.add_argument('--project-id', help='Project ID (auto-detects if not provided)')
+    goals_search_parser.add_argument('--type', choices=['goal', 'subtask'],
+        help='Filter by type (default: both)')
+    goals_search_parser.add_argument('--status', choices=['in_progress', 'complete', 'pending', 'completed'],
+        help='Filter by status')
+    goals_search_parser.add_argument('--ai-id', help='Filter by AI identifier')
+    goals_search_parser.add_argument('--limit', type=int, default=10,
+        help='Maximum results (default: 10)')
+    goals_search_parser.add_argument('--sync', action='store_true',
+        help='Sync SQLite goals to Qdrant before searching')
+    goals_search_parser.add_argument('--output', choices=['human', 'json'], default='human',
+        help='Output format')
+    goals_search_parser.add_argument('--verbose', action='store_true',
+        help='Show detailed operation info')
+
     # goals-ready command (BEADS integration - Phase 1)
     goals_ready_parser = subparsers.add_parser('goals-ready', help='Query ready work (BEADS + epistemic filtering)')
     goals_ready_parser.add_argument('--session-id', required=False, help='Session UUID (auto-detects active session if not provided)')

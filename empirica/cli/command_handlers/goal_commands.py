@@ -292,6 +292,41 @@ def handle_goals_create_command(args):
             except Exception as e:
                 # Safe degradation - don't fail goal creation if git storage fails
                 logger.debug(f"Git goal storage skipped: {e}")
+
+            # Qdrant embedding for semantic search (safe degradation)
+            qdrant_embedded = False
+            try:
+                from empirica.core.qdrant.vector_store import embed_goal
+                from empirica.data.session_database import SessionDatabase as GoalDB
+
+                # Get project_id from session
+                goal_db = GoalDB()
+                cursor = goal_db.conn.cursor()
+                cursor.execute("SELECT project_id, ai_id FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                goal_db.close()
+
+                if row and row[0]:
+                    project_id = row[0]
+                    ai_id = row[1] or getattr(args, 'ai_id', 'empirica_cli')
+                    qdrant_embedded = embed_goal(
+                        project_id=project_id,
+                        goal_id=goal.id,
+                        objective=objective,
+                        session_id=session_id,
+                        ai_id=ai_id,
+                        scope_breadth=scope_breadth,
+                        scope_duration=scope_duration,
+                        scope_coordination=scope_coordination,
+                        estimated_complexity=estimated_complexity,
+                        success_criteria=[sc.description for sc in success_criteria_objects],
+                        status="in_progress",
+                        timestamp=goal.created_timestamp,
+                    )
+                    if qdrant_embedded:
+                        result['qdrant_embedded'] = True
+            except Exception as e:
+                logger.debug(f"Goal Qdrant embedding skipped: {e}")
         else:
             result = {
                 "ok": False,
@@ -366,12 +401,12 @@ def handle_goals_add_subtask_command(args):
             # BEADS Integration (Optional): Create child issue with dependency
             beads_subtask_id = None
             use_beads = getattr(args, 'use_beads', False)
-            
+
             if use_beads:
                 try:
                     from empirica.integrations.beads import BeadsAdapter
                     from empirica.data.session_database import SessionDatabase
-                    
+
                     # Get parent goal's BEADS ID
                     db = SessionDatabase()
                     cursor = db.conn.execute(
@@ -380,7 +415,7 @@ def handle_goals_add_subtask_command(args):
                     )
                     row = cursor.fetchone()
                     parent_beads_id = row[0] if row and row[0] else None
-                    
+
                     if parent_beads_id:
                         beads = BeadsAdapter()
                         if beads.is_available():
@@ -392,7 +427,7 @@ def handle_goals_add_subtask_command(args):
                                 EpistemicImportance.LOW: 3
                             }
                             priority = priority_map.get(importance, 2)
-                            
+
                             # Create BEADS child issue (gets hierarchical ID like bd-a1b2.1)
                             beads_subtask_id = beads.create_issue(
                                 title=description,
@@ -401,7 +436,7 @@ def handle_goals_add_subtask_command(args):
                                 issue_type="task",
                                 labels=["empirica", "subtask"]
                             )
-                            
+
                             if beads_subtask_id:
                                 # Add dependency: subtask blocks parent
                                 beads.add_dependency(
@@ -409,10 +444,10 @@ def handle_goals_add_subtask_command(args):
                                     parent_id=parent_beads_id,
                                     dep_type='blocks'
                                 )
-                                
+
                                 # Store BEADS link in subtask_data
                                 db.conn.execute("""
-                                    UPDATE subtasks 
+                                    UPDATE subtasks
                                     SET subtask_data = json_set(subtask_data, '$.beads_issue_id', ?)
                                     WHERE id = ?
                                 """, (beads_subtask_id, subtask.id))
@@ -420,12 +455,47 @@ def handle_goals_add_subtask_command(args):
                                 logger.info(f"Linked subtask {subtask.id[:8]} to BEADS issue {beads_subtask_id}")
                     else:
                         logger.warning("Parent goal has no BEADS issue - cannot create linked subtask")
-                    
+
                     db.close()
                 except Exception as e:
                     logger.warning(f"BEADS subtask integration failed: {e}")
                     # Continue without BEADS - it's optional
-            
+
+            # Qdrant embedding (safe degradation)
+            qdrant_embedded = False
+            try:
+                from empirica.core.qdrant.vector_store import embed_subtask
+                from empirica.data.session_database import SessionDatabase as SubtaskDB
+
+                # Get goal's session and project info
+                st_db = SubtaskDB()
+                cursor = st_db.conn.execute("""
+                    SELECT g.objective, g.session_id, s.project_id, s.ai_id
+                    FROM goals g
+                    LEFT JOIN sessions s ON g.session_id = s.session_id
+                    WHERE g.id = ?
+                """, (goal_id,))
+                row = cursor.fetchone()
+                st_db.close()
+
+                if row:
+                    goal_objective, session_id, project_id, ai_id = row
+                    if project_id:
+                        qdrant_embedded = embed_subtask(
+                            project_id=project_id,
+                            subtask_id=subtask.id,
+                            description=description,
+                            goal_id=goal_id,
+                            goal_objective=goal_objective,
+                            session_id=session_id,
+                            ai_id=ai_id,
+                            epistemic_importance=importance.value,
+                            status=subtask.status.value,
+                            timestamp=subtask.created_timestamp,
+                        )
+            except Exception as e:
+                logger.debug(f"Subtask Qdrant embedding skipped: {e}")
+
             result = {
                 "ok": True,
                 "task_id": subtask.id,
@@ -1291,3 +1361,120 @@ def handle_goals_list_all_command(args):
         result = {'ok': False, 'error': str(e)}
         print(json.dumps(result))
         return 1
+
+
+def handle_goals_search_command(args):
+    """Handle goals-search command - semantic search for goals across sessions.
+
+    Uses Qdrant vector search to find goals similar to a query.
+    Enables post-compact context recovery and cross-session goal discovery.
+    """
+    try:
+        from empirica.core.qdrant.vector_store import search_goals, sync_goals_to_qdrant
+        from empirica.data.session_database import SessionDatabase
+
+        query = args.query
+        project_id = getattr(args, 'project_id', None)
+        item_type = getattr(args, 'type', None)  # 'goal' or 'subtask'
+        status = getattr(args, 'status', None)
+        ai_id = getattr(args, 'ai_id', None)
+        limit = getattr(args, 'limit', 10)
+        sync_first = getattr(args, 'sync', False)
+        output = getattr(args, 'output', 'human')
+
+        # Auto-detect project_id if not provided
+        if not project_id:
+            db = SessionDatabase()
+            cursor = db.conn.cursor()
+            # Get the most recently active project
+            cursor.execute("""
+                SELECT DISTINCT project_id FROM sessions
+                WHERE project_id IS NOT NULL
+                ORDER BY start_time DESC LIMIT 1
+            """)
+            row = cursor.fetchone()
+            project_id = row[0] if row else None
+            db.close()
+
+            if not project_id:
+                result = {
+                    "ok": False,
+                    "error": "No project found. Run empirica session-create first.",
+                    "hint": "Or specify --project-id explicitly"
+                }
+                print(json.dumps(result, indent=2) if output == 'json' else f"Error: {result['error']}")
+                return 1
+
+        # Optionally sync SQLite goals to Qdrant first
+        if sync_first:
+            synced = sync_goals_to_qdrant(project_id)
+            if output != 'json':
+                print(f"📦 Synced {synced} goals/subtasks to Qdrant")
+
+        # Perform semantic search
+        results = search_goals(
+            project_id=project_id,
+            query=query,
+            item_type=item_type,
+            status=status,
+            ai_id=ai_id,
+            include_subtasks=True,
+            limit=limit,
+        )
+
+        if output == 'json':
+            print(json.dumps({
+                "ok": True,
+                "query": query,
+                "project_id": project_id,
+                "results_count": len(results),
+                "results": results
+            }, indent=2))
+        else:
+            if not results:
+                print(f"\n🔍 No goals found for: \"{query}\"")
+                print(f"   Project: {project_id[:8]}...")
+                print(f"\n💡 Tips:")
+                print(f"   - Run with --sync to sync SQLite goals to Qdrant first")
+                print(f"   - Try a different query")
+                print(f"   - Check Qdrant is running (EMPIRICA_QDRANT_URL)")
+                return 0
+
+            print(f"\n🔍 Found {len(results)} result(s) for: \"{query}\"")
+            print(f"   Project: {project_id[:8]}...\n")
+
+            for i, r in enumerate(results, 1):
+                score = r.get('score', 0)
+                item_type = r.get('type', 'unknown')
+                is_completed = r.get('is_completed', False)
+
+                # Status icon
+                if is_completed:
+                    status_icon = "✅"
+                else:
+                    status_icon = "⏳"
+
+                # Type badge
+                type_badge = "📋" if item_type == 'goal' else "📝"
+
+                if item_type == 'goal':
+                    objective = r.get('objective', 'No objective')
+                    print(f"{status_icon} {i}. {type_badge} {objective[:70]}")
+                else:
+                    description = r.get('description', 'No description')
+                    goal_id = r.get('goal_id', '')
+                    print(f"{status_icon} {i}. {type_badge} {description[:70]}")
+                    if goal_id:
+                        print(f"      Goal: {goal_id[:8]}...")
+
+                print(f"      Score: {score:.2f} | Status: {r.get('status', 'unknown')}")
+                if r.get('session_id'):
+                    print(f"      Session: {r['session_id'][:8]}...")
+                if r.get('ai_id'):
+                    print(f"      AI: {r['ai_id']}")
+                print()
+
+        return None
+
+    except Exception as e:
+        handle_cli_error(e, "Search goals", getattr(args, 'verbose', False))
