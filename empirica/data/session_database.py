@@ -1622,8 +1622,17 @@ class SessionDatabase:
                 'created_at': row[6],
                 'code_location': row[7]
             })
-        
-        return issues
+
+        # Deduplicate by message (same error may occur in multiple sessions)
+        seen_messages = set()
+        unique_issues = []
+        for issue in issues:
+            msg = issue.get('message', '')
+            if msg not in seen_messages:
+                seen_messages.add(msg)
+                unique_issues.append(issue)
+
+        return unique_issues
 
     def get_git_status(self, project_root: str) -> Optional[Dict]:
         """Get git status information for the project.

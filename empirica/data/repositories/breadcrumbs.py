@@ -19,6 +19,31 @@ logger = logging.getLogger(__name__)
 class BreadcrumbRepository(BaseRepository):
     """Repository for knowledge artifact management (breadcrumbs for continuity)"""
 
+    @staticmethod
+    def _dedupe_by_content(items: List[Dict], content_key: str) -> List[Dict]:
+        """
+        Deduplicate items by content field, keeping the most recent entry.
+
+        Dual-scope logging (scope='both') writes to both session_* and project_* tables.
+        UNION queries then return duplicates with different IDs but same content.
+        This method removes duplicates by content text, keeping the newest.
+
+        Args:
+            items: List of dicts from UNION query
+            content_key: Key containing the content to dedupe by (e.g., 'finding', 'unknown')
+
+        Returns:
+            Deduplicated list preserving order (newest first)
+        """
+        seen = set()
+        unique = []
+        for item in items:
+            content = item.get(content_key, '')
+            if content not in seen:
+                seen.add(content)
+                unique.append(item)
+        return unique
+
     def log_finding(
         self,
         project_id: str,
@@ -429,7 +454,10 @@ class BreadcrumbRepository(BaseRepository):
         
         cursor = self._execute(query, params)
         findings = [dict(row) for row in cursor.fetchall()]
-        
+
+        # Deduplicate by finding content (dual-scope logging creates duplicates)
+        findings = self._dedupe_by_content(findings, 'finding')
+
         # Apply deprecation filtering
         from empirica.core.findings_deprecation import FindingsDeprecationEngine
         
@@ -516,6 +544,8 @@ class BreadcrumbRepository(BaseRepository):
                     ORDER BY created_timestamp DESC
                 """, (project_id, resolved, project_id, resolved))
         results = [dict(row) for row in cursor.fetchall()]
+        # Deduplicate by unknown content (dual-scope logging creates duplicates)
+        results = self._dedupe_by_content(results, 'unknown')
         if limit:
             results = results[:limit]
         return results
@@ -550,7 +580,9 @@ class BreadcrumbRepository(BaseRepository):
         if limit:
             query += f" LIMIT {limit}"
         cursor = self._execute(query, params)
-        return [dict(row) for row in cursor.fetchall()]
+        results = [dict(row) for row in cursor.fetchall()]
+        # Deduplicate by approach content (dual-scope logging creates duplicates)
+        return self._dedupe_by_content(results, 'approach')
 
     def get_project_reference_docs(self, project_id: str) -> List[Dict]:
         """Get all reference docs for a project"""

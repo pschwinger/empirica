@@ -16,6 +16,23 @@ from .base import BaseRepository
 class GoalRepository(BaseRepository):
     """Repository for goal and subtask management"""
 
+    @staticmethod
+    def _dedupe_by_objective(items: List[Dict]) -> List[Dict]:
+        """
+        Deduplicate goals by objective text, keeping the most recent entry.
+
+        Goals with the same objective may be created across multiple sessions.
+        This method removes duplicates by objective text, keeping the newest.
+        """
+        seen = set()
+        unique = []
+        for item in items:
+            objective = item.get('objective', '')
+            if objective not in seen:
+                seen.add(objective)
+                unique.append(item)
+        return unique
+
     def create_goal(self, session_id: str, objective: str, scope_breadth: float = None,
                    scope_duration: float = None, scope_coordination: float = None,
                    beads_issue_id: str = None) -> str:
@@ -279,6 +296,8 @@ class GoalRepository(BaseRepository):
             ORDER BY created_timestamp DESC
         """, (project_id,))
         incomplete_goals = [dict(row) for row in cursor.fetchall()]
+        # Deduplicate by objective (same goal may be created across sessions)
+        incomplete_goals = self._dedupe_by_objective(incomplete_goals)
 
         # Get active goals with subtask counts
         cursor = self._execute("""
@@ -293,6 +312,8 @@ class GoalRepository(BaseRepository):
             ORDER BY g.created_timestamp DESC
         """, (project_id,))
         active_goals = [dict(row) for row in cursor.fetchall()]
+        # Deduplicate by objective (same goal may be created across sessions)
+        active_goals = self._dedupe_by_objective(active_goals)
 
         return {
             'incomplete_work': incomplete_goals,
