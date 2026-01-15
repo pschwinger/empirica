@@ -9,6 +9,12 @@ that explains the epistemic journey, not just records it.
 
 Noetic concepts are stored as eidetic facts because they represent
 stable conceptual knowledge derived from reasoning, not temporal narratives.
+
+DESIGN PHILOSOPHY:
+- AI-provided concepts (semantic selection) are PRIORITIZED
+- Regex extraction is FALLBACK only when AI doesn't provide concepts
+- Complex language has too many nuances for keyword matching alone
+- Pattern/anti-pattern recognition > keyword heuristics
 """
 
 import logging
@@ -339,6 +345,73 @@ def embed_noetic_concepts(
     return (embedded, failed)
 
 
+def normalize_ai_concepts(
+    ai_concepts: List[Dict],
+    phase: str,
+    vectors: Optional[Dict[str, float]] = None,
+) -> List[Dict]:
+    """
+    Normalize and validate AI-provided noetic concepts.
+
+    AI provides concepts in structured format; this ensures they meet
+    embedding requirements and adds phase-specific tags.
+
+    Args:
+        ai_concepts: List of concept dicts from AI (fact_type, content, confidence, tags)
+        phase: CASCADE phase for tag injection
+        vectors: Optional vectors for confidence calibration
+
+    Returns:
+        List of normalized concepts ready for embedding
+    """
+    normalized = []
+
+    for concept in ai_concepts:
+        # Validate required fields
+        if not isinstance(concept, dict):
+            logger.warning(f"Skipping non-dict concept: {concept}")
+            continue
+
+        fact_type = concept.get("fact_type", "")
+        content = concept.get("content", "")
+
+        if not fact_type or not content:
+            logger.warning(f"Skipping concept missing fact_type or content: {concept}")
+            continue
+
+        # Validate fact_type
+        valid_types = set(NOETIC_FACT_TYPES.keys())
+        if fact_type not in valid_types:
+            logger.warning(f"Unknown fact_type '{fact_type}', defaulting to learning_insight")
+            fact_type = "learning_insight"
+
+        # Get confidence (default 0.7, cap at 0.95)
+        confidence = float(concept.get("confidence", 0.7))
+        confidence = min(0.95, max(0.1, confidence))
+
+        # Calibrate with vectors if available
+        if vectors:
+            # Higher know/lower uncertainty = trust AI's confidence more
+            know = vectors.get("know", 0.5)
+            uncertainty = vectors.get("uncertainty", 0.5)
+            calibration = (know + (1 - uncertainty)) / 2
+            confidence = confidence * (0.7 + calibration * 0.3)
+            confidence = min(0.95, confidence)
+
+        # Build tags (inject phase tag)
+        tags = list(concept.get("tags", []) or [])
+        tags.extend(["noetic", phase.lower(), "ai_provided"])
+
+        normalized.append({
+            "fact_type": fact_type,
+            "content": content.strip()[:500],  # Cap length
+            "confidence": round(confidence, 3),
+            "tags": tags,
+        })
+
+    return normalized
+
+
 def hook_cascade_noetic(
     phase: str,
     session_id: str,
@@ -347,11 +420,14 @@ def hook_cascade_noetic(
     task_context: Optional[str] = None,
     vectors: Optional[Dict[str, float]] = None,
     domain: Optional[str] = None,
+    ai_concepts: Optional[List[Dict]] = None,
 ) -> Dict:
     """
     Main hook to call from CASCADE phase handlers.
 
-    This extracts noetic concepts from reasoning and embeds them as eidetic facts.
+    PRIORITY ORDER:
+    1. AI-provided concepts (semantic selection) - preferred
+    2. Regex extraction (fallback) - only if AI provides nothing
 
     Args:
         phase: CASCADE phase (PREFLIGHT, CHECK, POSTFLIGHT)
@@ -361,17 +437,30 @@ def hook_cascade_noetic(
         task_context: Optional task description
         vectors: Optional epistemic vectors
         domain: Optional domain tag
+        ai_concepts: AI-provided noetic concepts (takes priority over extraction)
 
     Returns:
         Dict with extraction and embedding results
     """
-    # Extract concepts
-    concepts = extract_noetic_concepts(
-        reasoning=reasoning,
-        phase=phase,
-        task_context=task_context,
-        vectors=vectors,
-    )
+    concepts = []
+    source = "none"
+
+    # PRIORITY 1: AI-provided concepts (semantic selection)
+    if ai_concepts:
+        concepts = normalize_ai_concepts(ai_concepts, phase, vectors)
+        source = "ai_provided"
+        logger.info(f"Using {len(concepts)} AI-provided noetic concepts for {phase}")
+
+    # PRIORITY 2: Regex extraction (fallback)
+    if not concepts and reasoning:
+        concepts = extract_noetic_concepts(
+            reasoning=reasoning,
+            phase=phase,
+            task_context=task_context,
+            vectors=vectors,
+        )
+        source = "regex_fallback"
+        logger.info(f"Fallback: Extracted {len(concepts)} concepts via regex for {phase}")
 
     if not concepts:
         return {
@@ -379,7 +468,8 @@ def hook_cascade_noetic(
             "phase": phase,
             "concepts_extracted": 0,
             "concepts_embedded": 0,
-            "note": "No noetic concepts extracted from reasoning",
+            "source": source,
+            "note": "No noetic concepts (AI didn't provide any, regex found none)",
         }
 
     # Embed concepts
@@ -393,6 +483,7 @@ def hook_cascade_noetic(
     return {
         "ok": True,
         "phase": phase,
+        "source": source,
         "concepts_extracted": len(concepts),
         "concepts_embedded": embedded,
         "concepts_failed": failed,

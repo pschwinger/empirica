@@ -139,6 +139,7 @@ def handle_preflight_submit_command(args):
             vectors = validated.vectors
             reasoning = validated.reasoning or ''
             task_context = validated.task_context or ''
+            noetic_concepts = getattr(validated, 'noetic_concepts', None)
             output_format = 'json'  # AI-first always uses JSON output
         else:
             # LEGACY MODE: Use CLI flags
@@ -146,6 +147,7 @@ def handle_preflight_submit_command(args):
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             reasoning = args.reasoning
             task_context = getattr(args, 'task_context', '') or ''  # For pattern retrieval
+            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'json')  # Default to JSON
 
             # Validate required fields for legacy mode
@@ -283,8 +285,9 @@ def handle_preflight_submit_command(args):
                         task_context=task_context,
                         vectors=vectors,
                         domain=session.get('subject'),
+                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
                     )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded")
+                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
                 db.close()
             except Exception as e:
                 # Noetic extraction is optional
@@ -668,12 +671,16 @@ def handle_check_submit_command(args):
             vectors = config_data.get('vectors')
             decision = config_data.get('decision')
             reasoning = config_data.get('reasoning', '')
+            approach = config_data.get('approach', reasoning)  # Fallback to reasoning
+            noetic_concepts = config_data.get('noetic_concepts')  # AI-provided concepts
             output_format = config_data.get('output', 'json')  # Default to JSON for AI-first
         else:
             session_id = args.session_id
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             decision = args.decision
             reasoning = args.reasoning
+            approach = getattr(args, 'approach', reasoning)  # Fallback to reasoning
+            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'human')
         cycle = getattr(args, 'cycle', 1)  # Default to 1 if not provided
 
@@ -962,8 +969,9 @@ def handle_check_submit_command(args):
                         task_context=approach,  # CHECK uses 'approach' as context
                         vectors=vectors,
                         domain=session.get('subject'),
+                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
                     )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded")
+                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
                 db.close()
             except Exception as e:
                 # Noetic extraction is optional
@@ -1299,6 +1307,7 @@ def handle_postflight_submit_command(args):
             session_id = config_data.get('session_id')
             vectors = config_data.get('vectors')
             reasoning = config_data.get('reasoning', '')
+            noetic_concepts = config_data.get('noetic_concepts')  # AI-provided concepts
             output_format = 'json'
 
             # Validate required fields
@@ -1314,6 +1323,7 @@ def handle_postflight_submit_command(args):
             session_id = args.session_id
             vectors = parse_json_safely(args.vectors) if isinstance(args.vectors, str) else args.vectors
             reasoning = args.reasoning
+            noetic_concepts = None  # Legacy mode doesn't support AI-provided concepts
             output_format = getattr(args, 'output', 'json')
 
             # Validate required fields for legacy mode
@@ -1685,8 +1695,9 @@ def handle_postflight_submit_command(args):
                         task_context=session.get('subject'),
                         vectors=vectors,
                         domain=session.get('subject'),
+                        ai_concepts=noetic_concepts,  # AI-provided concepts (priority over regex)
                     )
-                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded")
+                    logger.debug(f"Noetic extraction: {noetic_result.get('concepts_embedded', 0)} concepts embedded (source: {noetic_result.get('source', 'unknown')})")
                 db.close()
             except Exception as e:
                 # Noetic extraction is optional

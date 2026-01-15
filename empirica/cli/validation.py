@@ -11,12 +11,61 @@ Usage:
     # validated is now a PreflightInput instance or raises ValidationError
 """
 
-from typing import Dict, Optional, Any, Type, TypeVar
+from typing import Dict, Optional, Any, Type, TypeVar, List
 from pydantic import BaseModel, Field, field_validator
 import json
 
 
 T = TypeVar('T', bound=BaseModel)
+
+
+# =============================================================================
+# Noetic Concept Model (AI-provided semantic concepts)
+# =============================================================================
+
+class NoeticConcept(BaseModel):
+    """
+    A noetic concept explicitly provided by AI during CASCADE phases.
+
+    Instead of post-hoc regex extraction, AI semantically selects what's
+    eidetically relevant and provides structured concepts for embedding.
+
+    Valid fact_types:
+    - task_understanding: PREFLIGHT - Why this task matters, constraints, stakeholders
+    - decision_rationale: CHECK - Why proceed/investigate, approach selection reasoning
+    - learning_insight: POSTFLIGHT - Patterns discovered, generalizable knowledge
+    - rejected_alternative: Path considered but not taken - preserves decision context
+    - conditional_knowledge: Knowledge with validity conditions - when/where it applies
+    - concept_link: Relationship between concepts - enables graph traversal
+    - reasoning_chain: Hypothesis → Evidence → Conclusion - preserves inference path
+    """
+    fact_type: str = Field(
+        description="Type of noetic concept (task_understanding, decision_rationale, etc.)"
+    )
+    content: str = Field(
+        min_length=10, max_length=500,
+        description="The concept content - what you learned/decided/understood"
+    )
+    confidence: float = Field(
+        default=0.7, ge=0.0, le=1.0,
+        description="How confident you are in this concept (0.0-1.0)"
+    )
+    tags: Optional[List[str]] = Field(
+        default=None,
+        description="Additional context tags (e.g., ['architecture', 'performance'])"
+    )
+
+    @field_validator('fact_type')
+    @classmethod
+    def validate_fact_type(cls, v: str) -> str:
+        valid_types = {
+            'task_understanding', 'decision_rationale', 'learning_insight',
+            'epistemic_principle', 'rejected_alternative', 'conditional_knowledge',
+            'concept_link', 'reasoning_chain'
+        }
+        if v not in valid_types:
+            raise ValueError(f'Invalid fact_type: {v}. Must be one of: {valid_types}')
+        return v
 
 
 # =============================================================================
@@ -46,6 +95,10 @@ class PreflightInput(BaseModel):
     vectors: Dict[str, float] = Field(description="Epistemic vector values")
     reasoning: Optional[str] = Field(default="", max_length=5000, description="Reasoning for assessment")
     task_context: Optional[str] = Field(default="", max_length=2000, description="Context for pattern retrieval")
+    noetic_concepts: Optional[List[Dict]] = Field(
+        default=None,
+        description="AI-provided noetic concepts (semantic selection, not regex extraction)"
+    )
 
     @field_validator('session_id')
     @classmethod
@@ -87,6 +140,10 @@ class CheckInput(BaseModel):
     vectors: Optional[Dict[str, float]] = Field(default=None, description="Updated vector values")
     approach: Optional[str] = Field(default="", max_length=2000, description="Planned approach")
     reasoning: Optional[str] = Field(default="", max_length=5000, description="Reasoning for check")
+    noetic_concepts: Optional[List[Dict]] = Field(
+        default=None,
+        description="AI-provided noetic concepts (decision rationale, rejected alternatives)"
+    )
 
     @field_validator('session_id')
     @classmethod
@@ -115,6 +172,10 @@ class PostflightInput(BaseModel):
     reasoning: Optional[str] = Field(default="", max_length=5000, description="Reasoning for assessment")
     learnings: Optional[str] = Field(default="", max_length=5000, description="Key learnings from session")
     goal_id: Optional[str] = Field(default=None, max_length=100, description="Associated goal ID")
+    noetic_concepts: Optional[List[Dict]] = Field(
+        default=None,
+        description="AI-provided noetic concepts (learning insights, causal patterns)"
+    )
 
     @field_validator('session_id')
     @classmethod
