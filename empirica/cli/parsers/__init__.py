@@ -63,6 +63,7 @@ from .release_parsers import add_release_parsers
 from .lesson_parsers import add_lesson_parsers
 from .onboarding_parsers import add_onboarding_parsers
 from .trajectory_parsers import add_trajectory_parsers
+from .concept_graph_parsers import add_concept_graph_parsers
 
 __all__ = [
     'format_help_text',
@@ -90,4 +91,5 @@ __all__ = [
     'add_lesson_parsers',
     'add_onboarding_parsers',
     'add_trajectory_parsers',
+    'add_concept_graph_parsers',
 ]

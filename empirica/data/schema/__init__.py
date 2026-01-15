@@ -11,6 +11,7 @@ from .goals_schema import SCHEMAS as GOALS_SCHEMAS
 from .projects_schema import SCHEMAS as PROJECTS_SCHEMAS
 from .tracking_schema import SCHEMAS as TRACKING_SCHEMAS
 from .trajectory_schema import SCHEMAS as TRAJECTORY_SCHEMAS
+from .concept_graph_schema import SCHEMAS as CONCEPT_GRAPH_SCHEMAS
 
 # All schemas in execution order
 ALL_SCHEMAS = (
@@ -19,7 +20,8 @@ ALL_SCHEMAS = (
     GOALS_SCHEMAS +
     PROJECTS_SCHEMAS +
     TRACKING_SCHEMAS +
-    TRAJECTORY_SCHEMAS
+    TRAJECTORY_SCHEMAS +
+    CONCEPT_GRAPH_SCHEMAS
 )
 
 __all__ = [
@@ -30,4 +32,5 @@ __all__ = [
     'PROJECTS_SCHEMAS',
     'TRACKING_SCHEMAS',
     'TRAJECTORY_SCHEMAS',
+    'CONCEPT_GRAPH_SCHEMAS',
 ]

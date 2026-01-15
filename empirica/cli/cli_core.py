@@ -103,6 +103,7 @@ from .parsers import (
     add_lesson_parsers,
     add_onboarding_parsers,
     add_trajectory_parsers,
+    add_concept_graph_parsers,
 )
 from .command_handlers.architecture_commands import (
     handle_assess_component_command,
@@ -136,6 +137,12 @@ from .command_handlers.trajectory_commands import (
     handle_trajectory_show as handle_trajectory_show_command,
     handle_trajectory_stats as handle_trajectory_stats_command,
     handle_trajectory_backfill as handle_trajectory_backfill_command,
+)
+from .command_handlers.concept_graph_commands import (
+    handle_concept_build,
+    handle_concept_stats,
+    handle_concept_top,
+    handle_concept_related,
 )
 
 
@@ -197,6 +204,7 @@ def create_argument_parser():
     add_lesson_parsers(subparsers)
     add_onboarding_parsers(subparsers)
     add_trajectory_parsers(subparsers)
+    add_concept_graph_parsers(subparsers)
 
     return parser
 
@@ -423,6 +431,12 @@ def main(args=None):
             'trajectory-show': handle_trajectory_show_command,
             'trajectory-stats': handle_trajectory_stats_command,
             'trajectory-backfill': handle_trajectory_backfill_command,
+
+            # Concept graph commands (experimental epistemic prediction)
+            'concept-build': handle_concept_build,
+            'concept-stats': handle_concept_stats,
+            'concept-top': handle_concept_top,
+            'concept-related': handle_concept_related,
         }
         
         if parsed_args.command in command_handlers:
