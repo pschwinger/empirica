@@ -21,10 +21,17 @@ logger = logging.getLogger(__name__)
 
 # Fact types for noetic concepts
 NOETIC_FACT_TYPES = {
+    # Core types (original)
     "task_understanding": "PREFLIGHT: Why this task matters, constraints, stakeholders",
     "decision_rationale": "CHECK: Why proceed/investigate, approach selection reasoning",
     "learning_insight": "POSTFLIGHT: Patterns discovered, generalizable knowledge",
     "epistemic_principle": "Cross-session: Recurring principles about learning/knowing",
+
+    # Chain-reconstruction types (new)
+    "rejected_alternative": "Path considered but not taken - preserves decision context",
+    "conditional_knowledge": "Knowledge with validity conditions - when/where it applies",
+    "concept_link": "Relationship between concepts - enables graph traversal",
+    "reasoning_chain": "Hypothesis → Evidence → Conclusion - preserves inference path",
 }
 
 
@@ -176,6 +183,31 @@ def _extract_check_concepts(
                 "content": content,
                 "confidence": base_confidence * 0.9,
                 "tags": ["noetic", "check", "approach"],
+            })
+
+    # CHAIN RECONSTRUCTION: Rejected alternatives (paths not taken)
+    # Critical for understanding WHY this path vs others
+    rejected_patterns = [
+        r"(?:instead of|rather than|not|didn't)\s+(.{10,80}?)\s+because\s+(.{15,100}?)(?:\.|$)",
+        r"(?:considered|tried|thought about)\s+(.{10,60}?)\s+but\s+(.{15,100}?)(?:\.|$)",
+        r"(?:rejected|ruled out|avoided)\s+(.{10,60}?)(?:\s+(?:because|since|as)\s+(.{15,100}?))?(?:\.|$)",
+        r"(?:could have|might have)\s+(.{10,60}?)\s+but\s+(.{15,100}?)(?:\.|$)",
+    ]
+
+    for pattern in rejected_patterns:
+        matches = re.findall(pattern, reasoning, re.IGNORECASE)
+        for match in matches[:2]:
+            if isinstance(match, tuple) and len(match) >= 2:
+                alt = match[0].strip()
+                reason = match[1].strip() if match[1] else "unspecified"
+                content = f"Rejected: {alt} | Reason: {reason}"
+            else:
+                content = f"Rejected alternative: {match.strip()}"
+            concepts.append({
+                "fact_type": "rejected_alternative",
+                "content": content,
+                "confidence": base_confidence * 0.85,
+                "tags": ["noetic", "check", "alternative", "chain"],
             })
 
     return concepts
