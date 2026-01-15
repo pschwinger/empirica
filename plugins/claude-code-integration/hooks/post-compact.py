@@ -672,8 +672,8 @@ Before CHECK, recover context via bootstrap and/or semantic search:
 # Load project context (depth scales with uncertainty)
 empirica project-bootstrap --session-id {session_id} --output json
 
-# Semantic search for specific topics (if qdrant-client installed)
-empirica project-search --query "<your current task>" --output json
+# Semantic search for specific topics (if Qdrant running)
+empirica project-search --project-id <PROJECT_ID> --task "<your current task>" --output json
 ```
 
 ### Step 2: Run CHECK Gate
