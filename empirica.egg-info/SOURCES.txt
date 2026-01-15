@@ -19,6 +19,7 @@ docs/architecture/SELF_MONITORING.md
 docs/architecture/SENTINEL_ARCHITECTURE.md
 docs/architecture/STORAGE_ARCHITECTURE_COMPLETE.md
 docs/architecture/SUPPORTING_COMPONENTS.md
+docs/architecture/VERSION_UPDATE_DESIGN.md
 docs/architecture/epistemic_vs_git_diff.svg
 docs/architecture/separation-of-concerns.md
 docs/architecture/storage_architecture_flow.svg

@@ -59,6 +59,7 @@ dependencies = [
 api = [
     "flask>=3.0",
     "flask-cors>=4.0",
+    "werkzeug>=3.1.5",          # Security fix for CVE-2025-66221, CVE-2026-21860
     "fastapi>=0.104",
     "uvicorn>=0.24",
 ]
