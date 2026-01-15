@@ -2,7 +2,8 @@
   "name": "empirica-integration",
   "description": "Epistemic continuity across memory compacting - automatic check-drift integration",
   "author": {
-    "name": "Empirica Team",
-    "email": "support@anthropic.com"
-  }
+    "name": "Empirica Project",
+    "url": "https://github.com/Nubaeon/empirica"
+  },
+  "version": "1.3.2"
 }
