@@ -2,6 +2,10 @@
 _archive/
 _dev/
 
+# Vault (sensitive data, secrets, credentials)
+vault/
+**/vault/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -117,3 +121,49 @@ SECURITY_RESOLUTION_PLAN.md
 
 # Outreach materials (separate repo)
 empirica-outreach/
+
+# Additional security patterns
+*.secrets
+*.credentials
+*_secret.*
+*_token.*
+*.private
+.secrets/
+secrets/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*~
+
+# Additional Python patterns
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.tox/
+.nox/
+*.egg
+pip-wheel-metadata/
+
+# Additional lock/temp files
+*.lock
+!poetry.lock
+!package-lock.json
+*.pid
+*.sock
+*.tmp
+*.temp
+
+# macOS additional
+.AppleDouble
+.LSOverride
+._*
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Local development overrides
+*.local
+.local/
+local/
